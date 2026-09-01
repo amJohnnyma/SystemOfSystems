@@ -1,0 +1,31 @@
+{
+  "materials": [
+    {
+      "id": 0,
+      "name": "air",
+      "priority": 0,
+      "color": [0.0, 0.0, 0.0, 0.0]
+    },
+    {
+      "id": 1,
+      "name": "dirt",
+      "priority": 10,
+      "color": [0.4, 0.25, 0.1, 1.0],
+      "texture": "res://textures/dirt.png"
+    },
+    {
+      "id": 2,
+      "name": "grass",
+      "priority": 20,
+      "color": [0.1, 0.8, 0.2, 1.0],
+      "texture": "res://textures/grass.png"
+    },
+    {
+      "id": 3,
+      "name": "stone",
+      "priority": 30,
+      "color": [0.5, 0.5, 0.5, 1.0],
+      "texture": "res://textures/stone.png"
+    }
+  ]
+}

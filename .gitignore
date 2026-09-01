@@ -1,0 +1,20 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+build/
+bin/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+.sconsign.dblite
+CMakeCache.txt
+CMakeFiles/
+.godot/
+.import/
+.idea/
+*.swp
+*~
