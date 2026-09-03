@@ -224,7 +224,8 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
     world_cells_.resize(world_x_ * world_y_);
     float base_height = world_y_ * 0.45f;       // Surface line (~45% down the map)
     float height_amplitude = world_y_ * 0.25f; // Hill variance height
-    // PARALLEL TIME !!!
+                                               // PARALLEL TIME !!!
+
 
 
     for (int iy = 0; iy < world_y_; iy++)
@@ -266,27 +267,65 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
             world_cells_[index].state_flags = 0;
         }
     }
-
     int numChunksX = static_cast<int>(world_x_ / chunk_size_);
     int numChunksY = static_cast<int>(world_y_ / chunk_size_);
+    int numChunks = numChunksX * numChunksY;
 
-    for (int cy = 0; cy < numChunksY - 1; cy ++)
+
+    unsigned int num_threads = std::min(
+            static_cast<size_t>(std::thread::hardware_concurrency()),
+            static_cast<size_t>(numChunksX));
+    if (num_threads == 0) num_threads = 1;
+
+    // Not quite accurate
+    size_t x_chunks_per_thread = ((numChunksX) + num_threads - 1) / num_threads;
+    std::vector<std::thread> workers;
+
+    workers.reserve(num_threads);
+
+    using ChunkMeshResult = std::pair<std::array<int, 2>, MeshData>;
+    std::vector<ChunkMeshResult> local_outputs(numChunks);
+
+    for (unsigned int t = 0; t < num_threads; t++)
     {
+        size_t start_idx = t * x_chunks_per_thread;
+        size_t end_idx = std::min(start_idx + x_chunks_per_thread, static_cast<size_t>(numChunksX));
 
-        for (int cx = 0; cx < numChunksX - 1; cx ++)
-        {
-            mesh.insert({{cx, cy}, marchingSquares.GenerateMesh(world_cells_, 128.f, world_x_, world_y_, cx, cy, chunk_size_)});
+        if (start_idx >= numChunks) break;
+
+        workers.emplace_back([this, start_idx, end_idx, &local_outputs,&numChunksX, &numChunksY]
+                {
+                for (size_t i = start_idx; i < end_idx; i ++)
+                {
+                for (size_t j = 0; j < numChunksY; j ++)
+                {
+
+                MeshData mesh_data = marchingSquares.GenerateMesh(world_cells_, 128.f,world_x_,world_y_, i, j,chunk_size_);
+
+                std::array<int, 2> coords = {static_cast<int>(i),static_cast<int>(j)};
+                local_outputs[j * numChunksX + i ] = std::make_pair(coords, std::move(mesh_data));
+                }
 
 
-        }
+                }
+
+                });
     }
-    int num_chunks_x = (world_x_+ chunk_size_ - 1) / chunk_size_;
-    int num_chunks_y = (world_y_ + chunk_size_ - 1) / chunk_size_;
+
+    for (auto& worker : workers)
+    {
+        worker.join();
+    }
+
+
+
     dirtyChunks.clear();
-    for (int cy = 0; cy < num_chunks_y; ++cy) {
-        for (int cx = 0; cx < num_chunks_x; ++cx) {
-            dirtyChunks.insert({cx, cy});
-        }
+
+    for (auto& [coords, meshData]: local_outputs)
+    {
+        mesh[coords] = meshData;
+
+        dirtyChunks.insert(coords);
     }
     updateMesh();
 
@@ -322,15 +361,15 @@ std::vector<std::pair<std::array<int, 2>, MeshData>> WorldGrid::updateMesh()
 
         workers.emplace_back([this, start_idx, end_idx, &dirty_list, &local_outputs]
                 {
-                    for (size_t i = start_idx; i < end_idx; i ++)
-                    {
-                    int cx = dirty_list[i][0];
-                    int cy = dirty_list[i][1];
+                for (size_t i = start_idx; i < end_idx; i ++)
+                {
+                int cx = dirty_list[i][0];
+                int cy = dirty_list[i][1];
 
-                    MeshData mesh_data = marchingSquares.GenerateMesh(world_cells_, 128.f, world_x_, world_y_, cx, cy, chunk_size_);
+                MeshData mesh_data = marchingSquares.GenerateMesh(world_cells_, 128.f, world_x_, world_y_, cx, cy, chunk_size_);
 
-                    local_outputs[i] = std::make_pair(dirty_list[i], std::move(mesh_data));
-                    }
+                local_outputs[i] = std::make_pair(dirty_list[i], std::move(mesh_data));
+                }
                 });
     }
 
