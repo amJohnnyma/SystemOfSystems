@@ -227,59 +227,92 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
                                                // PARALLEL TIME !!!
 
 
+    unsigned int num_threads = std::min(
+            static_cast<size_t>(std::thread::hardware_concurrency()),
+            static_cast<size_t>(1));
+    if (num_threads == 0) num_threads = 1;
 
-    for (int iy = 0; iy < world_y_; iy++)
+    std::vector<std::thread> workers;
+
+    workers.reserve(num_threads);
+
+    int numCells = world_x_ * world_y_;
+
+    size_t x_cells_per_thread = ((world_x_) + num_threads - 1) / num_threads;
+
+    for (unsigned int t = 0; t < num_threads; t++)
     {
-        for (int ix = 0; ix < world_x_; ix++)
-        {
-            size_t index = static_cast<size_t>(iy) * world_x_ + ix;
 
-            // 1. Calculate surface height curve (1D noise across X axis)
-            float noise_val = NativeNoise::fBm(static_cast<float>(ix) * 0.03f, 0.0f, 4, 1.0f, 0.5f);
-            float surface_y = base_height + (noise_val * height_amplitude);
+        size_t start_idx = t * x_cells_per_thread;
+        size_t end_idx = std::min(start_idx + x_cells_per_thread, static_cast<size_t>(world_x_));
 
-            // 2. Calculate cell density relative to depth
-            float depth = static_cast<float>(iy) - surface_y;
-            float density = std::clamp((depth + 1.0f) * 128.0f, 0.0f, 255.0f);
+        if (start_idx >= world_x_) break;
 
-            uint16_t type_id = 0; // Default: Air (ID 0)
+        workers.emplace_back([this, start_idx, end_idx, &base_height, &height_amplitude]
+                {
 
-            if (density > 0.0f)
-            {
-                // 3. Biome depth layering
-                if (depth < 2.5f) {
-                    type_id = 2; // Grass (ID 2): Surface layer
-                } 
-                else if (depth < 14.0f) {
-                    // Dirt layer with Stone pockets using 2D noise
-                    float mat_n = NativeNoise::eval(static_cast<float>(ix) * 0.1f, static_cast<float>(iy) * 0.1f);
-                    type_id = (mat_n > 0.25f) ? 3 : 1; // Stone (3) vs Dirt (1)
-                } 
-                else {
-                    // Underground: Mostly Stone with Dirt veins
-                    float mat_n = NativeNoise::eval(static_cast<float>(ix) * 0.06f, static_cast<float>(iy) * 0.06f);
-                    type_id = (mat_n > -0.1f) ? 3 : 1; // Stone (3) vs Dirt (1)
+                for (size_t i = start_idx; i < end_idx; i ++)
+                {
+                for (size_t j = 0; j < world_y_; j ++)
+                {
+
+                size_t index = j * world_x_ + i;
+
+                // 1. Calculate surface height curve (1D noise across X axis)
+                float noise_val = NativeNoise::fBm(static_cast<float>(i) * 0.03f, 0.0f, 4, 1.0f, 0.5f);
+                float surface_y = base_height + (noise_val * height_amplitude);
+
+                // 2. Calculate cell density relative to depth
+                float depth = static_cast<float>(j) - surface_y;
+                float density = std::clamp((depth + 1.0f) * 128.0f, 0.0f, 255.0f);
+
+                uint16_t type_id = 0; // Default: Air (ID 0)
+
+                if (density > 0.0f)
+                {
+                    // 3. Biome depth layering
+                    if (depth < 2.5f) {
+                        type_id = 2; // Grass (ID 2): Surface layer
+                    } 
+                    else if (depth < 14.0f) {
+                        // Dirt layer with Stone pockets using 2D noise
+                        float mat_n = NativeNoise::eval(static_cast<float>(i) * 0.1f, static_cast<float>(i) * 0.1f);
+                        type_id = (mat_n > 0.25f) ? 3 : 1; // Stone (3) vs Dirt (1)
+                    } 
+                    else {
+                        // Underground: Mostly Stone with Dirt veins
+                        float mat_n = NativeNoise::eval(static_cast<float>(i) * 0.06f, static_cast<float>(j) * 0.06f);
+                        type_id = (mat_n > -0.1f) ? 3 : 1; // Stone (3) vs Dirt (1)
+                    }
                 }
-            }
 
-            world_cells_[index].type_id = type_id;
-            world_cells_[index].density = density;
-            world_cells_[index].state_flags = 0;
-        }
+                world_cells_[index].type_id = type_id;
+                world_cells_[index].density = density;
+                world_cells_[index].state_flags = 0;
+
+                }
+                }
+                });
     }
+
+    for (auto& worker : workers)
+    {
+        worker.join();
+    }
+
     int numChunksX = static_cast<int>(world_x_ / chunk_size_);
     int numChunksY = static_cast<int>(world_y_ / chunk_size_);
     int numChunks = numChunksX * numChunksY;
 
 
-    unsigned int num_threads = std::min(
+    num_threads = std::min(
             static_cast<size_t>(std::thread::hardware_concurrency()),
             static_cast<size_t>(numChunksX));
     if (num_threads == 0) num_threads = 1;
 
     // Not quite accurate
     size_t x_chunks_per_thread = ((numChunksX) + num_threads - 1) / num_threads;
-    std::vector<std::thread> workers;
+    workers.clear();
 
     workers.reserve(num_threads);
 

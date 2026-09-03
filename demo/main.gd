@@ -16,7 +16,7 @@ var zoom_factor: float = 0.1
 var is_panning: bool = false
 
 # Brush & Grid settings
-var cell_size: float = 64.0
+var cell_size: float = 128.0
 var world_width: int = 6400
 var world_height: int = 1800
 var brush_radius_cells: float = 2.0
