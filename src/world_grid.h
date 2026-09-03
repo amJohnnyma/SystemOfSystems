@@ -13,6 +13,14 @@
 #include <thread>
 
 #include <set>
+/*
+ Replace std::map with Flat std::vector: Using std::map<std::array<int,2>, MeshData> incurs tree-node dynamic allocations and cache misses. Use a 1D std::vector<MeshData> sized to num_chunks_x * num_chunks_y and access chunks via cy * num_chunks_x + cx.
+
+Replace std::set for Dirty Chunks: std::set<std::array<int,2>> allocates memory on every inserted dirty chunk during painting. Replace it with a std::vector<bool> chunk_is_dirty mask alongside a std::vector<int> dirty_chunk_indices list.
+
+Pass Mesh Data by Reference: getMeshData() in world_grid.h returns std::map by value, duplicating all CPU mesh buffers before Godot converts them. Change the signature to return const auto&.
+Implement a Persistent Thread Pool: updateMesh() spawns and joins fresh OS threads every time terrain is modified. Replacing on-demand std::thread construction with a persistent Thread Pool or task queue will remove thread lifecycle overhead during active terrain updates.
+ */
 
 class WorldGrid
 {

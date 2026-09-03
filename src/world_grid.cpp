@@ -37,6 +37,7 @@ bool WorldGrid::set_cell(int x, int y, uint16_t type_id, uint8_t density, uint8_
     return false;
 }
 
+/*
 void WorldGrid::set_density(int x, int y, float radius, float strength, uint16_t type_id)
 {
     // negative strength = subtract
@@ -121,7 +122,110 @@ void WorldGrid::set_density(int x, int y, float radius, float strength, uint16_t
 
 
 }
+*/
 
+// GEMINI CODE PLS REVIEW
+void WorldGrid::set_density(int x, int y, float radius, float strength, uint16_t type_id)
+{
+    if (strength == 0.0f || radius <= 0.0f) return;
+
+    int cx = x;
+    int cy = y;
+    int sx = std::max(0, static_cast<int>(std::floor(cx - radius)));
+    int ex = std::min(world_x_ - 1, static_cast<int>(std::floor(cx + radius)));
+    int sy = std::max(0, static_cast<int>(std::floor(cy - radius)));
+    int ey = std::min(world_y_ - 1, static_cast<int>(std::floor(cy + radius)));
+
+    if (sx > ex || sy > ey) return;
+
+    // Precalculate loop invariants
+    const float radius_sq = radius * radius;
+    const float inv_radius = 1.0f / radius;
+    constexpr float PI = 3.14159265358979323846f;
+
+    // Local stack buffer to batch dirty chunk updates (avoids std::set allocations in hot loop)
+    std::array<std::array<int, 2>, 64> local_dirty_chunks;
+    int local_dirty_count = 0;
+
+    auto mark_chunk_dirty = [&](int ch_x, int ch_y) {
+        for (int k = 0; k < local_dirty_count; ++k) {
+            if (local_dirty_chunks[k][0] == ch_x && local_dirty_chunks[k][1] == ch_y) return;
+        }
+        if (local_dirty_count < 64) {
+            local_dirty_chunks[local_dirty_count++] = {ch_x, ch_y};
+        }
+    };
+
+    for (int iy = sy; iy <= ey; ++iy)
+    {
+        int dy = iy - cy;
+        int dy_sq = dy * dy;
+        size_t row_offset = static_cast<size_t>(iy) * world_x_;
+
+        for (int ix = sx; ix <= ex; ++ix)
+        {
+            int dx = ix - cx;
+            float dist_sq = static_cast<float>(dx * dx + dy_sq);
+
+            if (dist_sq <= radius_sq)
+            {
+                size_t index = row_offset + ix;
+                Cell& cell = world_cells_[index];
+
+                float dist = std::sqrt(dist_sq);
+                float falloff = 1.0f - (dist * inv_radius);
+                falloff = (1.0f - std::cos(falloff * PI)) * 0.5f;
+                float scaled_strength = strength * falloff;
+
+                if (strength > 0.0f)
+                {
+                    if (cell.type_id == 0 || cell.type_id == type_id)
+                    {
+                        cell.type_id = type_id;
+                        cell.density = std::clamp(cell.density + scaled_strength, 0.0f, 255.0f);
+                    }
+                    else
+                    {
+                        cell.density = std::clamp(cell.density - scaled_strength, 0.0f, 255.0f);
+                        if (cell.density <= 128.0f)
+                        {
+                            cell.type_id = type_id;
+                            cell.density = 255.0f - cell.density;
+                        }
+                    }
+                }
+                else // strength < 0.0f
+                {
+                    cell.density = std::clamp(cell.density + scaled_strength, 0.0f, 255.0f);
+                }
+
+                if (cell.density <= 0.0f)
+                {
+                    cell.type_id = 0;
+                    cell.density = 0.0f;
+                }
+
+                // Collect dirty chunk coordinates in local buffer
+                int chunk_x = ix / chunk_size_;
+                int chunk_y = iy / chunk_size_;
+
+                mark_chunk_dirty(chunk_x, chunk_y);
+
+                if (ix % chunk_size_ == chunk_size_ - 1) {
+                    mark_chunk_dirty(chunk_x + 1, chunk_y);
+                }
+                if (iy % chunk_size_ == chunk_size_ - 1) {
+                    mark_chunk_dirty(chunk_x, chunk_y + 1);
+                }
+            }
+        }
+    }
+
+    // Flush dirty chunks into standard set once per set_density call
+    for (int k = 0; k < local_dirty_count; ++k) {
+        dirtyChunks.insert(local_dirty_chunks[k]);
+    }
+}
 
 std::array<int, 2> WorldGrid::get_chunk_coords(int x, int y)
 {
