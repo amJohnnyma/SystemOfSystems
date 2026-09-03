@@ -276,7 +276,7 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
                     } 
                     else if (depth < 14.0f) {
                         // Dirt layer with Stone pockets using 2D noise
-                        float mat_n = NativeNoise::eval(static_cast<float>(i) * 0.1f, static_cast<float>(i) * 0.1f);
+                        float mat_n = NativeNoise::eval(static_cast<float>(i) * 0.1f, static_cast<float>(j) * 0.1f);
                         type_id = (mat_n > 0.25f) ? 3 : 1; // Stone (3) vs Dirt (1)
                     } 
                     else {
@@ -324,7 +324,7 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
         size_t start_idx = t * x_chunks_per_thread;
         size_t end_idx = std::min(start_idx + x_chunks_per_thread, static_cast<size_t>(numChunksX));
 
-        if (start_idx >= numChunks) break;
+        if (start_idx >= numChunksX) break;
 
         workers.emplace_back([this, start_idx, end_idx, &local_outputs,&numChunksX, &numChunksY]
                 {

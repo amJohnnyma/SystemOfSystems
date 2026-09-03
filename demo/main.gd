@@ -10,16 +10,16 @@ var shader_mat: ShaderMaterial
 const MESH_SCALE := Vector2(4.0, 4.0)
 
 # Camera settings
-var min_zoom: float = 0.2
-var max_zoom: float = 10.0
+var min_zoom: float = 0.001
+var max_zoom: float = 20.0
 var zoom_factor: float = 0.1
 var is_panning: bool = false
 
 # Brush & Grid settings
-var cell_size: float = 128.0
-var world_width: int = 6400
-var world_height: int = 1800
-var brush_radius_cells: float = 2.0
+var cell_size: float = 64.0
+var world_width: int = 8400
+var world_height: int = 2400
+var brush_radius_cells: float = 100.0
 var current_mouse_local: Vector2 = Vector2.ZERO
 
 var is_left_down: bool = false

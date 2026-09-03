@@ -143,6 +143,7 @@ MeshData MarchingSquares::GenerateMesh(const std::vector<Cell>& world, float thr
                 mesh.vertices.push_back(v0);
                 mesh.vertices.push_back(v1);
                 mesh.vertices.push_back(v2);
+                //Maybe better? mesh.vertices.emplace_back(GetCellVertex(tris[i], ix, iy, bl, br, tr, tl, bl_t, br_t, tr_t, tl_t, threshold));
 
                 mesh.indices.push_back(base_index);
                 mesh.indices.push_back(base_index+1);
