@@ -35,7 +35,8 @@ void GodotSimulation::createWorld(int world_x, int world_y, int g_size)
 Dictionary GodotSimulation::getMeshData()
 {
     Dictionary chunk_map;
-    auto all_native_meshes = world_grid_.getMeshData();
+    const auto& all_native_meshes = world_grid_.getMeshData();
+    int num_chunk_x = world_grid_.get_num_chunk_x();
 
     // Helper lambda to format a single MeshData into Godot arrays
     auto build_chunk_dict = [](const MeshData& mesh_data) -> Dictionary {
@@ -47,11 +48,12 @@ Dictionary GodotSimulation::getMeshData()
         indices.resize(static_cast<int64_t>(mesh_data.indices.size()));
         type_ids.resize(static_cast<int64_t>(mesh_data.vertices.size()));
 
-        for (size_t i = 0; i < mesh_data.vertices.size(); ++i) {
+        for (size_t i = 0; i < mesh_data.vertices.size(); i ++) {
             vertices[static_cast<int32_t>(i)] = Vector2(mesh_data.vertices[i].position.x, mesh_data.vertices[i].position.y);
             type_ids[static_cast<int32_t>(i)] = static_cast<int32_t>(mesh_data.vertices[i].type_id);
 
             indices[static_cast<int32_t>(i)] = static_cast<int32_t>(mesh_data.indices[i]);
+            i++;
         }
 
 
@@ -62,9 +64,9 @@ Dictionary GodotSimulation::getMeshData()
         return dict;
     };
 
-    for (const auto& [coords, mesh_data] : all_native_meshes) {
-        Vector2i key(coords[0], coords[1]);
-        chunk_map[key] = build_chunk_dict(mesh_data);
+    for (size_t chunk_idx = 0; chunk_idx < all_native_meshes.size(); chunk_idx++) {
+        Vector2i key(static_cast<int>(chunk_idx) % num_chunk_x, static_cast<int>(chunk_idx) / num_chunk_x);
+        chunk_map[key] = build_chunk_dict(all_native_meshes[chunk_idx]);
     }
 
     return chunk_map;

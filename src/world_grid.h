@@ -28,9 +28,12 @@ class WorldGrid
         int world_x_ = 6400;
         int world_y_ = 1800;
         int chunk_size_ = 64; // always square
+        int num_chunk_x = 0;
+        int num_chunk_y = 0;
         std::vector<Cell> world_cells_;
-        std::map<std::array<int,2>, MeshData> mesh; 
-        std::set<std::array<int, 2>> dirtyChunks;
+        std::vector<MeshData> mesh;
+        std::vector<int> dirty_chunk_indices_;
+        std::vector<uint8_t> chunk_is_dirty_;
 
         MarchingSquares marchingSquares = MarchingSquares();
 
@@ -58,11 +61,13 @@ class WorldGrid
         WorldGrid();
         ~WorldGrid();
 
-        std::map<std::array<int,2 >, MeshData> getMeshData() const {return mesh;}
+        const std::vector<MeshData>& getMeshData() const {return mesh;}
         std::vector<std::pair<std::array<int, 2>, MeshData>> updateMesh();
 
         void set_density(int x, int y, float radius, float strength, uint16_t type_id);
         void fill_cell(int x, int y, uint16_t type_id, bool negativeFill = false);
+
+        int get_num_chunk_x() const {return num_chunk_x; }
 
 
     protected:

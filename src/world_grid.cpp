@@ -37,94 +37,7 @@ bool WorldGrid::set_cell(int x, int y, uint16_t type_id, uint8_t density, uint8_
     return false;
 }
 
-/*
-void WorldGrid::set_density(int x, int y, float radius, float strength, uint16_t type_id)
-{
-    // negative strength = subtract
-    // positive strength = add
 
-    // loop all affected cells
-    int cx = x;
-    int cy = y;
-    int sx = std::max(0, static_cast<int>(std::floor(cx - radius)));
-    int ex = std::min(world_x_ - 1, static_cast<int>(std::floor(cx + radius)));
-    int sy = std::max(0, static_cast<int>(std::floor(cy - radius)));
-    int ey = std::min(world_y_ - 1, static_cast<int>(std::floor(cy + radius)));
-
-
-    for(int ix = sx; ix <= ex; ix++)
-    {
-        for (int iy = sy; iy <= ey; iy++)
-        {
-            int dx = ix - cx;
-            int dy = iy - cy;
-            float dist_sq =dx * dx + dy * dy; 
-            // in the radius
-            if(dist_sq <= radius * radius)
-            {
-                // update the cell density
-                size_t index = static_cast<size_t>(iy) * world_x_ + ix;
-                float dist = std::sqrt(dist_sq);
-                float falloff = 1.f - (dist / radius);
-
-                falloff = (1.f - std::cos(falloff * 3.14159265f)) * 0.5f;
-                float scaled_strength = strength * falloff;
-
-
-                if (strength > 0.0f)
-                {
-                    // empty or same type so add more
-                    if (world_cells_[index].type_id == 0 || world_cells_[index].type_id == type_id)
-                    {
-                        world_cells_[index].type_id = type_id;
-                        world_cells_[index].density = std::clamp(world_cells_[index].density + scaled_strength, 0.0f, 255.0f);
-                    }
-                    //take away until density is 0 (air)
-                    else 
-                    {
-
-                        world_cells_[index].density = std::clamp(world_cells_[index].density - scaled_strength, 0.0f, 255.0f);
-
-                        if (world_cells_[index].density <= 128.f)
-                        {
-                            world_cells_[index].type_id = type_id;
-                            world_cells_[index].density = 255.f - world_cells_[index].density;
-                        }
-                    }
-                }
-                else if (strength < 0.0f)
-                {
-                    world_cells_[index].density = std::clamp(world_cells_[index].density +scaled_strength, 0.0f, 255.f);
-                }
-
-                if (world_cells_[index].density <= 0.0f)
-                {
-
-                    world_cells_[index].type_id= 0;
-                    world_cells_[index].density = 0.f;
-                }
-
-                std::array<int, 2> chunk_coords = get_chunk_coords(ix, iy);
-                dirtyChunks.insert(chunk_coords);
-                // If editing the rightmost cell of a chunk, flag the neighbor to the right too
-                if (ix % chunk_size_ == chunk_size_ - 1) {
-                    dirtyChunks.insert({chunk_coords[0] + 1, chunk_coords[1]});
-                }
-                // If editing the bottommost cell of a chunk, flag the neighbor below too
-                if (iy % chunk_size_ == chunk_size_ - 1) {
-                    dirtyChunks.insert({chunk_coords[0], chunk_coords[1] + 1});
-                }
-
-
-            }
-        }
-    }
-
-
-}
-*/
-
-// GEMINI CODE PLS REVIEW
 void WorldGrid::set_density(int x, int y, float radius, float strength, uint16_t type_id)
 {
     if (strength == 0.0f || radius <= 0.0f) return;
@@ -144,16 +57,18 @@ void WorldGrid::set_density(int x, int y, float radius, float strength, uint16_t
     constexpr float PI = 3.14159265358979323846f;
 
     // Local stack buffer to batch dirty chunk updates (avoids std::set allocations in hot loop)
-    std::array<std::array<int, 2>, 64> local_dirty_chunks;
-    int local_dirty_count = 0;
+    const int max_dirty_chunks = 256;
 
     auto mark_chunk_dirty = [&](int ch_x, int ch_y) {
-        for (int k = 0; k < local_dirty_count; ++k) {
-            if (local_dirty_chunks[k][0] == ch_x && local_dirty_chunks[k][1] == ch_y) return;
+        if (ch_x < 0 || ch_x >= num_chunk_x || ch_y < 0 || ch_y >= num_chunk_y) return;
+
+        int chunk_idx = ch_y * num_chunk_x + ch_x;
+        if (!chunk_is_dirty_[chunk_idx])
+        {
+            chunk_is_dirty_[chunk_idx] = 1;
+            dirty_chunk_indices_.push_back(chunk_idx);
         }
-        if (local_dirty_count < 64) {
-            local_dirty_chunks[local_dirty_count++] = {ch_x, ch_y};
-        }
+
     };
 
     for (int iy = sy; iy <= ey; ++iy)
@@ -221,10 +136,6 @@ void WorldGrid::set_density(int x, int y, float radius, float strength, uint16_t
         }
     }
 
-    // Flush dirty chunks into standard set once per set_density call
-    for (int k = 0; k < local_dirty_count; ++k) {
-        dirtyChunks.insert(local_dirty_chunks[k]);
-    }
 }
 
 std::array<int, 2> WorldGrid::get_chunk_coords(int x, int y)
@@ -239,25 +150,12 @@ std::array<int, 2> WorldGrid::get_chunk_coords(int x, int y)
 }
 void WorldGrid::flag_dirty_chunk(int cx, int cy)
 {
-    int start_x = cx * chunk_size_;
-    int start_y = cy * chunk_size_;
-    int end_x = std::min(start_x + chunk_size_, world_x_);
-    int end_y = std::min(start_y + chunk_size_, world_y_);
+    if (cx < 0 || cx >= num_chunk_x || cy < 0 || cy >= num_chunk_y) return;
 
-    // Loop over every cell strictly inside this chunk
-    for (int cy_offset = 0; cy_offset < end_y; ++cy_offset)
-    {
-        int iy = start_y + cy_offset;
-        int row_offset = iy * world_x_; // Stride offset for row-major 1D array
-
-        for (int cx_offset = 0; cx_offset < end_x; ++cx_offset)
-        {
-            int ix = start_x + cx_offset;
-            size_t cell_index = row_offset + ix;
-
-            // set dirty
-            world_cells_[cell_index].state_flags |= 1;
-        }
+    int chunk_idx = cy * num_chunk_x + cx;
+    if (!chunk_is_dirty_[chunk_idx]) {
+        chunk_is_dirty_[chunk_idx] = 1;
+        dirty_chunk_indices_.push_back(chunk_idx);
     }
 }
 
@@ -319,25 +217,29 @@ namespace NativeNoise {
         return total / max_val;
     }
 }
-// make parallel     
+
 void WorldGrid::init(int x_size, int y_size, int g_size)
 {
     world_x_ = x_size;
     world_y_ = y_size;
     chunk_size_ = g_size;
+    num_chunk_x = world_x_ / chunk_size_;
+    num_chunk_y = world_y_ / chunk_size_;
     world_cells_.resize(world_x_ * world_y_);
     float base_height = world_y_ * 0.45f;       // Surface line (~45% down the map)
     float height_amplitude = world_y_ * 0.25f; // Hill variance height
                                                // PARALLEL TIME !!!
 
 
-    unsigned int num_threads = std::min(
-            static_cast<size_t>(std::thread::hardware_concurrency()),
-            static_cast<size_t>(1));
+    int numChunks = num_chunk_x * num_chunk_y;
+    mesh.resize(numChunks);
+    chunk_is_dirty_.assign(numChunks, 0);
+    dirty_chunk_indices_.clear();
+
+    unsigned int num_threads = std::thread::hardware_concurrency();
     if (num_threads == 0) num_threads = 1;
 
     std::vector<std::thread> workers;
-
     workers.reserve(num_threads);
 
     int numCells = world_x_ * world_y_;
@@ -404,77 +306,29 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
         worker.join();
     }
 
-    int numChunksX = static_cast<int>(world_x_ / chunk_size_);
-    int numChunksY = static_cast<int>(world_y_ / chunk_size_);
-    int numChunks = numChunksX * numChunksY;
+    chunk_is_dirty_.assign(numChunks, 1);
 
-
-    num_threads = std::min(
-            static_cast<size_t>(std::thread::hardware_concurrency()),
-            static_cast<size_t>(numChunksX));
-    if (num_threads == 0) num_threads = 1;
-
-    // Not quite accurate
-    size_t x_chunks_per_thread = ((numChunksX) + num_threads - 1) / num_threads;
-    workers.clear();
-
-    workers.reserve(num_threads);
-
-    using ChunkMeshResult = std::pair<std::array<int, 2>, MeshData>;
-    std::vector<ChunkMeshResult> local_outputs(numChunks);
-
-    for (unsigned int t = 0; t < num_threads; t++)
+    dirty_chunk_indices_.clear();
+    dirty_chunk_indices_.reserve(numChunks);
+    for (int i = 0; i < numChunks; ++i)
     {
-        size_t start_idx = t * x_chunks_per_thread;
-        size_t end_idx = std::min(start_idx + x_chunks_per_thread, static_cast<size_t>(numChunksX));
-
-        if (start_idx >= numChunksX) break;
-
-        workers.emplace_back([this, start_idx, end_idx, &local_outputs,&numChunksX, &numChunksY]
-                {
-                for (size_t i = start_idx; i < end_idx; i ++)
-                {
-                for (size_t j = 0; j < numChunksY; j ++)
-                {
-
-                MeshData mesh_data = marchingSquares.GenerateMesh(world_cells_, 128.f,world_x_,world_y_, i, j,chunk_size_);
-
-                std::array<int, 2> coords = {static_cast<int>(i),static_cast<int>(j)};
-                local_outputs[j * numChunksX + i ] = std::make_pair(coords, std::move(mesh_data));
-                }
-
-
-                }
-
-                });
+        dirty_chunk_indices_.push_back(i);
     }
 
-    for (auto& worker : workers)
-    {
-        worker.join();
-    }
+   // updateMesh();
 
 
 
-    dirtyChunks.clear();
 
-    for (auto& [coords, meshData]: local_outputs)
-    {
-        mesh[coords] = meshData;
-
-        dirtyChunks.insert(coords);
-    }
-    updateMesh();
 
 }
 
 std::vector<std::pair<std::array<int, 2>, MeshData>> WorldGrid::updateMesh()
 {
-    if (dirtyChunks.empty()) return {};
+    if (dirty_chunk_indices_.empty()) return {};
 
-    std::vector<std::array<int, 2>> dirty_list(dirtyChunks.begin(), dirtyChunks.end());
 
-    size_t total_dirty = dirty_list.size();
+    size_t total_dirty = dirty_chunk_indices_.size();
 
     using ChunkMeshResult = std::pair<std::array<int, 2>, MeshData>;
     std::vector<ChunkMeshResult> local_outputs(total_dirty);
@@ -496,16 +350,21 @@ std::vector<std::pair<std::array<int, 2>, MeshData>> WorldGrid::updateMesh()
 
         if (start_idx >= total_dirty) break;
 
-        workers.emplace_back([this, start_idx, end_idx, &dirty_list, &local_outputs]
+        workers.emplace_back([this, start_idx, end_idx, &local_outputs]
                 {
+                MarchingSquares local_marching_squares;
                 for (size_t i = start_idx; i < end_idx; i ++)
                 {
-                int cx = dirty_list[i][0];
-                int cy = dirty_list[i][1];
 
-                MeshData mesh_data = marchingSquares.GenerateMesh(world_cells_, 128.f, world_x_, world_y_, cx, cy, chunk_size_);
+                int chunk_idx = dirty_chunk_indices_[i];
 
-                local_outputs[i] = std::make_pair(dirty_list[i], std::move(mesh_data));
+                int cx = chunk_idx % num_chunk_x;
+                int cy = chunk_idx / num_chunk_x;
+
+                MeshData mesh_data = local_marching_squares.GenerateMesh(world_cells_, 128.f, world_x_, world_y_, cx, cy, chunk_size_);
+
+                local_outputs[i] = std::make_pair(std::array<int, 2>{cx, cy}, std::move(mesh_data));
+
                 }
                 });
     }
@@ -515,12 +374,15 @@ std::vector<std::pair<std::array<int, 2>, MeshData>> WorldGrid::updateMesh()
         worker.join();
     }
 
-    for (auto& [coords, meshData]: local_outputs)
+    for (size_t i = 0; i < total_dirty; i ++)
     {
-        mesh[coords] = meshData;
-    }
+        int chunk_idx = dirty_chunk_indices_[i];
 
-    dirtyChunks.clear();
+        mesh[chunk_idx] = local_outputs[i].second;
+        chunk_is_dirty_[chunk_idx] = 0;
+    }
+    dirty_chunk_indices_.clear();
+
     return local_outputs;
 
 
@@ -530,21 +392,25 @@ std::vector<std::pair<std::array<int, 2>, MeshData>> WorldGrid::updateMesh()
 
 void WorldGrid::fill_cell(int x, int y, uint16_t type_id, bool negativeFill)
 {
+    if (x < 0 || x >= world_x_ || y < 0 || y >= world_y_) return;
 
-    if (x < 0 || x >= world_x_ || y < 0 || y >= world_y_)
-    {
-        return; // out of bounds
-    }
-
-    float density = 255.f;
-    if (negativeFill)
-    {
-        density = 0.f;
-    }
-
+    float density = negativeFill ? 0.0f : 255.0f;
     size_t index = static_cast<size_t>(y) * world_x_ + x;
     world_cells_[index].density = density;
-    world_cells_[index].type_id= type_id;
+    world_cells_[index].type_id = type_id;
+
+    int cx = x / chunk_size_;
+    int cy = y / chunk_size_;
+
+    flag_dirty_chunk(cx, cy);
+
+    // Seam neighbor checks
+    if (x % chunk_size_ == chunk_size_ - 1) {
+        flag_dirty_chunk(cx + 1, cy);
+    }
+    if (y % chunk_size_ == chunk_size_ - 1) {
+        flag_dirty_chunk(cx, cy + 1);
+    }
 }
 
 WorldGrid::WorldGrid()

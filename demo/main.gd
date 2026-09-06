@@ -17,9 +17,9 @@ var is_panning: bool = false
 
 # Brush & Grid settings
 var cell_size: float = 64.0
-var world_width: int = 8400
-var world_height: int = 2400
-var brush_radius_cells: float = 100.0
+var world_width: int = 6400
+var world_height: int = 1800
+var brush_radius_cells: float = 6.0
 var current_mouse_local: Vector2 = Vector2.ZERO
 
 var is_left_down: bool = false
@@ -49,6 +49,7 @@ func _ready() -> void:
 	
 	# Populate all chunk nodes initially
 	_setup_full_mesh_display()
+	update_mesh_display()
 
 func _process(_delta: float) -> void:
 	# Convert global mouse position to local cell coordinates
@@ -88,6 +89,7 @@ func _setup_full_mesh_display() -> void:
 	var all_chunks: Dictionary = world.getMeshData() # Vector2i -> Chunk Dict
 	for chunk_pos in all_chunks:
 		_update_chunk_node(chunk_pos, all_chunks[chunk_pos])
+		
 
 # Delta update (called during editing)
 func update_mesh_display() -> void:
