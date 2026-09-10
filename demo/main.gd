@@ -2,6 +2,7 @@ extends Node2D
 
 @onready var world: GodotSimulation = $GodotSimulation
 @onready var input_manager: InputManager = $InputManager
+@onready var ui_root_scene = preload("res://demo/ui_root.tscn")
 
 var chunk_nodes: Dictionary = {} # Vector2i(cx, cy) -> MeshInstance2D
 var camera: Camera2D
@@ -31,27 +32,37 @@ func _ready() -> void:
 	shader_mat = ShaderMaterial.new()
 	shader_mat.shader = preload("res://shaders/flat_colour.gdshader")
 
-	# Initialize C++ world grid (world_x, world_y, g_size)
-	world.createWorld(world_width, world_height, int(cell_size))
-	
-	# Populate all chunk nodes initially
-	_setup_full_mesh_display()
-	update_mesh_display()
+
 	
 	# Connect to InputManager signals
 	input_manager.setup(world, camera, MESH_SCALE)
 	input_manager.terrain_modified.connect(update_mesh_display)
 	input_manager.cursor_moved.connect(func(_pos): queue_redraw())
 	input_manager.brush_radius_changed.connect(func(_radius): queue_redraw())
-	
+
+	# Instantiate UI CanvasLayer above the world
+	#var ui_root = ui_root_scene.instantiate()
+	#add_child(ui_root)
+	#UIManager.register_ui_root(ui_root)
+	#UIManager.connect_simulation(world)
+	#var test_scene = preload("res://demo/base_window.tscn")
+	#UIManager.open_window(test_scene)
 	# Connect using the standard GDScript signal syntax
 	world.test_signal_event.connect(_on_custom_event)
 	
 	# Call the C++ method that triggers the emission
 	world.trigger_test_signal("MEOW")
 	
+		# Initialize C++ world grid (world_x, world_y, g_size)
+	world.createWorld(world_width, world_height, int(cell_size))
+	
+	# Populate all chunk nodes initially
+	_setup_full_mesh_display()
+	update_mesh_display()
+	
 func _on_custom_event(message: String) -> void:
 	print("Received signal from C++: - ", message)
+
 
 
 func _draw() -> void:

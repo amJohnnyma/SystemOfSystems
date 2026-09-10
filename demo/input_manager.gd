@@ -1,36 +1,40 @@
 class_name InputManager
-
 extends Node
 
+enum InputMode {
+	FULL_GAMEPLAY,  # Terraforming, camera pan, and tool shortcuts
+	CAMERA_ONLY,    # Windows like Inventory: camera movement allowed, terraforming blocked
+	UI_ONLY         # Modal/Pause menus: all world interactions frozen
+}
+
+var current_mode: InputMode = InputMode.FULL_GAMEPLAY
 
 # Signals
 signal terrain_modified()
 signal cursor_moved(local_cell_pos: Vector2)
-signal brush_radius_changed(new_radius : float)
+signal brush_radius_changed(new_radius: float)
 
-
-# Global toggles
+# Global toggle
 var is_input_enabled: bool = true
 
 # Dependencies
-var world : GodotSimulation
-var camera : Camera2D
-var mesh_scale : Vector2 = Vector2(4.0, 4.0)
+var world: GodotSimulation
+var camera: Camera2D
+var mesh_scale: Vector2 = Vector2(4.0, 4.0)
 
 # Brush & Timing
-var brush_radius_cells : float = 6.0
+var brush_radius_cells: float = 6.0
 var current_mouse_local: Vector2 = Vector2.ZERO
-var is_left_down : bool = false
-var is_right_down : bool = false
-var is_panning : bool = false
-var paint_cooldown : float = 0.0
-const PAINT_INTERVAL : float = 0.1
+var is_left_down: bool = false
+var is_right_down: bool = false
+var is_panning: bool = false
+var paint_cooldown: float = 0.0
+const PAINT_INTERVAL: float = 0.1
 
 # Camera settings
 var min_zoom: float = 0.001
 var max_zoom: float = 20.0
 var zoom_factor: float = 0.1
-
 
 func setup(p_world: GodotSimulation, p_camera: Camera2D, p_mesh_scale: Vector2) -> void:
 	world = p_world
@@ -41,56 +45,68 @@ func _process(delta: float) -> void:
 	if not is_input_enabled or not camera:
 		return
 
-	# Calculate mouse local position relative to camera & scale
+	# Always track cursor position for UI/HUD tooltips
 	current_mouse_local = camera.get_global_mouse_position() / mesh_scale
 	cursor_moved.emit(current_mouse_local)
 
-	# Handle continuous paint interval
 	if paint_cooldown > 0.0:
 		paint_cooldown -= delta
 
-	if (is_left_down or is_right_down) and paint_cooldown <= 0.0:
-		_apply_brush()
-		paint_cooldown = PAINT_INTERVAL
-
-func _unhandled_input(event: InputEvent) -> void:
-	if not is_input_enabled:
-		return
-
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			is_left_down = event.pressed
-		elif event.button_index == MOUSE_BUTTON_RIGHT:
-			is_right_down = event.pressed
-
-		if event.pressed and (is_left_down or is_right_down):
+	# Continuous painting is strictly restricted to FULL_GAMEPLAY mode
+	if current_mode == InputMode.FULL_GAMEPLAY:
+		if (is_left_down or is_right_down) and paint_cooldown <= 0.0:
 			_apply_brush()
 			paint_cooldown = PAINT_INTERVAL
+	else:
+		# Reset painting click states if input mode changed mid-click
+		is_left_down = false
+		is_right_down = false
 
-		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			_zoom_camera(1.0 + zoom_factor)
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			_zoom_camera(1.0 - zoom_factor)
-
-	elif event is InputEventKey and event.pressed:
-		var cell_x := int(current_mouse_local.x)
-		var cell_y := int(current_mouse_local.y)
-
-		if event.keycode == KEY_A:
-			_apply_fill(cell_x, cell_y, 2, false)
-		elif event.keycode == KEY_S:
-			_apply_fill(cell_x, cell_y, 2, true)
-		elif event.keycode == KEY_1:
-			brush_radius_cells = max(0.5, brush_radius_cells - 0.5)
-			brush_radius_changed.emit(brush_radius_cells)
-		elif event.keycode == KEY_2:
-			brush_radius_cells += 0.5
-			brush_radius_changed.emit(brush_radius_cells)
-
-func _input(event: InputEvent) -> void:
-	if not is_input_enabled or not camera:
+func _unhandled_input(event: InputEvent) -> void:
+	if not is_input_enabled or current_mode == InputMode.UI_ONLY:
 		return
 
+	# Camera zoom is permitted in both FULL_GAMEPLAY and CAMERA_ONLY modes
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_zoom_camera(1.0 + zoom_factor)
+			return
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_zoom_camera(1.0 - zoom_factor)
+			return
+
+	# Terraforming and key actions are ONLY allowed during FULL_GAMEPLAY
+	if current_mode == InputMode.FULL_GAMEPLAY:
+		if event is InputEventMouseButton:
+			if event.button_index == MOUSE_BUTTON_LEFT:
+				is_left_down = event.pressed
+			elif event.button_index == MOUSE_BUTTON_RIGHT:
+				is_right_down = event.pressed
+
+			if event.pressed and (is_left_down or is_right_down):
+				_apply_brush()
+				paint_cooldown = PAINT_INTERVAL
+
+		elif event is InputEventKey and event.pressed:
+			var cell_x := int(current_mouse_local.x)
+			var cell_y := int(current_mouse_local.y)
+
+			if event.keycode == KEY_A:
+				_apply_fill(cell_x, cell_y, 2, false)
+			elif event.keycode == KEY_S:
+				_apply_fill(cell_x, cell_y, 2, true)
+			elif event.keycode == KEY_1:
+				brush_radius_cells = max(0.5, brush_radius_cells - 0.5)
+				brush_radius_changed.emit(brush_radius_cells)
+			elif event.keycode == KEY_2:
+				brush_radius_cells += 0.5
+				brush_radius_changed.emit(brush_radius_cells)
+
+func _input(event: InputEvent) -> void:
+	if not is_input_enabled or not camera or current_mode == InputMode.UI_ONLY:
+		return
+
+	# Middle-click camera panning allowed in FULL_GAMEPLAY and CAMERA_ONLY modes
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE:
 		is_panning = event.pressed
 

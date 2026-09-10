@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://crcknfq02xs8q"]
+
+[ext_resource type="Script" uid="uid://rn6ca2qy21lj" path="res://demo/BaseWindow.gd" id="1_n314w"]
+
+[node name="UIRoot" type="PanelContainer"]
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_n314w")

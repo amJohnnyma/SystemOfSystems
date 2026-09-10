@@ -15,6 +15,10 @@ run/main_scene="uid://0t66dyv1sh75"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
+[autoload]
+
+UIManager="*res://demo/UIManager.gd"
+
 [display]
 
 window/vsync/vsync_mode=0
