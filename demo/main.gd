@@ -50,6 +50,15 @@ func _ready() -> void:
 	# Populate all chunk nodes initially
 	_setup_full_mesh_display()
 	update_mesh_display()
+	
+	# Connect using the standard GDScript signal syntax
+	world.test_signal_event.connect(_on_custom_event)
+	
+	# Call the C++ method that triggers the emission
+	world.trigger_test_signal("MEOW")
+	
+func _on_custom_event(message: String) -> void:
+	print("Received signal from C++: - ", message)
 
 func _process(_delta: float) -> void:
 	# Convert global mouse position to local cell coordinates

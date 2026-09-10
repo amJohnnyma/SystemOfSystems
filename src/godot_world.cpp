@@ -16,10 +16,19 @@ void GodotSimulation::_bind_methods() {
     ClassDB::bind_method(D_METHOD("setDensity", "x", "y", "radius", "strength", "type_id"), &GodotSimulation::setDensity);
     ClassDB::bind_method(D_METHOD("updateMeshData"), &GodotSimulation::updateMeshData);
     ClassDB::bind_method(D_METHOD("fillCell", "x", "y", "type_id", "negativeFill"), &GodotSimulation::fillCell);
+
+
+    ClassDB::bind_method(D_METHOD("trigger_test_signal", "message"), &GodotSimulation::trigger_test_signal);
+    ADD_SIGNAL(MethodInfo("test_signal_event", PropertyInfo(Variant::STRING, "message")));
 }
 
 GodotSimulation::GodotSimulation() {}
 GodotSimulation::~GodotSimulation() {}
+
+void GodotSimulation::trigger_test_signal(const godot::String &msg)
+{
+    emit_signal("test_signal_event", msg);
+}
 
 void GodotSimulation::_process(double delta)
 {
