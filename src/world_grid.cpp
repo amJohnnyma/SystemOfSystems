@@ -1,13 +1,12 @@
 #include "world_grid.h"
 #include "marching_squares.h"
+#include "thread_pool.h"
 #include "world_types.h"
 #include <cmath>
 #include <cstdint>
 #include <algorithm>
 #include <array>
-#include <iostream>
-#include <random>
-#include <thread>
+#include <memory>
 
 Cell WorldGrid::get_cell(int x, int y) const
 {
@@ -230,21 +229,19 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
     float height_amplitude = world_y_ * 0.25f; // Hill variance height
                                                // PARALLEL TIME !!!
 
+    pool_ = std::make_unique<ThreadPool>();
 
     int numChunks = num_chunk_x * num_chunk_y;
     mesh.resize(numChunks);
     chunk_is_dirty_.assign(numChunks, 0);
     dirty_chunk_indices_.clear();
 
-    unsigned int num_threads = std::thread::hardware_concurrency();
-    if (num_threads == 0) num_threads = 1;
 
-    std::vector<std::thread> workers;
-    workers.reserve(num_threads);
-
-    int numCells = world_x_ * world_y_;
-
+    unsigned int num_threads = pool_->get_num_threads();
     size_t x_cells_per_thread = ((world_x_) + num_threads - 1) / num_threads;
+
+    std::vector<std::future<void>> futures;
+    futures.reserve(num_threads);
 
     for (unsigned int t = 0; t < num_threads; t++)
     {
@@ -254,7 +251,7 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
 
         if (start_idx >= world_x_) break;
 
-        workers.emplace_back([this, start_idx, end_idx, &base_height, &height_amplitude]
+        futures.push_back(pool_->enqueue([this, start_idx, end_idx, &base_height, &height_amplitude]
                 {
 
                 for (size_t i = start_idx; i < end_idx; i ++)
@@ -298,12 +295,12 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
 
                 }
                 }
-                });
+                }));
     }
 
-    for (auto& worker : workers)
+    for (auto& f:futures)
     {
-        worker.join();
+        f.get();
     }
 
     chunk_is_dirty_.assign(numChunks, 1);
@@ -334,14 +331,13 @@ std::vector<std::pair<std::array<int, 2>, MeshData>> WorldGrid::updateMesh()
     std::vector<ChunkMeshResult> local_outputs(total_dirty);
 
     unsigned int num_threads = std::min(
-            static_cast<size_t>(std::thread::hardware_concurrency()),
+            static_cast<size_t>(pool_->get_num_threads()),
             total_dirty);
-    if (num_threads == 0) num_threads = 1;
 
     size_t chunks_per_thread = (total_dirty + num_threads - 1) / num_threads;
-    std::vector<std::thread> workers;
+    std::vector<std::future<void>> futures;
+    futures.reserve(num_threads);
 
-    workers.reserve(num_threads);
 
     for (unsigned int t = 0; t < num_threads; t++)
     {
@@ -350,7 +346,7 @@ std::vector<std::pair<std::array<int, 2>, MeshData>> WorldGrid::updateMesh()
 
         if (start_idx >= total_dirty) break;
 
-        workers.emplace_back([this, start_idx, end_idx, &local_outputs]
+        futures.push_back(pool_->enqueue([this, start_idx, end_idx, &local_outputs]
                 {
                 MarchingSquares local_marching_squares;
                 for (size_t i = start_idx; i < end_idx; i ++)
@@ -366,12 +362,12 @@ std::vector<std::pair<std::array<int, 2>, MeshData>> WorldGrid::updateMesh()
                 local_outputs[i] = std::make_pair(std::array<int, 2>{cx, cy}, std::move(mesh_data));
 
                 }
-                });
+                }));
     }
 
-    for (auto& worker : workers)
+    for (auto& f:futures)
     {
-        worker.join();
+        f.get();
     }
 
     for (size_t i = 0; i < total_dirty; i ++)

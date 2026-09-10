@@ -10,9 +10,9 @@
 #include "world_types.h"
 #include "marching_squares.h"
 #include <cstdint>
-#include <thread>
+#include "thread_pool.h"
 
-#include <set>
+
 
 class WorldGrid
 {
@@ -26,6 +26,7 @@ class WorldGrid
         std::vector<MeshData> mesh;
         std::vector<int> dirty_chunk_indices_;
         std::vector<uint8_t> chunk_is_dirty_;
+        std::unique_ptr<ThreadPool> pool_;
 
         MarchingSquares marchingSquares = MarchingSquares();
 
@@ -60,6 +61,16 @@ class WorldGrid
         void fill_cell(int x, int y, uint16_t type_id, bool negativeFill = false);
 
         int get_num_chunk_x() const {return num_chunk_x; }
+
+        // Enable move assignment if re-assigning world_grid_ = WorldGrid();
+        WorldGrid(WorldGrid&&) noexcept = default;
+        WorldGrid& operator=(WorldGrid&&) noexcept = default;
+
+        // Delete copy assignment explicitly
+        WorldGrid(const WorldGrid&) = delete;
+        WorldGrid& operator=(const WorldGrid&) = delete;
+
+        ThreadPool& get_thread_pool() { return *pool_; }
 
 
     protected:
