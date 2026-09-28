@@ -1,0 +1,61 @@
+[gd_scene format=3 uid="uid://dgt3smw6je2jt"]
+
+[ext_resource type="Script" uid="uid://drfbflpr0lw35" path="res://demo/inventory_ui.gd" id="1_yhs4g"]
+
+[node name="InventoryUI" type="Control" unique_id=1375818985]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_yhs4g")
+
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=1116803421]
+self_modulate = Color(1, 1, 1, 0.29803923)
+custom_minimum_size = Vector2(600, 600)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -6.5
+offset_top = -17.5
+offset_right = 6.5
+offset_bottom = 17.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer" unique_id=270032148]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer" unique_id=1016302338]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=932765749]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer/Header" unique_id=1492136647]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.19215687, 1, 1, 1)
+text = "Inventory"
+horizontal_alignment = 1
+
+[node name="CloseButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/Header" unique_id=1004448843]
+unique_name_in_owner = true
+layout_mode = 2
+text = "X"
+
+[node name="HSeparator" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=930593418]
+layout_mode = 2
+
+[node name="ItemGrid" type="GridContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1358444543]
+unique_name_in_owner = true
+layout_mode = 2
+columns = 10

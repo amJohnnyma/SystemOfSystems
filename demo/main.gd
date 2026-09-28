@@ -41,12 +41,11 @@ func _ready() -> void:
 	input_manager.brush_radius_changed.connect(func(_radius): queue_redraw())
 
 	# Instantiate UI CanvasLayer above the world
-	#var ui_root = ui_root_scene.instantiate()
-	#add_child(ui_root)
-	#UIManager.register_ui_root(ui_root)
-	#UIManager.connect_simulation(world)
-	#var test_scene = preload("res://demo/base_window.tscn")
-	#UIManager.open_window(test_scene)
+	var ui_root = ui_root_scene.instantiate()
+	add_child(ui_root)
+	UIManager.register_ui_root(ui_root)
+	UIManager.connect_simulation(world)
+
 	# Connect using the standard GDScript signal syntax
 	world.test_signal_event.connect(_on_custom_event)
 	

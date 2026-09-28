@@ -32,6 +32,7 @@ void GodotSimulation::trigger_test_signal(const godot::String &msg)
 
 void GodotSimulation::_process(double delta)
 {
+    world_grid_.tick(delta);
 }
 
 void GodotSimulation::createWorld(int world_x, int world_y, int g_size)

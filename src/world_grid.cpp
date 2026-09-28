@@ -409,6 +409,16 @@ void WorldGrid::fill_cell(int x, int y, uint16_t type_id, bool negativeFill)
     }
 }
 
+void WorldGrid::tick(double deltaTime)
+{
+    // could be parallel
+    for(Structure s : tick_structures_)
+    {
+        s.on_tick(deltaTime);
+    }
+
+}
+
 WorldGrid::WorldGrid()
 {
 }

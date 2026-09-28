@@ -11,6 +11,7 @@
 #include "marching_squares.h"
 #include <cstdint>
 #include "thread_pool.h"
+#include "structure.h"
 
 
 
@@ -29,6 +30,8 @@ class WorldGrid
         std::unique_ptr<ThreadPool> pool_;
 
         MarchingSquares marchingSquares = MarchingSquares();
+
+        std::vector<Structure> tick_structures_;
 
 
 
@@ -71,6 +74,8 @@ class WorldGrid
         WorldGrid& operator=(const WorldGrid&) = delete;
 
         ThreadPool& get_thread_pool() { return *pool_; }
+
+        void tick(double deltaTime); // Each frame update function
 
 
     protected:

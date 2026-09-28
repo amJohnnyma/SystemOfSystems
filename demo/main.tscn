@@ -1,16 +1,16 @@
-[gd_scene load_steps=4 format=3 uid="uid://0t66dyv1sh75"]
+[gd_scene format=3 uid="uid://0t66dyv1sh75"]
 
 [ext_resource type="Script" uid="uid://bamoj6w4o4kew" path="res://demo/main.gd" id="1_ke4q7"]
 [ext_resource type="Script" uid="uid://p22142dxqs1d" path="res://demo/fps.gd" id="2_ru5rj"]
 [ext_resource type="Script" uid="uid://5dody74e8ebm" path="res://demo/input_manager.gd" id="3_cvse4"]
 
-[node name="Main" type="Node2D"]
+[node name="Main" type="Node2D" unique_id=1802112415]
 script = ExtResource("1_ke4q7")
 
-[node name="GodotSimulation" type="GodotSimulation" parent="."]
+[node name="GodotSimulation" type="GodotSimulation" parent="." unique_id=1569538665]
 
-[node name="FPS" type="Node" parent="."]
+[node name="FPS" type="Node" parent="." unique_id=471670251]
 script = ExtResource("2_ru5rj")
 
-[node name="InputManager" type="Node" parent="."]
+[node name="InputManager" type="Node" parent="." unique_id=1536726]
 script = ExtResource("3_cvse4")
