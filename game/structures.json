@@ -1,0 +1,48 @@
+[
+  {
+    "structureID": 1,
+    "x_width": 2,
+    "y_width": 2,
+    "cantick": false,
+    "processing_time": 1.0,
+    "resource_input": [
+      {
+        "objectID": 101,
+        "count": 5
+      },
+      {
+        "objectID": 102,
+        "count": 2
+      }
+    ],
+    "resource_output": [
+      {
+        "objectID": 201,
+        "count": 1
+      }
+    ]
+  },
+  {
+    "structureID": 2,
+    "x_width": 4,
+    "y_width": 3,
+    "cantick": true,
+    "processing_time": 2.5,
+    "resource_input": [
+      {
+        "objectID": 103,
+        "count": 10
+      }
+    ],
+    "resource_output": [
+      {
+        "objectID": 202,
+        "count": 2
+      },
+      {
+        "objectID": 203,
+        "count": 1
+      }
+    ]
+  }
+]

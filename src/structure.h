@@ -21,9 +21,12 @@ struct struct_template
 
 };
 
+
+
 class Structure
 {
     private:
+        struct_template struct_;
     public:
         Structure(struct_template t);
         ~Structure();

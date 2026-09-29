@@ -27,6 +27,28 @@ uint8_t priority = JsonLoader::Instance().GetEntry<uint8_t>("materials.json", "m
 #include <unordered_map>
 #include "json.hpp"
 
+struct jResourceRequirement {
+    int objectID{0};
+    int count{0};
+
+    // Enables direct conversion from nlohmann::json to ResourceRequirement
+    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(jResourceRequirement, objectID, count)
+};
+
+struct jStructure {
+    int structureID{0};
+    int x_width{0};
+    int y_width{0};
+    bool cantick{false};
+    float processing_time{0.0f};
+    std::vector<jResourceRequirement> resource_input;
+    std::vector<jResourceRequirement> resource_output;
+
+    // Enables direct conversion from nlohmann::json to Structure
+    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(jStructure, 
+        structureID, x_width, y_width, cantick, processing_time, resource_input, resource_output)
+};
+
 class JsonLoader {
 public:
     static JsonLoader& Instance() {

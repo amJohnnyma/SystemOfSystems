@@ -12,6 +12,7 @@
 #include <cstdint>
 #include "thread_pool.h"
 #include "structure.h"
+#include <unordered_map>
 
 
 
@@ -32,6 +33,8 @@ class WorldGrid
         MarchingSquares marchingSquares = MarchingSquares();
 
         std::vector<Structure> tick_structures_;
+
+        std::unordered_map<int, Structure> structure_registry_;
 
 
 
@@ -76,6 +79,8 @@ class WorldGrid
         ThreadPool& get_thread_pool() { return *pool_; }
 
         void tick(double deltaTime); // Each frame update function
+                                     //
+        void placeStructure(int bl_x, int bl_y, uint32_t structureID);
 
 
     protected:

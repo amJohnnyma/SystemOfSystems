@@ -1,5 +1,7 @@
 #include "world_grid.h"
+#include "json_loader.h"
 #include "marching_squares.h"
+#include "structure.h"
 #include "thread_pool.h"
 #include "world_types.h"
 #include <cmath>
@@ -236,6 +238,19 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
     chunk_is_dirty_.assign(numChunks, 0);
     dirty_chunk_indices_.clear();
 
+    // Load JSON structures and any other future jsons
+    nlohmann::json& structure_data = JsonLoader::Instance().Get("../game/structures.json");
+    if(structure_data.is_array())
+    {
+        for (const auto& item : structure_data)
+        {
+            jStructure js = item.get<jStructure>();
+            struct_template s;
+            s.x_width = js.x_width;
+            structure_registry_[] = s;
+        }
+    }
+
 
     unsigned int num_threads = pool_->get_num_threads();
     size_t x_cells_per_thread = ((world_x_) + num_threads - 1) / num_threads;
@@ -417,6 +432,11 @@ void WorldGrid::tick(double deltaTime)
         s.on_tick(deltaTime);
     }
 
+}
+
+void WorldGrid::placeStructure(int bl_x, int bl_y, uint32_t structureID)
+{
+    // we should know the structure ID from somewhere?
 }
 
 WorldGrid::WorldGrid()
