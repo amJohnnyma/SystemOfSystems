@@ -34,6 +34,7 @@ class WorldGrid
 
         std::vector<Structure> tick_structures_;
 
+        uint32_t current_structure_unique_ID_ = 0;
         std::unordered_map<int, Structure> structure_registry_;
 
 
@@ -52,6 +53,12 @@ class WorldGrid
 
         void flag_dirty_chunk(int cx, int cy);
         std::array<int, 2> get_chunk_coords(int x, int y);
+        uint32_t getNextStructureUniqueID() 
+        {
+            uint32_t ID = current_structure_unique_ID_;
+            current_structure_unique_ID_ ++;
+            return ID;
+        }
 
 
         

@@ -247,7 +247,9 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
             jStructure js = item.get<jStructure>();
             struct_template s;
             s.x_width = js.x_width;
-            structure_registry_[] = s;
+            int unique_ID = getNextStructureUniqueID();
+            // This might be quite large? Terraria has 15 major structures, but many sub structures.
+            structure_registry_.insert({unique_ID, s});
         }
     }
 
