@@ -5,8 +5,6 @@
 #include <godot_cpp/variant/packed_vector2_array.hpp>
 #include <godot_cpp/variant/packed_int32_array.hpp>
 #include <godot_cpp/variant/packed_int32_array.hpp>
-#include <map>
-#include <array>
 
 using namespace godot;
 
@@ -37,8 +35,27 @@ void GodotSimulation::_process(double delta)
 
 void GodotSimulation::createWorld(int world_x, int world_y, int g_size)
 {
+
     world_grid_ = WorldGrid(); 
     world_grid_.init(world_x, world_y, g_size);
+
+    auto const& sr = world_grid_.getStructureRegistry();
+    godot::String dump = "--- Registry Dump ---\n";
+
+    
+    char buffer[256];
+    for (auto it = sr.begin(); it != sr.end(); ++it) {
+        auto const& st = it->second.getTemplate();
+        
+        snprintf(buffer, sizeof(buffer), "ID: %u | Size: %dx%d | Tick: %s | Time: %.1f\n",
+                 st.structureID, st.x_width, st.y_width, 
+                 (st.canTick ? "yes" : "no"), st.processing_time);
+                 
+        dump += godot::String(buffer);
+    }
+
+    trigger_test_signal(dump);
+
 }
 
 // this is slow so lets make sure there is a method for only modifying parts of the mesh

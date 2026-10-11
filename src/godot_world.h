@@ -9,6 +9,7 @@
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/array.hpp>
 #include <vector>
+
 #include "world_grid.h" // Includes pure C++ header
 
 namespace godot {

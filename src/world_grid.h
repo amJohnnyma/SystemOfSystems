@@ -89,6 +89,9 @@ class WorldGrid
                                      //
         void placeStructure(int bl_x, int bl_y, uint32_t structureID);
 
+        const std::unordered_map<int, Structure>& getStructureRegistry() const {return structure_registry_;}
+
+
 
     protected:
 };

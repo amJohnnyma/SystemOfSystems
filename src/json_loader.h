@@ -24,6 +24,7 @@ uint8_t priority = JsonLoader::Instance().GetEntry<uint8_t>("materials.json", "m
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include "json.hpp"
 
@@ -32,7 +33,7 @@ struct jResourceRequirement {
     int count{0};
 
     // Enables direct conversion from nlohmann::json to ResourceRequirement
-    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(jResourceRequirement, objectID, count)
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(jResourceRequirement, objectID, count)
 };
 
 struct jStructure {
@@ -45,7 +46,7 @@ struct jStructure {
     std::vector<jResourceRequirement> resource_output;
 
     // Enables direct conversion from nlohmann::json to Structure
-    NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(jStructure, 
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(jStructure, 
         structureID, x_width, y_width, cantick, processing_time, resource_input, resource_output)
 };
 
@@ -80,25 +81,32 @@ public:
         return true;
     }
 
-    nlohmann::json& Get(const std::string& filepath) {
+    nlohmann::json* GetPtr(const std::string& filepath) {
         auto it = cache_.find(filepath);
         if (it == cache_.end()) {
-            LoadFile(filepath);
-            return cache_[filepath];
+            if (!LoadFile(filepath)) return nullptr;
+            return &cache_[filepath];
         }
-        return it->second;
+        return &(it->second);
     }
+
+    nlohmann::json& Get(const std::string& filepath) {
+        nlohmann::json* ptr = GetPtr(filepath);
+        static nlohmann::json null_json = nullptr;
+        if (!ptr) return null_json;
+        return *ptr;
+    }
+
 
     template <typename T, typename... Args>
     T GetEntry(const std::string& filepath, Args&&... keys_or_indices) {
-        nlohmann::json& j = Get(filepath);
-        if (j.is_null()) return T{};
-        
-        nlohmann::json* target = &j;
-        bool success = AccessJsonPathPtr(target, std::forward<Args>(keys_or_indices)...);
-        
-        if (success && !target->is_null()) {
-            return target->template get<T>();
+        nlohmann::json* current = GetPtr(filepath);
+        if (!current || current->is_null()) return T{};
+
+        bool success = AccessJsonPathPtr(current, std::forward<Args>(keys_or_indices)...);
+        if (success && current && !current->is_null())
+        {
+            return current->template get<T>();
         }
         
         return T{};
@@ -123,15 +131,31 @@ private:
     // Safe pointer-based path traversal (no exceptions thrown)
     template <typename CurrentKey>
     bool AccessJsonPathPtr(nlohmann::json*& current, CurrentKey&& key) {
-        if (!current || !current->contains(key)) return false;
-        current = &((*current)[std::forward<CurrentKey>(key)]);
-        return true;
+        if (!current) return false;
+        
+        if (current->is_object() && current->contains(key))
+        {
+            current = &((*current)[std::forward<CurrentKey>(key)]);
+            return true;
+        }
+
+        if (current->is_array())
+        {
+            if constexpr (std::is_integral_v<std::decay_t<CurrentKey>>) {
+                size_t idx = static_cast<size_t>(key);
+                if (idx < current->size())
+                {
+                    current = &((*current)[idx]);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     template <typename CurrentKey, typename... RemainingKeys>
     bool AccessJsonPathPtr(nlohmann::json*& current, CurrentKey&& key, RemainingKeys&&... rest) {
-        if (!current || !current->contains(key)) return false;
-        current = &((*current)[std::forward<CurrentKey>(key)]);
+        if (!AccessJsonPathPtr(current, std::forward<CurrentKey>(key))) return false;
         return AccessJsonPathPtr(current, std::forward<RemainingKeys>(rest)...);
     }
 };

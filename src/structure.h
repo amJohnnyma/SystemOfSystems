@@ -4,6 +4,13 @@
 #include <cstdint>
 #include <memory>
 #include <utility>
+#include <vector>
+
+struct resource_requirement
+{
+    uint32_t rID = 0;
+    int count = 0;
+};
 
 struct struct_template
 {
@@ -16,8 +23,8 @@ struct struct_template
     uint32_t instanceID;
 
     float processing_time = 1.f; // in seconds
-    float resource_input = 10.f; //data structure TBD
-    float resource_output = 20.f; // data structure TBD
+    std::vector<resource_requirement> resource_input = {}; 
+    std::vector<resource_requirement> resource_output = {};                                      
 
 };
 
@@ -28,9 +35,10 @@ class Structure
     private:
         struct_template struct_;
     public:
-        Structure(struct_template t);
-        ~Structure();
-        void on_tick(double deltaTime); // might want to return something
+        Structure(struct_template t) : struct_(std::move(t)) {}
+        ~Structure() = default;
+        void on_tick(double deltaTime) {} // might want to return something
+        const struct_template& getTemplate() const {return struct_;}
 };
 
 

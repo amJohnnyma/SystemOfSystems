@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <memory>
+#include <utility>
 
 Cell WorldGrid::get_cell(int x, int y) const
 {
@@ -239,7 +240,7 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
     dirty_chunk_indices_.clear();
 
     // Load JSON structures and any other future jsons
-    nlohmann::json& structure_data = JsonLoader::Instance().Get("../game/structures.json");
+    nlohmann::json& structure_data = JsonLoader::Instance().Get("game/structures.json");
     if(structure_data.is_array())
     {
         for (const auto& item : structure_data)
@@ -247,9 +248,30 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
             jStructure js = item.get<jStructure>();
             struct_template s;
             s.x_width = js.x_width;
-            int unique_ID = getNextStructureUniqueID();
-            // This might be quite large? Terraria has 15 major structures, but many sub structures.
-            structure_registry_.insert({unique_ID, s});
+            s.y_width = js.y_width;
+            s.canTick = js.cantick;
+            s.origin = std::make_pair(0, 0);
+            s.processing_time = js.processing_time;
+            for (const auto& ri : js.resource_input)
+            {
+                resource_requirement r;
+                r.rID = ri.objectID;
+                r.count = ri.count;
+                s.resource_input.push_back(r);
+            }
+
+            for (const auto& ro : js.resource_output)
+            {
+
+                resource_requirement r;
+                r.rID = ro.objectID;
+                r.count = ro.count;
+                s.resource_output.push_back(r);
+            }
+
+
+            Structure structure = Structure(s);
+            structure_registry_.insert({js.structureID, structure});
         }
     }
 
@@ -438,7 +460,7 @@ void WorldGrid::tick(double deltaTime)
 
 void WorldGrid::placeStructure(int bl_x, int bl_y, uint32_t structureID)
 {
-    // we should know the structure ID from somewhere?
+    // we should know the structure ID from somewhere? -> JSON
 }
 
 WorldGrid::WorldGrid()
