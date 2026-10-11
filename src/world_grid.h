@@ -87,7 +87,7 @@ class WorldGrid
 
         void tick(double deltaTime); // Each frame update function
                                      //
-        void placeStructure(int bl_x, int bl_y, uint32_t structureID);
+        void placeStructure(int bl_x, int bl_y, int structureID);
 
         const std::unordered_map<int, Structure>& getStructureRegistry() const {return structure_registry_;}
 

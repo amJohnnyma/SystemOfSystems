@@ -14,6 +14,9 @@ var cell_size: float = 64.0
 var world_width: int = 6400
 var world_height: int = 1800
 
+var structure_registry: Dictionary = {}
+var selected_structure: Dictionary = {}
+
 
 var type_colors: Dictionary = {
 	0: Color.TRANSPARENT,
@@ -39,12 +42,15 @@ func _ready() -> void:
 	input_manager.terrain_modified.connect(update_mesh_display)
 	input_manager.cursor_moved.connect(func(_pos): queue_redraw())
 	input_manager.brush_radius_changed.connect(func(_radius): queue_redraw())
+	input_manager.building_placed.connect(_place_selected_building)
+	input_manager.building_cancelled.connect(_cancel_building)
 
 	# Instantiate UI CanvasLayer above the world
 	var ui_root = ui_root_scene.instantiate()
 	add_child(ui_root)
 	UIManager.register_ui_root(ui_root)
 	UIManager.connect_simulation(world)
+	UIManager.slot_action_requested.connect(_on_slot_action_requested)
 
 	# Connect using the standard GDScript signal syntax
 	world.test_signal_event.connect(_on_custom_event)
@@ -54,6 +60,8 @@ func _ready() -> void:
 	
 		# Initialize C++ world grid (world_x, world_y, g_size)
 	world.createWorld(world_width, world_height, int(cell_size))
+	structure_registry = world.getStructureRegistry()
+	print("Loaded structures into Godot: ", structure_registry)
 	
 	# Populate all chunk nodes initially
 	_setup_full_mesh_display()
@@ -62,7 +70,41 @@ func _ready() -> void:
 func _on_custom_event(message: String) -> void:
 	print("Received signal from C++: - ", message)
 
+func _on_slot_action_requested(slot_number: int) -> void:
+	print("Main script heard that slot was clicked: ", slot_number)
 
+	if slot_number == 1:
+		UIManager.close_top_window()
+		selected_structure = structure_registry.get(1, {})
+		input_manager.set_input_mode(3)
+		pass
+
+func _draw_building_overlay():
+	# For now just a box with the dimensions
+	var color := Color(0.325, 0.282, 0.29, 1.0)
+	var w = selected_structure.get("width", 1)
+	var h = selected_structure.get("height", 1)
+
+	var size = Vector2(w, -h) * MESH_SCALE.x 
+
+	var pos = input_manager.current_mouse_local * MESH_SCALE.x
+
+	var rect = Rect2(pos, size)
+
+	draw_rect(rect, color, false, 0.5)
+
+func _place_selected_building():
+	print("Placing: ", selected_structure)
+	var mouse_pos := input_manager.current_mouse_local * MESH_SCALE
+	var structureID = selected_structure.get("id")
+	world.placeStructure(mouse_pos.x, mouse_pos.y, structureID)
+	selected_structure = {}
+	input_manager.set_input_mode(0)
+
+func _cancel_building():
+	print("Building cancelled")
+	selected_structure = {}
+	input_manager.set_input_mode(0)
 
 func _draw() -> void:
 	var grid_color := Color(1, 1, 1, 0.15)
@@ -84,6 +126,9 @@ func _draw() -> void:
 	var circle_center := input_manager.current_mouse_local * MESH_SCALE
 	var pixel_radius := input_manager.brush_radius_cells * MESH_SCALE.x
 	draw_arc(circle_center, pixel_radius, 0, TAU, 32, Color(1, 1, 0, 0.8), 0.5)
+	
+	if not selected_structure.is_empty():
+		_draw_building_overlay()
 
 # Full rebuild (called once at start)
 func _setup_full_mesh_display() -> void:

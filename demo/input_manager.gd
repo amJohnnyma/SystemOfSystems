@@ -4,7 +4,8 @@ extends Node
 enum InputMode {
 	FULL_GAMEPLAY,  # Terraforming, camera pan, and tool shortcuts
 	CAMERA_ONLY,    # Windows like Inventory: camera movement allowed, terraforming blocked
-	UI_ONLY         # Modal/Pause menus: all world interactions frozen
+	UI_ONLY,         # Modal/Pause menus: all world interactions frozen
+	BUILDING_PLACEMENT
 }
 
 var current_mode: InputMode = InputMode.FULL_GAMEPLAY
@@ -13,6 +14,8 @@ var current_mode: InputMode = InputMode.FULL_GAMEPLAY
 signal terrain_modified()
 signal cursor_moved(local_cell_pos: Vector2)
 signal brush_radius_changed(new_radius: float)
+signal building_placed()
+signal building_cancelled()
 
 # Global toggle
 var is_input_enabled: bool = true
@@ -74,7 +77,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_zoom_camera(1.0 - zoom_factor)
 			return
-
+	
 	# Terraforming and key actions are ONLY allowed during FULL_GAMEPLAY
 	if current_mode == InputMode.FULL_GAMEPLAY:
 		if event is InputEventMouseButton:
@@ -101,6 +104,19 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif event.keycode == KEY_2:
 				brush_radius_cells += 0.5
 				brush_radius_changed.emit(brush_radius_cells)
+	if current_mode == InputMode.BUILDING_PLACEMENT:
+		if event is InputEventMouseButton:
+			if event.button_index == MOUSE_BUTTON_LEFT:
+				is_left_down = event.pressed
+
+			if event.pressed and (is_left_down):
+				_place_buiding()
+		elif event is InputEventKey and event.pressed:
+			if event.keycode == KEY_ESCAPE:
+				_cancel_building()
+		return
+				
+
 
 func _input(event: InputEvent) -> void:
 	if not is_input_enabled or not camera or current_mode == InputMode.UI_ONLY:
@@ -126,6 +142,17 @@ func _apply_brush() -> void:
 
 	terrain_modified.emit()
 
+func _place_buiding():
+	if not world:
+		return
+
+	building_placed.emit()
+	
+func _cancel_building():
+	if not world:
+		return
+		
+	building_cancelled.emit()
 func _apply_fill(x: int, y: int, type_id: int, negative_fill: bool) -> void:
 	if not world:
 		return
@@ -146,3 +173,6 @@ func _zoom_camera(factor: float) -> void:
 	var mouse_world_after := camera.get_global_mouse_position()
 
 	camera.position += (mouse_world_before - mouse_world_after)
+
+func set_input_mode(mode : InputMode):
+	current_mode = mode

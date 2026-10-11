@@ -4,6 +4,8 @@ signal hud_updated(data: Dictionary)
 signal window_opened(win: Control)
 signal window_closed()
 
+signal slot_action_requested(slot_number : int)
+
 var window_stack: Array[Control] = []
 
 var window_container: Control

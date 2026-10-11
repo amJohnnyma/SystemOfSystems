@@ -247,6 +247,7 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
         {
             jStructure js = item.get<jStructure>();
             struct_template s;
+            s.structureID = js.structureID;
             s.x_width = js.x_width;
             s.y_width = js.y_width;
             s.canTick = js.cantick;
@@ -458,9 +459,10 @@ void WorldGrid::tick(double deltaTime)
 
 }
 
-void WorldGrid::placeStructure(int bl_x, int bl_y, uint32_t structureID)
+void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
 {
-    // we should know the structure ID from somewhere? -> JSON
+    Structure s = structure_registry_.at(structureID);
+    // now the placement stuff
 }
 
 WorldGrid::WorldGrid()

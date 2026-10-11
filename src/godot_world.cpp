@@ -14,6 +14,9 @@ void GodotSimulation::_bind_methods() {
     ClassDB::bind_method(D_METHOD("setDensity", "x", "y", "radius", "strength", "type_id"), &GodotSimulation::setDensity);
     ClassDB::bind_method(D_METHOD("updateMeshData"), &GodotSimulation::updateMeshData);
     ClassDB::bind_method(D_METHOD("fillCell", "x", "y", "type_id", "negativeFill"), &GodotSimulation::fillCell);
+    ClassDB::bind_method(D_METHOD("getStructureRegistry"), &GodotSimulation::getStructureRegistry);
+    ClassDB::bind_method(D_METHOD("placeStructure", "x", "y", "structureID"), &GodotSimulation::placeStructure);
+
 
 
     ClassDB::bind_method(D_METHOD("trigger_test_signal", "message"), &GodotSimulation::trigger_test_signal);
@@ -56,6 +59,27 @@ void GodotSimulation::createWorld(int world_x, int world_y, int g_size)
 
     trigger_test_signal(dump);
 
+}
+
+godot::Dictionary GodotSimulation::getStructureRegistry() const {
+    godot::Dictionary registry_dict;
+    auto const& sr = world_grid_.getStructureRegistry();
+
+    for (auto it = sr.begin(); it != sr.end(); ++it) {
+        auto const& st = it->second.getTemplate();
+        
+        godot::Dictionary st_dict;
+        st_dict["id"] = st.structureID;
+        st_dict["width"] = st.x_width;
+        st_dict["height"] = st.y_width;
+        st_dict["can_tick"] = st.canTick;
+        st_dict["processing_time"] = st.processing_time;
+
+        // Use the structure ID as the dictionary key
+        registry_dict[st.structureID] = st_dict;
+    }
+
+    return registry_dict;
 }
 
 // this is slow so lets make sure there is a method for only modifying parts of the mesh
@@ -144,4 +168,10 @@ void GodotSimulation::setDensity(int x, int y, float radius, float strength, uin
 void GodotSimulation::fillCell(int x, int y, uint16_t type_id, bool negativeFill)
 {
     world_grid_.fill_cell(x,y, type_id, negativeFill);
+}
+
+
+void GodotSimulation::placeStructure(int x, int y, int structureID)
+{
+    world_grid_.placeStructure(x,y,structureID);
 }
