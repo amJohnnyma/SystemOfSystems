@@ -92,6 +92,8 @@ Vertex GetCellVertex(int id, float x, float y,
 
         MeshData GenerateMesh(const std::vector<Cell>& world, float threshold, int world_x, int world_y, int cx, int cy, int chunk_size);
 
+        MeshData generate_blocky_mesh(const std::vector<Cell>& world, int world_x, int world_y, int cx, int cy, int chunk_size);
+
 
 
 };

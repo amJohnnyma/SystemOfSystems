@@ -24,6 +24,12 @@ struct MeshData
     std::vector<uint32_t> indices;
 };
 
+struct ChunkMeshData
+{
+    MeshData terrain_mesh;
+    MeshData structure_mesh;
+};
+
 
 
 struct LineSegment {Vertex p1; Vertex p2;};

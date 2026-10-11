@@ -157,5 +157,52 @@ MeshData MarchingSquares::GenerateMesh(const std::vector<Cell>& world, float thr
     return mesh;
 }
 
+MeshData MarchingSquares::generate_blocky_mesh(const std::vector<Cell>& world, int world_x, int world_y, int cx, int cy, int chunk_size) {
+    MeshData mesh;
+    int start_x = cx * chunk_size;
+    int start_y = cy * chunk_size;
+    int end_x = std::min(start_x + chunk_size, world_x);
+    int end_y = std::min(start_y + chunk_size, world_y);
+
+    for (int iy = start_y; iy < end_y; iy++) {
+        for (int ix = start_x; ix < end_x; ix++) {
+            size_t idx = static_cast<size_t>(iy) * world_x + ix;
+            const Cell& cell = world[idx];
+
+            if (cell.type_id == 0) continue; // Skip air
+
+            // Define a full 1x1 quad for this cell
+            float x = static_cast<float>(ix);
+            float y = static_cast<float>(iy);
+
+            Vertex v0 = {Vec2{x, y}, Vec2{0,0}, cell.type_id};         // BL
+            Vertex v1 = {Vec2{x + 1.0f, y}, Vec2{1,0}, cell.type_id};     // BR
+            Vertex v2 = {Vec2{x + 1.0f, y + 1.0f}, Vec2{1,1}, cell.type_id}; // TR
+            Vertex v3 = {Vec2{x, y + 1.0f}, Vec2{0,1}, cell.type_id};     // TL
+
+            uint32_t base_index = static_cast<uint32_t>(mesh.vertices.size());
+            
+            // Push two triangles to form a full square
+            mesh.vertices.push_back(v0);
+            mesh.vertices.push_back(v1);
+            mesh.vertices.push_back(v2);
+            
+            mesh.vertices.push_back(v0);
+            mesh.vertices.push_back(v2);
+            mesh.vertices.push_back(v3);
+
+// Add corresponding indices for the 6 pushed vertices
+            mesh.indices.push_back(base_index);     // Triangle 1: v0
+            mesh.indices.push_back(base_index + 1); // Triangle 1: v1
+            mesh.indices.push_back(base_index + 2); // Triangle 1: v2
+
+            mesh.indices.push_back(base_index + 3); // Triangle 2: v0
+            mesh.indices.push_back(base_index + 4); // Triangle 2: v2
+            mesh.indices.push_back(base_index + 5); // Triangle 2: v3
+
+        }
+    }
+    return mesh;
+}
 
 MarchingSquares::~MarchingSquares() {}

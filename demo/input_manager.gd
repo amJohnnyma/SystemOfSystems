@@ -44,6 +44,12 @@ func setup(p_world: GodotSimulation, p_camera: Camera2D, p_mesh_scale: Vector2) 
 	camera = p_camera
 	mesh_scale = p_mesh_scale
 
+func getCurMouseX():
+	return current_mouse_local.x
+
+func getCurMouseY():
+	return current_mouse_local.y
+
 func _process(delta: float) -> void:
 	if not is_input_enabled or not camera:
 		return
@@ -58,7 +64,7 @@ func _process(delta: float) -> void:
 	# Continuous painting is strictly restricted to FULL_GAMEPLAY mode
 	if current_mode == InputMode.FULL_GAMEPLAY:
 		if (is_left_down or is_right_down) and paint_cooldown <= 0.0:
-			_apply_brush()
+			#_apply_brush()
 			paint_cooldown = PAINT_INTERVAL
 	else:
 		# Reset painting click states if input mode changed mid-click
@@ -87,7 +93,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				is_right_down = event.pressed
 
 			if event.pressed and (is_left_down or is_right_down):
-				_apply_brush()
+				#_apply_brush()
 				paint_cooldown = PAINT_INTERVAL
 
 		elif event is InputEventKey and event.pressed:
@@ -104,6 +110,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif event.keycode == KEY_2:
 				brush_radius_cells += 0.5
 				brush_radius_changed.emit(brush_radius_cells)
+				
 	if current_mode == InputMode.BUILDING_PLACEMENT:
 		if event is InputEventMouseButton:
 			if event.button_index == MOUSE_BUTTON_LEFT:
@@ -157,6 +164,7 @@ func _apply_fill(x: int, y: int, type_id: int, negative_fill: bool) -> void:
 	if not world:
 		return
 	world.fillCell(x, y, type_id, negative_fill)
+	#world.placeStructure(x,y,1)
 	terrain_modified.emit()
 
 func _zoom_camera(factor: float) -> void:

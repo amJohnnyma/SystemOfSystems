@@ -27,11 +27,28 @@ bool WorldGrid::set_cell(int x, int y, uint16_t type_id, uint8_t density, uint8_
 
     if(x >= 0 && x < world_x_ && y >= 0 && y < world_y_)
     {
-        size_t index = static_cast<size_t>(y) * world_x_ + x;
-        Cell& c = world_cells_[index];
-        c.type_id = type_id;
-        c.density = density;
-        c.state_flags = state_flags;
+        int coords[4][2]
+        {
+        {x, y},         // Bottom-Left
+        {x + 1, y},     // Bottom-Right
+        {x + 1, y + 1}, // Top-Right
+        {x, y + 1}      // Top-Left
+        };
+
+        for (auto& coord : coords) {
+            size_t index = static_cast<size_t>(coord[1]) * world_x_ + coord[0];
+            Cell& c = world_cells_[index];
+            c.type_id = type_id;
+            c.density = density;
+            c.state_flags = state_flags;
+
+            int chunk_x = coord[0] / chunk_size_;
+            int chunk_y = coord[1] / chunk_size_;
+            
+            // Mark the corresponding chunks as dirty so they re-render
+            flag_dirty_chunk(chunk_x, chunk_y);
+        }
+
 
         // mark dirty chunk
         return true;
@@ -228,8 +245,9 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
     num_chunk_x = world_x_ / chunk_size_;
     num_chunk_y = world_y_ / chunk_size_;
     world_cells_.resize(world_x_ * world_y_);
-    float base_height = world_y_ * 0.45f;       // Surface line (~45% down the map)
-    float height_amplitude = world_y_ * 0.25f; // Hill variance height
+    placed_cells_.resize(world_x_ * world_y_);
+    float base_height = world_y_ * 0.6f;       // Surface line (~45% down the map)
+    float height_amplitude = world_y_ * 0.01f; // Hill variance height
                                                // PARALLEL TIME !!!
 
     pool_ = std::make_unique<ThreadPool>();
@@ -360,14 +378,14 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
 
 }
 
-std::vector<std::pair<std::array<int, 2>, MeshData>> WorldGrid::updateMesh()
+std::vector<std::pair<std::array<int, 2>,ChunkMeshData>> WorldGrid::updateMesh()
 {
     if (dirty_chunk_indices_.empty()) return {};
 
 
     size_t total_dirty = dirty_chunk_indices_.size();
 
-    using ChunkMeshResult = std::pair<std::array<int, 2>, MeshData>;
+    using ChunkMeshResult = std::pair<std::array<int, 2>, ChunkMeshData>;
     std::vector<ChunkMeshResult> local_outputs(total_dirty);
 
     unsigned int num_threads = std::min(
@@ -397,9 +415,11 @@ std::vector<std::pair<std::array<int, 2>, MeshData>> WorldGrid::updateMesh()
                 int cx = chunk_idx % num_chunk_x;
                 int cy = chunk_idx / num_chunk_x;
 
-                MeshData mesh_data = local_marching_squares.GenerateMesh(world_cells_, 128.f, world_x_, world_y_, cx, cy, chunk_size_);
+                MeshData terrain_mesh= local_marching_squares.GenerateMesh(world_cells_, 128.f, world_x_, world_y_, cx, cy, chunk_size_);
+                MeshData structure_mesh = local_marching_squares.generate_blocky_mesh(placed_cells_, world_x_, world_y_, cx, cy, chunk_size_);
 
-                local_outputs[i] = std::make_pair(std::array<int, 2>{cx, cy}, std::move(mesh_data));
+                ChunkMeshData chunk_data{std::move(terrain_mesh), std::move(structure_mesh)};
+                local_outputs[i] = std::make_pair(std::array<int, 2>{cx, cy}, std::move(chunk_data));
 
                 }
                 }));
@@ -461,8 +481,36 @@ void WorldGrid::tick(double deltaTime)
 
 void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
 {
-    Structure s = structure_registry_.at(structureID);
-    // now the placement stuff
+    if (structure_registry_.find(structureID) == structure_registry_.end()) return;
+    const auto& st = structure_registry_.at(structureID).getTemplate();
+
+    int w = st.x_width;
+    int h = st.y_width;
+
+    for (int dy = 0; dy < h; ++dy)
+    {
+        for (int dx = 0; dx < w; ++dx)
+        {
+            int x = bl_x + dx;
+            int y = bl_y - dy;
+
+            if (x >= 0 && x < world_x_ && y >= 0 && y < world_y_)
+            {
+                size_t index = static_cast<size_t>(y) * world_x_ + x;
+
+                placed_cells_[index].type_id = static_cast<uint16_t>(structureID);
+                placed_cells_[index].density = 255.0f;
+                placed_cells_[index].state_flags = 0;
+
+                world_cells_[index].type_id = 0;
+                world_cells_[index].density = 0.0f;
+
+                int cx = x / chunk_size_;
+                int cy = y / chunk_size_;
+                flag_dirty_chunk(cx, cy);
+            }
+        }
+    }
 }
 
 WorldGrid::WorldGrid()

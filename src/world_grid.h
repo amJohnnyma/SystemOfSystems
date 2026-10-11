@@ -25,7 +25,8 @@ class WorldGrid
         int num_chunk_x = 0;
         int num_chunk_y = 0;
         std::vector<Cell> world_cells_;
-        std::vector<MeshData> mesh;
+        std::vector<Cell> placed_cells_;
+        std::vector<ChunkMeshData> mesh;
         std::vector<int> dirty_chunk_indices_;
         std::vector<uint8_t> chunk_is_dirty_;
         std::unique_ptr<ThreadPool> pool_;
@@ -67,8 +68,8 @@ class WorldGrid
         WorldGrid();
         ~WorldGrid();
 
-        const std::vector<MeshData>& getMeshData() const {return mesh;}
-        std::vector<std::pair<std::array<int, 2>, MeshData>> updateMesh();
+        const std::vector<ChunkMeshData>& getMeshData() const {return mesh;}
+        std::vector<std::pair<std::array<int, 2>, ChunkMeshData>> updateMesh();
 
         void set_density(int x, int y, float radius, float strength, uint16_t type_id);
         void fill_cell(int x, int y, uint16_t type_id, bool negativeFill = false);

@@ -95,11 +95,13 @@ func _draw_building_overlay():
 
 func _place_selected_building():
 	print("Placing: ", selected_structure)
-	var mouse_pos := input_manager.current_mouse_local * MESH_SCALE
+	var cell_x := int(input_manager.getCurMouseX())
+	var cell_y := int(input_manager.getCurMouseY())
 	var structureID = selected_structure.get("id")
-	world.placeStructure(mouse_pos.x, mouse_pos.y, structureID)
+	world.placeStructure(cell_x, cell_y, 1)
 	selected_structure = {}
 	input_manager.set_input_mode(0)
+	update_mesh_display()
 
 func _cancel_building():
 	print("Building cancelled")
@@ -148,38 +150,58 @@ func update_mesh_display() -> void:
 
 # Internal helper to construct/update a single chunk's MeshInstance2D
 func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
-	var vertices: PackedVector2Array = chunk_data.get("vertices", PackedVector2Array())
-	var indices: PackedInt32Array = chunk_data.get("indices", PackedInt32Array())
-	var type_ids: PackedInt32Array = chunk_data.get("type_ids", PackedInt32Array())
-
-	# Fetch existing node or instantiate a new chunk node
 	var chunk_node: MeshInstance2D = chunk_nodes.get(chunk_pos, null)
 	if chunk_node == null:
 		chunk_node = MeshInstance2D.new()
 		chunk_node.scale = MESH_SCALE
 		chunk_node.show_behind_parent = true
-		chunk_node.material = shader_mat
 		add_child(chunk_node)
 		chunk_nodes[chunk_pos] = chunk_node
 
-	# If the mesh chunk is empty, clear the node mesh and return
-	if vertices.is_empty() or indices.is_empty():
-		chunk_node.mesh = null
-		return
-
-	# Build colors array
-	var colors := PackedColorArray()
-	colors.resize(type_ids.size())
-	for i in range(type_ids.size()):
-		colors[i] = type_colors.get(type_ids[i], Color.WHITE)
-
-	# Assign to ArrayMesh
-	var surface_array: Array = []
-	surface_array.resize(Mesh.ARRAY_MAX)
-	surface_array[Mesh.ARRAY_VERTEX] = vertices
-	surface_array[Mesh.ARRAY_INDEX] = indices
-	surface_array[Mesh.ARRAY_COLOR] = colors
+	var terrain_dict: Dictionary = chunk_data.get("terrain", {})
+	var struct_dict: Dictionary = chunk_data.get("structure", {})
 
 	var array_mesh := ArrayMesh.new()
-	array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
-	chunk_node.mesh = array_mesh
+
+	# --- Surface 0: Smooth Terrain ---
+	var t_verts: PackedVector2Array = terrain_dict.get("vertices", PackedVector2Array())
+	var t_inds: PackedInt32Array = terrain_dict.get("indices", PackedInt32Array())
+	var t_types: PackedInt32Array = terrain_dict.get("type_ids", PackedInt32Array())
+
+	if not t_verts.is_empty() and not t_inds.is_empty():
+		var t_colors := PackedColorArray()
+		t_colors.resize(t_types.size())
+		for i in range(t_types.size()):
+			t_colors[i] = type_colors.get(t_types[i], Color.WHITE)
+
+		var t_array: Array = []
+		t_array.resize(Mesh.ARRAY_MAX)
+		t_array[Mesh.ARRAY_VERTEX] = t_verts
+		t_array[Mesh.ARRAY_INDEX] = t_inds
+		t_array[Mesh.ARRAY_COLOR] = t_colors
+		
+		array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, t_array)
+		# Assign your marching squares shader to surface 0
+		chunk_node.material = shader_mat 
+
+	# --- Surface 1: Crisp Structures ---
+	var s_verts: PackedVector2Array = struct_dict.get("vertices", PackedVector2Array())
+	var s_inds: PackedInt32Array = struct_dict.get("indices", PackedInt32Array())
+	var s_types: PackedInt32Array = struct_dict.get("type_ids", PackedInt32Array())
+
+	if not s_verts.is_empty() and not s_inds.is_empty():
+		var s_colors := PackedColorArray()
+		s_colors.resize(s_types.size())
+		for i in range(s_types.size()):
+			s_colors[i] = type_colors.get(s_types[i], Color.WHITE)
+
+		var s_array: Array = []
+		s_array.resize(Mesh.ARRAY_MAX)
+		s_array[Mesh.ARRAY_VERTEX] = s_verts
+		s_array[Mesh.ARRAY_INDEX] = s_inds
+		s_array[Mesh.ARRAY_COLOR] = s_colors
+		
+		array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, s_array)
+		# Surface 1 will use default blocky rendering (no shader or a crisp building material)
+
+	chunk_node.mesh = array_mesh if array_mesh.get_surface_count() > 0 else null

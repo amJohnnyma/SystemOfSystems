@@ -82,42 +82,43 @@ godot::Dictionary GodotSimulation::getStructureRegistry() const {
     return registry_dict;
 }
 
-// this is slow so lets make sure there is a method for only modifying parts of the mesh
+auto build_mesh_dict = [](const MeshData& mesh_data) -> Dictionary {
+    PackedVector2Array vertices;
+    PackedInt32Array indices;
+    PackedInt32Array type_ids;
+
+    vertices.resize(static_cast<int64_t>(mesh_data.vertices.size()));
+    indices.resize(static_cast<int64_t>(mesh_data.indices.size()));
+    type_ids.resize(static_cast<int64_t>(mesh_data.vertices.size()));
+
+    for (size_t i = 0; i < mesh_data.vertices.size(); ++i) {
+        vertices[static_cast<int32_t>(i)] = Vector2(mesh_data.vertices[i].position.x, mesh_data.vertices[i].position.y);
+        type_ids[static_cast<int32_t>(i)] = static_cast<int32_t>(mesh_data.vertices[i].type_id);
+        indices[static_cast<int32_t>(i)] = static_cast<int32_t>(mesh_data.indices[i]);
+    }
+
+    Dictionary dict;
+    dict["vertices"] = vertices;
+    dict["indices"] = indices;
+    dict["type_ids"] = type_ids;
+    return dict;
+};
+
 Dictionary GodotSimulation::getMeshData()
 {
     Dictionary chunk_map;
     const auto& all_native_meshes = world_grid_.getMeshData();
     int num_chunk_x = world_grid_.get_num_chunk_x();
 
-    // Helper lambda to format a single MeshData into Godot arrays
-    auto build_chunk_dict = [](const MeshData& mesh_data) -> Dictionary {
-        PackedVector2Array vertices;
-        PackedInt32Array indices;
-        PackedInt32Array type_ids;
-
-        vertices.resize(static_cast<int64_t>(mesh_data.vertices.size()));
-        indices.resize(static_cast<int64_t>(mesh_data.indices.size()));
-        type_ids.resize(static_cast<int64_t>(mesh_data.vertices.size()));
-
-        for (size_t i = 0; i < mesh_data.vertices.size(); i ++) {
-            vertices[static_cast<int32_t>(i)] = Vector2(mesh_data.vertices[i].position.x, mesh_data.vertices[i].position.y);
-            type_ids[static_cast<int32_t>(i)] = static_cast<int32_t>(mesh_data.vertices[i].type_id);
-
-            indices[static_cast<int32_t>(i)] = static_cast<int32_t>(mesh_data.indices[i]);
-            i++;
-        }
-
-
-        Dictionary dict;
-        dict["vertices"] = vertices;
-        dict["indices"] = indices;
-        dict["type_ids"] = type_ids;
-        return dict;
-    };
-
     for (size_t chunk_idx = 0; chunk_idx < all_native_meshes.size(); chunk_idx++) {
         Vector2i key(static_cast<int>(chunk_idx) % num_chunk_x, static_cast<int>(chunk_idx) / num_chunk_x);
-        chunk_map[key] = build_chunk_dict(all_native_meshes[chunk_idx]);
+        
+        const ChunkMeshData& chunk_data = all_native_meshes[chunk_idx];
+        Dictionary chunk_dict;
+        chunk_dict["terrain"] = build_mesh_dict(chunk_data.terrain_mesh);
+        chunk_dict["structure"] = build_mesh_dict(chunk_data.structure_mesh);
+
+        chunk_map[key] = chunk_dict;
     }
 
     return chunk_map;
@@ -130,29 +131,12 @@ Array GodotSimulation::updateMeshData()
 
     for (const auto& item : updated_native_meshes) {
         const std::array<int, 2>& coords = item.first;
-        const MeshData& mesh_data = item.second;
-
-        PackedVector2Array vertices;
-        PackedInt32Array indices;
-        PackedInt32Array type_ids;
-
-        vertices.resize(static_cast<int64_t>(mesh_data.vertices.size()));
-        indices.resize(static_cast<int64_t>(mesh_data.indices.size()));
-        type_ids.resize(static_cast<int64_t>(mesh_data.vertices.size()));
-
-        for (size_t i = 0; i < mesh_data.vertices.size(); ++i) {
-            vertices[static_cast<int32_t>(i)] = Vector2(mesh_data.vertices[i].position.x, mesh_data.vertices[i].position.y);
-            type_ids[static_cast<int32_t>(i)] = static_cast<int32_t>(mesh_data.vertices[i].type_id);
-
-            indices[static_cast<int32_t>(i)] = static_cast<int32_t>(mesh_data.indices[i]);
-        }
-
+        const ChunkMeshData& chunk_data = item.second;
 
         Dictionary chunk_dict;
         chunk_dict["chunk_pos"] = Vector2i(coords[0], coords[1]);
-        chunk_dict["vertices"] = vertices;
-        chunk_dict["indices"] = indices;
-        chunk_dict["type_ids"] = type_ids;
+        chunk_dict["terrain"] = build_mesh_dict(chunk_data.terrain_mesh);
+        chunk_dict["structure"] = build_mesh_dict(chunk_data.structure_mesh);
 
         updated_chunks.append(chunk_dict);
     }
