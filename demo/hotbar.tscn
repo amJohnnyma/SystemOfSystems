@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://clbp14btq3r2k"]
+
+[ext_resource type="Script" uid="uid://bs5pu3nex6yl3" path="res://demo/hotbar.gd" id="1_gvd75"]
+
+[node name="Hotbar" type="MarginContainer" unique_id=1653636934]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -40.0
+offset_right = 20.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("1_gvd75")
+
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=1148150014]
+layout_mode = 2
+
+[node name="HotbarGrid" type="HBoxContainer" parent="PanelContainer" unique_id=193657247]
+unique_name_in_owner = true
+layout_mode = 2

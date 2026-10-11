@@ -1,0 +1,63 @@
+Your instinct is entirely correct. Iterating through a vector of structures every time a player right-clicks a chest would scale poorly as the base grows.
+
+Your proposed solution—**having the grid cell store an "address" (or unique ID) that points directly to the entity**—is the industry-standard way to solve this in grid-based games (like *Factorio* or *RimWorld*). It turns an $O(N)$ slow search into an instant $O(1)$ lookup.
+
+Here is how you can structure this cleanly to get lightning-fast interaction lookups *and* efficient processing loops:
+
+---
+
+### 1. The Spatial Lookup (The Cell "Address")
+
+Instead of just storing a generic `type_id` in your `placed_cells_` grid, your grid can store a reference key:
+
+```cpp
+struct PlacedCell {
+    uint16_t structure_id = 0;   // What is it? (e.g., Furnace, Chest)
+    uint32_t entity_unique_id = 0; // The "address" pointing to the entity instance
+};
+
+```
+
+* **When you RMB a cell:** You take the mouse coordinates, find the grid index, read the `entity_unique_id`, and look up that specific entity instantly. No loops required.
+
+### 2. Entity Storage: Central Registry + Processing Lists
+
+Instead of managing four entirely separate heavy vectors that you have to sync manually, use a **Central Registry** combined with **lightweight capability lists**:
+
+* **The Master Registry:** A hash map storing *all* active structure entities by their unique ID. This is where the actual data (inventories, timers, recipes) lives.
+```cpp
+std::unordered_map<uint32_t, StructureEntity> entity_registry_;
+
+```
+
+
+* **The Tick List (For Performance):** Instead of looping through *all* entities every frame, keep a simple vector of *pointers* or *IDs* specifically for entities that need a tick update.
+```cpp
+std::vector<StructureEntity*> tick_entities_; // Only populated if can_tick == true
+
+```
+
+
+
+---
+
+### How the Workflow Looks in Action
+
+1. **Placement (`placeStructure`):**
+* Spawns a new entity in the `entity_registry_` with a unique ID.
+* Loops through the building's width/height footprint on `placed_cells_`, setting the `structure_id` and writing that `entity_unique_id` into every cell belonging to that building.
+* If the building needs to tick, its pointer is added to `tick_entities_`.
+
+
+2. **Interaction (Player RMBs a Chest):**
+* Player clicks cell `(x, y)`.
+* Backend checks `placed_cells_[index].entity_unique_id`.
+* It finds ID `42`, queries `entity_registry_[42]`, verifies it's a chest/interactive container, and fires a signal to Godot to open the UI inventory.
+
+
+3. **Simulation Tick:**
+* Your `tick(double deltaTime)` loop iterates *only* over `tick_entities_`, completely ignoring passive walls, floors, and empty space.
+
+
+
+This hybrid approach gives you **$O(1)$ spatial lookups** for clicks and interactions, and **blazing-fast cache-friendly iteration** for your simulation ticks!

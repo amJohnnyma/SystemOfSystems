@@ -1,8 +1,10 @@
 [gd_scene format=3 uid="uid://c7fxsqaldhe2q"]
 
-[node name="UIRoot" type="CanvasLayer"]
+[ext_resource type="PackedScene" uid="uid://clbp14btq3r2k" path="res://demo/hotbar.tscn" id="1_owrag"]
 
-[node name="RootContainer" type="Control" parent="."]
+[node name="UIRoot" type="CanvasLayer" unique_id=363195503]
+
+[node name="RootContainer" type="Control" parent="." unique_id=1909113113]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -11,7 +13,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
 
-[node name="HUDDock" type="Control" parent="RootContainer"]
+[node name="HUDDock" type="Control" parent="RootContainer" unique_id=1766937631]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,7 +22,10 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 1
 
-[node name="WindowContainer" type="Control" parent="RootContainer"]
+[node name="Hotbar" parent="RootContainer/HUDDock" unique_id=1653636934 instance=ExtResource("1_owrag")]
+layout_mode = 1
+
+[node name="WindowContainer" type="Control" parent="RootContainer" unique_id=329521772]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

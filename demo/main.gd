@@ -17,6 +17,8 @@ var world_height: int = 1800
 var structure_registry: Dictionary = {}
 var selected_structure: Dictionary = {}
 
+var selected_hotbar_slot = -1
+
 
 var type_colors: Dictionary = {
 	0: Color.TRANSPARENT,
@@ -51,6 +53,10 @@ func _ready() -> void:
 	UIManager.register_ui_root(ui_root)
 	UIManager.connect_simulation(world)
 	UIManager.slot_action_requested.connect(_on_slot_action_requested)
+	
+	var hotbar = get_tree().root.find_child("Hotbar", true, false)
+	if hotbar:
+		hotbar.hotbar_slot_selected.connect(_on_hotbar_slot_selected)
 
 	# Connect using the standard GDScript signal syntax
 	world.test_signal_event.connect(_on_custom_event)
@@ -67,18 +73,36 @@ func _ready() -> void:
 	_setup_full_mesh_display()
 	update_mesh_display()
 	
+func get_selected_hotbar_slot():
+	return selected_hotbar_slot
+
 func _on_custom_event(message: String) -> void:
 	print("Received signal from C++: - ", message)
 
 func _on_slot_action_requested(slot_number: int) -> void:
 	print("Main script heard that slot was clicked: ", slot_number)
 
-	if slot_number == 1:
-		UIManager.close_top_window()
-		selected_structure = structure_registry.get(1, {})
-		input_manager.set_input_mode(3)
-		pass
+	UIManager.close_top_window()
+	selected_structure = structure_registry.get(slot_number, {})
+	input_manager.set_input_mode(3)
 
+func _on_hotbar_slot_selected(slot_number: int) -> void:
+	print("Main script received hotbar selection: Slot ", slot_number)
+	input_manager.setSelectedHotbarSlot(slot_number)
+	
+	if slot_number == 3:
+		selected_structure = structure_registry.get(1, {})
+		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
+	elif slot_number == 4:
+		selected_structure = structure_registry.get(2, {})
+		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
+	elif slot_number == 5:
+		selected_structure = structure_registry.get(2, {})
+		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
+	else:
+		selected_structure = {}
+		input_manager.set_input_mode(InputManager.InputMode.FULL_GAMEPLAY)
+		
 func _draw_building_overlay():
 	# For now just a box with the dimensions
 	var color := Color(0.325, 0.282, 0.29, 1.0)
@@ -87,7 +111,9 @@ func _draw_building_overlay():
 
 	var size = Vector2(w, -h) * MESH_SCALE.x 
 
-	var pos = input_manager.current_mouse_local * MESH_SCALE.x
+	var cell_x = int(input_manager.current_mouse_local.x)
+	var cell_y = int(input_manager.current_mouse_local.y)
+	var pos = Vector2(cell_x, cell_y+1) * MESH_SCALE.x
 
 	var rect = Rect2(pos, size)
 
@@ -98,9 +124,10 @@ func _place_selected_building():
 	var cell_x := int(input_manager.getCurMouseX())
 	var cell_y := int(input_manager.getCurMouseY())
 	var structureID = selected_structure.get("id")
-	world.placeStructure(cell_x, cell_y, 1)
+	world.placeStructure(cell_x, cell_y, structureID)
 	selected_structure = {}
 	input_manager.set_input_mode(0)
+	input_manager.setSelectedHotbarSlot(-1)
 	update_mesh_display()
 
 func _cancel_building():

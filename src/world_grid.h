@@ -33,7 +33,11 @@ class WorldGrid
 
         MarchingSquares marchingSquares = MarchingSquares();
 
-        std::vector<Structure> tick_structures_;
+        // Check ENTITYMANAGEMENT.txt 
+        std::vector<Structure> tick_structures_; // does work each tick (a clock)
+        std::vector<Structure> passive_structures_; // just looks nice (a painting)
+        std::vector<Structure> interactive_structures_; // can be interacted with (a chest)
+        std::vector<Structure> interactive_tick_structures_; // can be interacted with and does work each tick (put items in a furnace)
 
         uint32_t current_structure_unique_ID_ = 0;
         std::unordered_map<int, Structure> structure_registry_;

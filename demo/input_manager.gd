@@ -39,6 +39,8 @@ var min_zoom: float = 0.001
 var max_zoom: float = 20.0
 var zoom_factor: float = 0.1
 
+var selected_hotbar_slot = -1
+
 func setup(p_world: GodotSimulation, p_camera: Camera2D, p_mesh_scale: Vector2) -> void:
 	world = p_world
 	camera = p_camera
@@ -49,6 +51,9 @@ func getCurMouseX():
 
 func getCurMouseY():
 	return current_mouse_local.y
+
+func setSelectedHotbarSlot(slot : int):
+	selected_hotbar_slot = slot
 
 func _process(delta: float) -> void:
 	if not is_input_enabled or not camera:
@@ -61,15 +66,6 @@ func _process(delta: float) -> void:
 	if paint_cooldown > 0.0:
 		paint_cooldown -= delta
 
-	# Continuous painting is strictly restricted to FULL_GAMEPLAY mode
-	if current_mode == InputMode.FULL_GAMEPLAY:
-		if (is_left_down or is_right_down) and paint_cooldown <= 0.0:
-			#_apply_brush()
-			paint_cooldown = PAINT_INTERVAL
-	else:
-		# Reset painting click states if input mode changed mid-click
-		is_left_down = false
-		is_right_down = false
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_input_enabled or current_mode == InputMode.UI_ONLY:
@@ -92,8 +88,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif event.button_index == MOUSE_BUTTON_RIGHT:
 				is_right_down = event.pressed
 
-			if event.pressed and (is_left_down or is_right_down):
-				#_apply_brush()
+			if event.pressed and (is_left_down or is_right_down) and (selected_hotbar_slot == 1 or selected_hotbar_slot == 2):
+				_apply_brush()
 				paint_cooldown = PAINT_INTERVAL
 
 		elif event is InputEventKey and event.pressed:
@@ -104,12 +100,17 @@ func _unhandled_input(event: InputEvent) -> void:
 				_apply_fill(cell_x, cell_y, 2, false)
 			elif event.keycode == KEY_S:
 				_apply_fill(cell_x, cell_y, 2, true)
-			elif event.keycode == KEY_1:
+			elif event.keycode == KEY_MINUS:
 				brush_radius_cells = max(0.5, brush_radius_cells - 0.5)
 				brush_radius_changed.emit(brush_radius_cells)
-			elif event.keycode == KEY_2:
+			elif event.keycode == KEY_EQUAL:
 				brush_radius_cells += 0.5
 				brush_radius_changed.emit(brush_radius_cells)
+			elif event.keycode >= KEY_1 and event.keycode <= KEY_9:
+				var slot_num = event.keycode - KEY_1 + 1
+				_trigger_hotbar_selection(slot_num)
+			elif event.keycode == KEY_0:
+				_trigger_hotbar_selection(10)
 				
 	if current_mode == InputMode.BUILDING_PLACEMENT:
 		if event is InputEventMouseButton:
@@ -124,6 +125,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 				
 
+# Helper function to find and update the hotbar node from InputManager
+func _trigger_hotbar_selection(slot_number: int) -> void:
+	var hotbar = get_tree().root.find_child("Hotbar", true, false)
+	if hotbar and hotbar.has_method("select_slot"):
+		hotbar.select_slot(slot_number)
 
 func _input(event: InputEvent) -> void:
 	if not is_input_enabled or not camera or current_mode == InputMode.UI_ONLY:
@@ -142,9 +148,9 @@ func _apply_brush() -> void:
 	var cell_x := int(current_mouse_local.x)
 	var cell_y := int(current_mouse_local.y)
 
-	if is_left_down:
+	if is_left_down and selected_hotbar_slot == 1:
 		world.setDensity(cell_x, cell_y, brush_radius_cells, 256, 2)
-	elif is_right_down:
+	elif is_right_down and selected_hotbar_slot == 2:
 		world.setDensity(cell_x, cell_y, brush_radius_cells, -256, 2)
 
 	terrain_modified.emit()

@@ -479,6 +479,9 @@ void WorldGrid::tick(double deltaTime)
 
 }
 
+// placing a structure
+// -> Placing actual buildings (System not yet implemented ill figure it out)
+// -> Placing blocks
 void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
 {
     if (structure_registry_.find(structureID) == structure_registry_.end()) return;
