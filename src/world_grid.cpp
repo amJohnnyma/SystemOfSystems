@@ -242,8 +242,8 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
     world_x_ = x_size + 1;
     world_y_ = y_size + 1;
     chunk_size_ = g_size;
-    num_chunk_x = std::max(1, world_x_ / chunk_size_);
-    num_chunk_y = std::max(1,world_y_ / chunk_size_);
+    num_chunk_x = std::max(1, (world_x_ + chunk_size_ - 1) / chunk_size_);
+    num_chunk_y = std::max(1,(world_y_ + chunk_size_ - 1) / chunk_size_);
     world_cells_.resize(world_x_ * world_y_);
     placed_cells_.resize(world_x_ * world_y_);
     float base_height = world_y_ * 1.f;       // Surface line 
@@ -362,6 +362,52 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
     {
         f.get();
     }
+// ==========================================
+    // MANUAL TEST FEATURES (Hill, Cave, Cutout)
+    // ==========================================
+    auto carve_shape = [&](int cx, int cy, float radius, uint16_t type_id, float density, bool is_additive) {
+        int sx = std::max(0, static_cast<int>(cx - radius));
+        int ex = std::min(world_x_ - 1, static_cast<int>(cx + radius));
+        int sy = std::max(0, static_cast<int>(cy - radius));
+        int ey = std::min(world_y_ - 1, static_cast<int>(cy + radius));
+        float r_sq = radius * radius;
+
+        for (int y = sy; y <= ey; ++y) {
+            for (int x = sx; x <= ex; ++x) {
+                float dx = x - cx;
+                float dy = y - cy;
+                if (dx * dx + dy * dy <= r_sq) {
+                    size_t idx = y * world_x_ + x;
+                    if (is_additive) {
+                        world_cells_[idx].type_id = type_id;
+                        world_cells_[idx].density = std::max(world_cells_[idx].density,static_cast<uint8_t>(density));
+                    } else {
+                        world_cells_[idx].type_id = type_id; // 0 for air cutout
+                        world_cells_[idx].density = density;   // 0.0f for air cutout
+                    }
+                }
+            }
+        }
+    };
+
+    // 1. A Hill (Additive mound of Dirt/Grass on the surface)
+    // Placed at 30% width, positioned near the upper surface layer
+    int hill_cx = static_cast<int>(world_x_ * 0.3f);
+    int hill_cy = static_cast<int>(world_y_ * 0.2f); 
+    carve_shape(hill_cx, hill_cy, 15.0f, 2, 255.0f, true); // Grass mound
+
+    // 2. A Cave Entrance (Subtractive circular arch cut into a wall/hillside)
+    // Placed at 50% width, deeper down in the dirt/stone layers
+    int cave_cx = static_cast<int>(world_x_ * 0.5f);
+    int cave_cy = static_cast<int>(world_y_ * 0.5f);
+    carve_shape(cave_cx, cave_cy, 8.0f, 0, 0.0f, false); // Air pocket
+
+    // 3. A Small Cutout (A distinct geometric bite taken out of the lower stone layer)
+    // Placed at 70% width, near the bottom
+    int cut_cx = static_cast<int>(world_x_ * 0.7f);
+    int cut_cy = static_cast<int>(world_y_ * 0.75f);
+    carve_shape(cut_cx, cut_cy, 10.0f, 0, 0.0f, false); // Air pocket
+    // ==========================================
 
     chunk_is_dirty_.assign(numChunks, 1);
 
@@ -652,7 +698,109 @@ void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
 
     }
 }
+// magic numbers everwhere
+bool WorldGrid::isCellSolid(float x, float y) const {
+    int cell_x = static_cast<int>(std::floor(x));
+    int cell_y = static_cast<int>(std::floor(y));
 
+    if (cell_x < 0 || cell_x >= world_x_ || cell_y < 0 || cell_y >= world_y_) {
+        return true; // Treat out-of-bounds as solid walls
+    }
+
+    size_t index = static_cast<size_t>(cell_y) * world_x_ + cell_x;
+    const Cell& c = world_cells_[index];
+    
+    return (c.type_id != 0 && c.density > 128.0f);
+}
+
+float WorldGrid::getDensityAt(float x, float y) const {
+    int cell_x = static_cast<int>(std::floor(x));
+    int cell_y = static_cast<int>(std::floor(y));
+
+    if (cell_x < 0 || cell_x >= world_x_ || cell_y < 0 || cell_y >= world_y_) {
+        return 0.0f; // Treat outside as empty air
+    }
+
+    size_t index = static_cast<size_t>(cell_y) * world_x_ + cell_x;
+    return static_cast<float>(world_cells_[index].density);
+}
+
+Vec2 WorldGrid::calculateDensityGradient(float x, float y) const {
+    float eps = 1.0f; // 1 cell offset
+    
+    float d_left   = getDensityAt(x - eps, y);
+    float d_right  = getDensityAt(x + eps, y);
+    float d_top    = getDensityAt(x, y - eps);
+    float d_bottom = getDensityAt(x, y + eps);
+
+    float gx = (d_right - d_left) * 0.5f;
+    float gy = (d_top - d_bottom) * 0.5f; // Normal points upward into air
+
+    Vec2 grad(gx, gy);
+    float len = std::sqrt(grad.x * grad.x + grad.y * grad.y);
+    if (len > 0.0001f) {
+        grad.x /= len;
+        grad.y /= len;
+    }
+    return grad;
+}
+Vec2 WorldGrid::resolveCollision(Vec2 current_pos, Vec2& velocity, float width_cells, float height_cells, double deltaTime) {
+    Vec2 new_pos = current_pos;
+
+    // --- 1. Horizontal Movement & Collision ---
+    float dx = velocity.x * static_cast<float>(deltaTime);
+    new_pos.x += dx;
+
+    if (checkAABBCollision(new_pos, width_cells, height_cells)) {
+        new_pos.x = current_pos.x; // Stop dead on X walls
+        velocity.x = 0.0f;
+    }
+
+    // --- 2. Vertical Movement & Collision ---
+    float dy = velocity.y * static_cast<float>(deltaTime);
+    new_pos.y += dy;
+
+    float half_w = width_cells * 0.5f;
+    float half_h = height_cells * 0.5f;
+
+    if (velocity.y > 0.0f) {
+        // Falling: Check bottom corners
+        float left = new_pos.x - half_w;
+        float right = new_pos.x + half_w;
+        float bottom = new_pos.y + half_h;
+
+        if (isCellSolid(left, bottom) || isCellSolid(right, bottom)) {
+            velocity.y = 0.0f;
+            new_pos.y = current_pos.y; // Stop dead on ground with zero bounce
+        }
+    } 
+    else if (velocity.y < 0.0f) {
+        // Jumping/Rising: Check top corners
+        float left = new_pos.x - half_w;
+        float right = new_pos.x + half_w;
+        float top = new_pos.y - half_h;
+
+        if (isCellSolid(left, top) || isCellSolid(right, top)) {
+            velocity.y = 0.0f;
+            new_pos.y = current_pos.y; // Hit ceiling, stop rise
+        }
+    }
+
+    return new_pos;
+}
+
+bool WorldGrid::checkAABBCollision(const Vec2& pos, float width, float height) const {
+    float half_w = width * 0.5f;
+    float half_h = height * 0.5f;
+
+    float left = pos.x - half_w;
+    float right = pos.x + half_w;
+    float top = pos.y - half_h;
+    float bottom = pos.y + half_h;
+
+    return isCellSolid(left, top) || isCellSolid(right, top) ||
+           isCellSolid(left, bottom) || isCellSolid(right, bottom);
+}
 WorldGrid::WorldGrid()
 {
 }

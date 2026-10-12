@@ -27,6 +27,10 @@ void GodotSimulation::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("update_godot_mesh_signal"), &GodotSimulation::trigger_test_signal);
     ADD_SIGNAL(MethodInfo("update_godot_mesh_event"));
+
+ClassDB::bind_method(D_METHOD("updatePlayerPosition", "x", "y"), &GodotSimulation::updatePlayerPosition);
+    ClassDB::bind_method(D_METHOD("resolveCollision", "current_pos", "velocity", "width", "height", "delta"), &GodotSimulation::resolveCollision);
+
 }
 
 GodotSimulation::GodotSimulation() {}
@@ -54,6 +58,18 @@ void GodotSimulation::_process(double delta)
     {
         // emit_signal("update_ui_event");
     }
+}
+void GodotSimulation::updatePlayerPosition(float x, float y) {
+    world_grid_.updatePlayerPosition(x, y);
+}
+
+Vector2 GodotSimulation::resolveCollision(Vector2 current_pos, Vector2 velocity, float width, float height, double delta) {
+    Vec2 cp = Vec2(current_pos.x, current_pos.y);
+    Vec2 v = Vec2(velocity.x,velocity.y);
+    Vec2 r = world_grid_.resolveCollision(cp,v, width, height, delta);
+    Vector2 rr = Vector2(r.x, r.y);
+ 
+    return rr; 
 }
 
 void GodotSimulation::createWorld(int world_x, int world_y, int g_size)
