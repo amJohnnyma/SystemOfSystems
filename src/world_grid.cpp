@@ -486,7 +486,9 @@ uint32_t WorldGrid::tick(double deltaTime)
 
     // also do entity processes
     
+    
     uint32_t active_flags = TickFlags::NONE;
+    /*
     time_accumulator_ += deltaTime;
 
     // 2. Check if counter/interval is reached (e.g., every 2 seconds)
@@ -507,6 +509,7 @@ uint32_t WorldGrid::tick(double deltaTime)
         placeStructure(random_x, random_y, 5);
         active_flags |= TickFlags::MESH_UPDATE;
     }
+    */
     return active_flags;
 
 }
