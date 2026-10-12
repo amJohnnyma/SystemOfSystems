@@ -246,7 +246,7 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
     num_chunk_y = world_y_ / chunk_size_;
     world_cells_.resize(world_x_ * world_y_);
     placed_cells_.resize(world_x_ * world_y_);
-    float base_height = world_y_ * 0.6f;       // Surface line (~45% down the map)
+    float base_height = world_y_ * 0.8f;       // Surface line 
     float height_amplitude = world_y_ * 0.01f; // Hill variance height
                                                // PARALLEL TIME !!!
 
@@ -339,16 +339,17 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
                         // 3. Biome depth layering
                         if (depth < 2.5f) {
                             type_id = 2; // Grass (ID 2): Surface layer
+                            
                         } 
                         else if (depth < 14.0f) {
                             // Dirt layer with Stone pockets using 2D noise
                             float mat_n = NativeNoise::eval(static_cast<float>(i) * 0.1f, static_cast<float>(j) * 0.1f);
-                            type_id = (mat_n > 0.25f) ? 3 : 1; // Stone (3) vs Dirt (1)
+                            type_id = (mat_n > 0.25f) ? 4 : 3; // Stone (3) vs Dirt (1)
                         } 
                         else {
                             // Underground: Mostly Stone with Dirt veins
                             float mat_n = NativeNoise::eval(static_cast<float>(i) * 0.06f, static_cast<float>(j) * 0.06f);
-                            type_id = (mat_n > -0.1f) ? 3 : 1; // Stone (3) vs Dirt (1)
+                            type_id = (mat_n > -0.1f) ? 4 : 3; // Stone (3) vs Dirt (1)
                         }
                     }
 

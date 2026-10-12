@@ -128,10 +128,11 @@ func _init_building_materials() -> void:
 		)
 	else:
 		push_error("Block atlas not found: " + BLOCK_ATLAS_PATH)
-	print("Atlas loaded: ", block_atlas != null)
+	#print("Atlas loaded: ", block_atlas != null)
 	if block_atlas != null:
-		print("Atlas size: ", block_atlas.get_size())
-		print("Atlas resource path: ", block_atlas.resource_path)
+		#print("Atlas size: ", block_atlas.get_size())
+		#print("Atlas resource path: ", block_atlas.resource_path)
+		pass
 	# Individual textures for buildings.
 	for id in structure_registry:
 		var st: Dictionary = structure_registry[id]
@@ -151,7 +152,7 @@ func _init_building_materials() -> void:
 			mat.shader = textured_shader
 			mat.set_shader_parameter("building_tex", tex)
 			building_materials[id] = mat
-			print("Loaded building texture: ", tex_path)
+			#print("Loaded building texture: ", tex_path)
 
 		else:
 			push_warning("Missing building texture: " + tex_path)
@@ -242,7 +243,7 @@ func _draw_building_overlay():
 	draw_rect(rect, color, true)
 
 func _place_selected_building():
-	print("Placing: ", selected_structure)
+	#print("Placing: ", selected_structure)
 	var cell_x := int(input_manager.getCurMouseX())
 	var cell_y := int(input_manager.getCurMouseY())
 	var structureID = selected_structure.get("id")
@@ -253,30 +254,32 @@ func _place_selected_building():
 	update_mesh_display()
 
 func _cancel_building():
-	print("Building cancelled")
+	#print("Building cancelled")
 	selected_structure = {}
 	input_manager.set_input_mode(0)
 
 func _draw() -> void:
-	var grid_color := Color(1, 1, 1, 0.15)
-	var line_width := 0.5
+	if selected_hotbar_slot == 9:
+		var grid_color := Color(1, 1, 1, 0.15)
+		var line_width := 0.5
 
-	# Vertical grid lines
-	for x in range(world_width):
-		var start := Vector2(x, 0) * MESH_SCALE
-		var end := Vector2(x, world_height) * MESH_SCALE
-		draw_line(start, end, grid_color, line_width)
+		# Vertical grid lines
+		for x in range(world_width):
+			var start := Vector2(x, 0) * MESH_SCALE
+			var end := Vector2(x, world_height) * MESH_SCALE
+			draw_line(start, end, grid_color, line_width)
 
-	# Horizontal grid lines
-	for y in range(world_height):
-		var start := Vector2(0, y) * MESH_SCALE
-		var end := Vector2(world_width, y) * MESH_SCALE
-		draw_line(start, end, grid_color, line_width)
+		# Horizontal grid lines
+		for y in range(world_height):
+			var start := Vector2(0, y) * MESH_SCALE
+			var end := Vector2(world_width, y) * MESH_SCALE
+			draw_line(start, end, grid_color, line_width)
 
 	# Mouse Radius Circle
-	var circle_center := input_manager.current_mouse_local * MESH_SCALE
-	var pixel_radius := input_manager.brush_radius_cells * MESH_SCALE.x
-	draw_arc(circle_center, pixel_radius, 0, TAU, 32, Color(1, 1, 0, 0.8), 0.5)
+	if selected_hotbar_slot == 1 or selected_hotbar_slot == 2:
+		var circle_center := input_manager.current_mouse_local * MESH_SCALE
+		var pixel_radius := input_manager.brush_radius_cells * MESH_SCALE.x
+		draw_arc(circle_center, pixel_radius, 0, TAU, 32, Color(1, 1, 0, 0.8), 0.5)
 	
 	if not selected_structure.is_empty():
 		_draw_building_overlay()
@@ -490,10 +493,10 @@ func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 				max_uv.x = maxf(max_uv.x, uv.x)
 				max_uv.y = maxf(max_uv.y, uv.y)
 
-			print("Building type: ", type_id,
-		  " UV range: ", min_uv, " to ", max_uv)
-			print("Type ", type_id, " first triangle UVs: ",
-			g["uvs"].slice(0, 6))
+			#print("Building type: ", type_id,
+		  #" UV range: ", min_uv, " to ", max_uv)
+			#print("Type ", type_id, " first triangle UVs: ",
+			#g["uvs"].slice(0, 6))
 
 		# Build one independent mesh per type ID.
 		for type_id_variant in groups.keys():
@@ -542,12 +545,12 @@ func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 			s_array[Mesh.ARRAY_VERTEX] = g["vertices"]
 			s_array[Mesh.ARRAY_INDEX] = g["indices"]
 			s_array[Mesh.ARRAY_TEX_UV] = g["uvs"]
-			print(
-				"TYPE=", type_id,
-				" VERTEX COUNT=", g["vertices"].size(),
-				" FIRST VERTICES=", g["vertices"].slice(0, 6),
-				" FIRST UVS=", g["uvs"].slice(0, 6)
-			)
+			#print(
+			#	"TYPE=", type_id,
+			#	" VERTEX COUNT=", g["vertices"].size(),
+			#	" FIRST VERTICES=", g["vertices"].slice(0, 6),
+			#	" FIRST UVS=", g["uvs"].slice(0, 6)
+			#)
 
 			structure_mesh.add_surface_from_arrays(
 				Mesh.PRIMITIVE_TRIANGLES,
