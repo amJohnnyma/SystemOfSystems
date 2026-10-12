@@ -41,14 +41,27 @@ struct jStructure {
     int x_width{0};
     int y_width{0};
     bool cantick{false};
+    bool isBuilding{false};
     float processing_time{0.0f};
+    int blockType{0};
+    std::string sprite{""};
     std::vector<jResourceRequirement> resource_input;
     std::vector<jResourceRequirement> resource_output;
 
-    // Enables direct conversion from nlohmann::json to Structure
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(jStructure, 
-        structureID, x_width, y_width, cantick, processing_time, resource_input, resource_output)
 };
+
+inline void from_json(const nlohmann::json& j, jStructure& s) {
+    j.at("structureID").get_to(s.structureID);
+    j.at("x_width").get_to(s.x_width);
+    j.at("y_width").get_to(s.y_width);
+    s.cantick = j.value("cantick", false);
+    s.isBuilding = j.value("isBuilding", false);
+    s.processing_time = j.value("processing_time", 1.0f);
+    s.blockType = j.value("blockType", 0);
+    s.sprite = j.value("sprite", "");
+    s.resource_input = j.value("resource_input", std::vector<jResourceRequirement>{});
+    s.resource_output = j.value("resource_output", std::vector<jResourceRequirement>{});
+}
 
 class JsonLoader {
 public:

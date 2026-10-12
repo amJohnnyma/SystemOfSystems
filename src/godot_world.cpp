@@ -1,5 +1,6 @@
 
 #include "godot_world.h"
+#include <charconv>
 #include <cstdint>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/packed_vector2_array.hpp>
@@ -50,9 +51,10 @@ void GodotSimulation::createWorld(int world_x, int world_y, int g_size)
     for (auto it = sr.begin(); it != sr.end(); ++it) {
         auto const& st = it->second.getTemplate();
         
-        snprintf(buffer, sizeof(buffer), "ID: %u | Size: %dx%d | Tick: %s | Time: %.1f\n",
+        snprintf(buffer, sizeof(buffer), "ID: %u | Size: %dx%d | Tick: %s | Time: %.1f | Type: %s\n",
                  st.structureID, st.x_width, st.y_width, 
-                 (st.canTick ? "yes" : "no"), st.processing_time);
+                 (st.canTick ? "yes" : "no"), st.processing_time,
+                 (st.isBuilding ? "Building": "Block"));
                  
         dump += godot::String(buffer);
     }
@@ -74,6 +76,25 @@ godot::Dictionary GodotSimulation::getStructureRegistry() const {
         st_dict["height"] = st.y_width;
         st_dict["can_tick"] = st.canTick;
         st_dict["processing_time"] = st.processing_time;
+        st_dict["isBuilding"] = st.isBuilding;
+        st_dict["blockType"] = st.blockType;
+        st_dict["sprite"] = godot::String(st.sprite.c_str());
+        godot::Array input_arr;
+        godot::Array output_arr;
+        for (const auto& ri : st.resource_input) {
+            godot::Dictionary req;
+            req["objectID"] = ri.rID;
+            req["count"] = ri.count;
+            input_arr.append(req);
+        }
+        st_dict["resource_input"] = input_arr;
+        for (const auto& ro : st.resource_output) {
+            godot::Dictionary req;
+            req["objectID"] = ro.rID;
+            req["count"] = ro.count;
+            output_arr.append(req);
+        }
+        st_dict["resource_output"] = output_arr;
 
         // Use the structure ID as the dictionary key
         registry_dict[st.structureID] = st_dict;

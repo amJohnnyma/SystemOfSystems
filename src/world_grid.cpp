@@ -29,10 +29,10 @@ bool WorldGrid::set_cell(int x, int y, uint16_t type_id, uint8_t density, uint8_
     {
         int coords[4][2]
         {
-        {x, y},         // Bottom-Left
-        {x + 1, y},     // Bottom-Right
-        {x + 1, y + 1}, // Top-Right
-        {x, y + 1}      // Top-Left
+            {x, y},         // Bottom-Left
+                {x + 1, y},     // Bottom-Right
+                {x + 1, y + 1}, // Top-Right
+                {x, y + 1}      // Top-Left
         };
 
         for (auto& coord : coords) {
@@ -44,7 +44,7 @@ bool WorldGrid::set_cell(int x, int y, uint16_t type_id, uint8_t density, uint8_
 
             int chunk_x = coord[0] / chunk_size_;
             int chunk_y = coord[1] / chunk_size_;
-            
+
             // Mark the corresponding chunks as dirty so they re-render
             flag_dirty_chunk(chunk_x, chunk_y);
         }
@@ -269,8 +269,13 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
             s.x_width = js.x_width;
             s.y_width = js.y_width;
             s.canTick = js.cantick;
-            s.origin = std::make_pair(0, 0);
+            s.isBuilding = js.isBuilding;
+            s.x_origin = 0;
+            s.y_origin = 0;
             s.processing_time = js.processing_time;
+            s.blockType = js.blockType;
+            s.sprite = js.sprite;
+            
             for (const auto& ri : js.resource_input)
             {
                 resource_requirement r;
@@ -310,50 +315,50 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
         if (start_idx >= world_x_) break;
 
         futures.push_back(pool_->enqueue([this, start_idx, end_idx, &base_height, &height_amplitude]
-                {
+                    {
 
-                for (size_t i = start_idx; i < end_idx; i ++)
-                {
-                for (size_t j = 0; j < world_y_; j ++)
-                {
+                    for (size_t i = start_idx; i < end_idx; i ++)
+                    {
+                    for (size_t j = 0; j < world_y_; j ++)
+                    {
 
-                size_t index = j * world_x_ + i;
+                    size_t index = j * world_x_ + i;
 
-                // 1. Calculate surface height curve (1D noise across X axis)
-                float noise_val = NativeNoise::fBm(static_cast<float>(i) * 0.03f, 0.0f, 4, 1.0f, 0.5f);
-                float surface_y = base_height + (noise_val * height_amplitude);
+                    // 1. Calculate surface height curve (1D noise across X axis)
+                    float noise_val = NativeNoise::fBm(static_cast<float>(i) * 0.03f, 0.0f, 4, 1.0f, 0.5f);
+                    float surface_y = base_height + (noise_val * height_amplitude);
 
-                // 2. Calculate cell density relative to depth
-                float depth = static_cast<float>(j) - surface_y;
-                float density = std::clamp((depth + 1.0f) * 128.0f, 0.0f, 255.0f);
+                    // 2. Calculate cell density relative to depth
+                    float depth = static_cast<float>(j) - surface_y;
+                    float density = std::clamp((depth + 1.0f) * 128.0f, 0.0f, 255.0f);
 
-                uint16_t type_id = 0; // Default: Air (ID 0)
+                    uint16_t type_id = 0; // Default: Air (ID 0)
 
-                if (density > 0.0f)
-                {
-                    // 3. Biome depth layering
-                    if (depth < 2.5f) {
-                        type_id = 2; // Grass (ID 2): Surface layer
-                    } 
-                    else if (depth < 14.0f) {
-                        // Dirt layer with Stone pockets using 2D noise
-                        float mat_n = NativeNoise::eval(static_cast<float>(i) * 0.1f, static_cast<float>(j) * 0.1f);
-                        type_id = (mat_n > 0.25f) ? 3 : 1; // Stone (3) vs Dirt (1)
-                    } 
-                    else {
-                        // Underground: Mostly Stone with Dirt veins
-                        float mat_n = NativeNoise::eval(static_cast<float>(i) * 0.06f, static_cast<float>(j) * 0.06f);
-                        type_id = (mat_n > -0.1f) ? 3 : 1; // Stone (3) vs Dirt (1)
+                    if (density > 0.0f)
+                    {
+                        // 3. Biome depth layering
+                        if (depth < 2.5f) {
+                            type_id = 2; // Grass (ID 2): Surface layer
+                        } 
+                        else if (depth < 14.0f) {
+                            // Dirt layer with Stone pockets using 2D noise
+                            float mat_n = NativeNoise::eval(static_cast<float>(i) * 0.1f, static_cast<float>(j) * 0.1f);
+                            type_id = (mat_n > 0.25f) ? 3 : 1; // Stone (3) vs Dirt (1)
+                        } 
+                        else {
+                            // Underground: Mostly Stone with Dirt veins
+                            float mat_n = NativeNoise::eval(static_cast<float>(i) * 0.06f, static_cast<float>(j) * 0.06f);
+                            type_id = (mat_n > -0.1f) ? 3 : 1; // Stone (3) vs Dirt (1)
+                        }
                     }
-                }
 
-                world_cells_[index].type_id = type_id;
-                world_cells_[index].density = density;
-                world_cells_[index].state_flags = 0;
+                    world_cells_[index].type_id = type_id;
+                    world_cells_[index].density = density;
+                    world_cells_[index].state_flags = 0;
 
-                }
-                }
-                }));
+                    }
+                    }
+                    }));
     }
 
     for (auto& f:futures)
@@ -370,7 +375,7 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
         dirty_chunk_indices_.push_back(i);
     }
 
-   // updateMesh();
+    // updateMesh();
 
 
 
@@ -405,24 +410,24 @@ std::vector<std::pair<std::array<int, 2>,ChunkMeshData>> WorldGrid::updateMesh()
         if (start_idx >= total_dirty) break;
 
         futures.push_back(pool_->enqueue([this, start_idx, end_idx, &local_outputs]
-                {
-                MarchingSquares local_marching_squares;
-                for (size_t i = start_idx; i < end_idx; i ++)
-                {
+                    {
+                    MarchingSquares local_marching_squares;
+                    for (size_t i = start_idx; i < end_idx; i ++)
+                    {
 
-                int chunk_idx = dirty_chunk_indices_[i];
+                    int chunk_idx = dirty_chunk_indices_[i];
 
-                int cx = chunk_idx % num_chunk_x;
-                int cy = chunk_idx / num_chunk_x;
+                    int cx = chunk_idx % num_chunk_x;
+                    int cy = chunk_idx / num_chunk_x;
 
-                MeshData terrain_mesh= local_marching_squares.GenerateMesh(world_cells_, 128.f, world_x_, world_y_, cx, cy, chunk_size_);
-                MeshData structure_mesh = local_marching_squares.generate_blocky_mesh(placed_cells_, world_x_, world_y_, cx, cy, chunk_size_);
+                    MeshData terrain_mesh= local_marching_squares.GenerateMesh(world_cells_, 128.f, world_x_, world_y_, cx, cy, chunk_size_);
+                    MeshData structure_mesh = local_marching_squares.generate_blocky_mesh(placed_cells_, world_x_, world_y_, cx, cy, chunk_size_);
 
-                ChunkMeshData chunk_data{std::move(terrain_mesh), std::move(structure_mesh)};
-                local_outputs[i] = std::make_pair(std::array<int, 2>{cx, cy}, std::move(chunk_data));
+                    ChunkMeshData chunk_data{std::move(terrain_mesh), std::move(structure_mesh)};
+                    local_outputs[i] = std::make_pair(std::array<int, 2>{cx, cy}, std::move(chunk_data));
 
-                }
-                }));
+                    }
+                    }));
     }
 
     for (auto& f:futures)
@@ -472,9 +477,10 @@ void WorldGrid::fill_cell(int x, int y, uint16_t type_id, bool negativeFill)
 void WorldGrid::tick(double deltaTime)
 {
     // could be parallel
-    for(Structure s : tick_structures_)
+ //   for(uint32_t sID : tick_structures_)
     {
-        s.on_tick(deltaTime);
+        //Structure& s = structures_.at(sID); 
+       // s.on_tick(deltaTime);
     }
 
 }
@@ -485,7 +491,8 @@ void WorldGrid::tick(double deltaTime)
 void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
 {
     if (structure_registry_.find(structureID) == structure_registry_.end()) return;
-    const auto& st = structure_registry_.at(structureID).getTemplate();
+
+    struct_template st = structure_registry_.at(structureID).getTemplate();
 
     int w = st.x_width;
     int h = st.y_width;
@@ -508,11 +515,45 @@ void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
                 world_cells_[index].type_id = 0;
                 world_cells_[index].density = 0.0f;
 
+
                 int cx = x / chunk_size_;
                 int cy = y / chunk_size_;
                 flag_dirty_chunk(cx, cy);
             }
         }
+    }
+
+    if (st.isBuilding)
+    {
+
+        int uID = getNextStructureUniqueID(); // buildings require unique ID's
+                                              //
+        st.instanceID = uID;
+        st.x_origin = bl_x;
+        st.y_origin = bl_y;
+
+        if(st.canTick)
+        {
+            tick_structures_.push_back(uID);
+        }
+        structures_.try_emplace(uID, Structure(st));
+
+        for (int dy = 0; dy < h; ++dy)
+        {
+            for (int dx = 0; dx < w; ++dx)
+            {
+                int x = bl_x + dx;
+                int y = bl_y - dy;
+
+                if (x >= 0 && x < world_x_ && y >= 0 && y < world_y_)
+                {
+                    size_t index = static_cast<size_t>(y) * world_x_ + x;
+
+                    placed_cells_[index].entity_on_cell_uID = uID;
+                }
+            }
+        }
+
     }
 }
 

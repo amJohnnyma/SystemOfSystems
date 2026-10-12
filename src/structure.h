@@ -5,6 +5,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 struct resource_requirement
 {
@@ -16,8 +17,12 @@ struct struct_template
 {
     int x_width = 2;
     int y_width = 2;
-    std::pair<int, int> origin = std::make_pair(0, 0); // local origin (bottom left)
+    int x_origin = 0;
+    int y_origin = 0;
     bool canTick = false; // if a structure needs to perform updates each tick
+    bool isBuilding = false; // else its just a "block"
+    int blockType = 0;
+    std::string sprite = "";
     
     uint32_t structureID = 0;
     uint32_t instanceID;
@@ -30,6 +35,7 @@ struct struct_template
 
 
 
+// a structure is something like a building, or a blocky terrain block
 class Structure
 {
     private:

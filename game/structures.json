@@ -1,56 +1,52 @@
 [
   {
     "structureID": 1,
-    "x_width": 20,
-    "y_width": 20,
+    "x_width": 1,
+    "y_width": 1,
     "cantick": false,
-    "processing_time": 1.0,
-    "resource_input": [
-      {
-        "objectID": 101,
-        "count": 5
-      },
-      {
-        "objectID": 102,
-        "count": 2
-      }
-    ],
-    "resource_output": [
-      {
-        "objectID": 201,
-        "count": 1
-      }
-    ]
+	"isBuilding" : false,
+	"blockType" : 1
   },
   {
     "structureID": 2,
-    "x_width": 4,
-    "y_width": 3,
-    "cantick": true,
-    "processing_time": 2.5,
-    "resource_input": [
-      {
-        "objectID": 103,
-        "count": 10
-      }
-    ],
-    "resource_output": [
-      {
-        "objectID": 202,
-        "count": 2
-      },
-      {
-        "objectID": 203,
-        "count": 1
-      }
-    ]
+    "x_width": 1,
+    "y_width": 1,
+    "cantick": false,
+	"isBuilding" : false,
+	"blockType" : 2
   },
   {
     "structureID": 3,
-    "x_width": 40,
-    "y_width": 40,
+    "x_width": 1,
+    "y_width": 1,
+    "cantick": false,
+	"isBuilding" : false,
+	"blockType" : 3
+  },
+  {
+    "structureID": 4,
+    "x_width": 1,
+    "y_width": 1,
+    "cantick": false,
+	"isBuilding" : false,
+	"blockType" : 4
+  },
+  {
+    "structureID": 5,
+    "x_width": 4,
+    "y_width": 3,
+    "cantick": false,
+"isBuilding" : true,
+"sprite" : "chest.png"
+  },
+  {
+    "structureID": 6,
+    "x_width": 3,
+    "y_width": 3,
     "cantick": true,
     "processing_time": 2.5,
+"isBuilding" : true,
+"sprite" : "furnace.png",
     "resource_input": [
       {
         "objectID": 103,

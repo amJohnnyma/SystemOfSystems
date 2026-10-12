@@ -1,9 +1,3 @@
-// data layer
-//
-// Allocate and manage 1D cell density array in RAM
-
-
-
 #ifndef WORLD_GRID_H
 #define WORLD_GRID_H
 
@@ -33,13 +27,10 @@ class WorldGrid
 
         MarchingSquares marchingSquares = MarchingSquares();
 
-        // Check ENTITYMANAGEMENT.txt 
-        std::vector<Structure> tick_structures_; // does work each tick (a clock)
-        std::vector<Structure> passive_structures_; // just looks nice (a painting)
-        std::vector<Structure> interactive_structures_; // can be interacted with (a chest)
-        std::vector<Structure> interactive_tick_structures_; // can be interacted with and does work each tick (put items in a furnace)
+        std::unordered_map<uint32_t, Structure> structures_ = {}; // All structures
+        std::vector<uint32_t> tick_structures_; // store ID and lookup data when needed
 
-        uint32_t current_structure_unique_ID_ = 0;
+        uint32_t current_entity_unique_ID_ = 0; // for anything that needs a uid
         std::unordered_map<int, Structure> structure_registry_;
 
 
@@ -60,8 +51,8 @@ class WorldGrid
         std::array<int, 2> get_chunk_coords(int x, int y);
         uint32_t getNextStructureUniqueID() 
         {
-            uint32_t ID = current_structure_unique_ID_;
-            current_structure_unique_ID_ ++;
+            uint32_t ID = current_entity_unique_ID_;
+            current_entity_unique_ID_ ++;
             return ID;
         }
 

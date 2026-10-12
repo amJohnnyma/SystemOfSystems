@@ -25,6 +25,9 @@ var type_colors: Dictionary = {
 	1: Color(0.4, 0.3, 0.2), # Dirt (Brown)
 	2: Color(0.2, 0.8, 0.3), # Grass (Green)
 	3: Color(0.5, 0.5, 0.5), # Stone (Gray)
+	4: Color(0.502, 0.502, 0.882, 1.0), 
+	5: Color(0.122, 0.008, 0.882, 1.0), 
+	6: Color(0.929, 0.133, 0.882, 1.0), 
 }
 
 func _ready() -> void:
@@ -79,6 +82,18 @@ func get_selected_hotbar_slot():
 func _on_custom_event(message: String) -> void:
 	print("Received signal from C++: - ", message)
 
+# Helper to get color for a block type
+func get_block_color(block_type: int) -> Color:
+	return type_colors.get(block_type, Color.WHITE)
+
+# Helper to get the full texture path for a structure sprite
+func get_structure_sprite_path(structure_data: Dictionary) -> String:
+	var sprite_filename = structure_data.get("sprite", "")
+	if sprite_filename.is_empty():
+		return ""
+	# Adjust path according to where your sprites are stored
+	return "res://icon.svg"# + sprite_filename
+	
 func _on_slot_action_requested(slot_number: int) -> void:
 	print("Main script heard that slot was clicked: ", slot_number)
 
@@ -97,15 +112,25 @@ func _on_hotbar_slot_selected(slot_number: int) -> void:
 		selected_structure = structure_registry.get(2, {})
 		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
 	elif slot_number == 5:
-		selected_structure = structure_registry.get(2, {})
+		selected_structure = structure_registry.get(3, {})
+		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
+	elif slot_number == 6:
+		selected_structure = structure_registry.get(4, {})
+		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
+	elif slot_number == 7:
+		selected_structure = structure_registry.get(5, {})
+		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
+	elif slot_number == 8:
+		selected_structure = structure_registry.get(6, {})
 		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
 	else:
 		selected_structure = {}
 		input_manager.set_input_mode(InputManager.InputMode.FULL_GAMEPLAY)
 		
 func _draw_building_overlay():
-	# For now just a box with the dimensions
-	var color := Color(0.325, 0.282, 0.29, 1.0)
+	if selected_structure.is_empty():
+		return
+	var color := Color(0.325, 0.282, 0.29, 0.6)
 	var w = selected_structure.get("width", 1)
 	var h = selected_structure.get("height", 1)
 
@@ -117,7 +142,7 @@ func _draw_building_overlay():
 
 	var rect = Rect2(pos, size)
 
-	draw_rect(rect, color, false, 0.5)
+	draw_rect(rect, color, true)
 
 func _place_selected_building():
 	print("Placing: ", selected_structure)
@@ -212,6 +237,7 @@ func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 		chunk_node.material = shader_mat 
 
 	# --- Surface 1: Crisp Structures ---
+	# This should only be for blocks
 	var s_verts: PackedVector2Array = struct_dict.get("vertices", PackedVector2Array())
 	var s_inds: PackedInt32Array = struct_dict.get("indices", PackedInt32Array())
 	var s_types: PackedInt32Array = struct_dict.get("type_ids", PackedInt32Array())

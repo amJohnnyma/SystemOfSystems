@@ -164,6 +164,7 @@ MeshData MarchingSquares::generate_blocky_mesh(const std::vector<Cell>& world, i
     int end_x = std::min(start_x + chunk_size, world_x);
     int end_y = std::min(start_y + chunk_size, world_y);
 
+    
     for (int iy = start_y; iy < end_y; iy++) {
         for (int ix = start_x; ix < end_x; ix++) {
             size_t idx = static_cast<size_t>(iy) * world_x + ix;
@@ -174,6 +175,7 @@ MeshData MarchingSquares::generate_blocky_mesh(const std::vector<Cell>& world, i
             // Define a full 1x1 quad for this cell
             float x = static_cast<float>(ix);
             float y = static_cast<float>(iy);
+
 
             Vertex v0 = {Vec2{x, y}, Vec2{0,0}, cell.type_id};         // BL
             Vertex v1 = {Vec2{x + 1.0f, y}, Vec2{1,0}, cell.type_id};     // BR
