@@ -239,15 +239,16 @@ namespace NativeNoise {
 
 void WorldGrid::init(int x_size, int y_size, int g_size)
 {
-    world_x_ = x_size;
-    world_y_ = y_size;
+    world_x_ = x_size + 1;
+    world_y_ = y_size + 1;
     chunk_size_ = g_size;
-    num_chunk_x = world_x_ / chunk_size_;
-    num_chunk_y = world_y_ / chunk_size_;
+    num_chunk_x = std::max(1, world_x_ / chunk_size_);
+    num_chunk_y = std::max(1,world_y_ / chunk_size_);
     world_cells_.resize(world_x_ * world_y_);
     placed_cells_.resize(world_x_ * world_y_);
-    float base_height = world_y_ * 0.8f;       // Surface line 
-    float height_amplitude = world_y_ * 0.01f; // Hill variance height
+    float base_height = world_y_ * 1.f;       // Surface line 
+                                               //
+    float height_amplitude = world_y_ * 0.f; // Hill variance height
                                                // PARALLEL TIME !!!
 
     pool_ = std::make_unique<ThreadPool>();
@@ -323,35 +324,30 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
                     {
 
                     size_t index = j * world_x_ + i;
-
-                    // 1. Calculate surface height curve (1D noise across X axis)
-                    float noise_val = NativeNoise::fBm(static_cast<float>(i) * 0.03f, 0.0f, 4, 1.0f, 0.5f);
-                    float surface_y = base_height + (noise_val * height_amplitude);
-
-                    // 2. Calculate cell density relative to depth
-                    float depth = static_cast<float>(j) - surface_y;
-                    float density = std::clamp((depth + 1.0f) * 128.0f, 0.0f, 255.0f);
+// Calculate percentage height from bottom (0.0) to top (1.0)
+                    float height_pct = 1.f - (static_cast<float>(j) / static_cast<float>(world_y_));
 
                     uint16_t type_id = 0; // Default: Air (ID 0)
+                    float density = 0.0f;
 
-                    if (density > 0.0f)
-                    {
-                        // 3. Biome depth layering
-                        if (depth < 2.5f) {
-                            type_id = 2; // Grass (ID 2): Surface layer
-                            
-                        } 
-                        else if (depth < 14.0f) {
-                            // Dirt layer with Stone pockets using 2D noise
-                            float mat_n = NativeNoise::eval(static_cast<float>(i) * 0.1f, static_cast<float>(j) * 0.1f);
-                            type_id = (mat_n > 0.25f) ? 4 : 3; // Stone (3) vs Dirt (1)
-                        } 
-                        else {
-                            // Underground: Mostly Stone with Dirt veins
-                            float mat_n = NativeNoise::eval(static_cast<float>(i) * 0.06f, static_cast<float>(j) * 0.06f);
-                            type_id = (mat_n > -0.1f) ? 4 : 3; // Stone (3) vs Dirt (1)
-                        }
+                    if (height_pct >= 0.9f) {
+                        // Top 10%: Air
+                        type_id = 0;
+                        density = 0.0f;
+                    } 
+                    else if (height_pct >= 0.8f) {
+                        type_id = 1;
+                        density = 255.0f;
+                    } 
+                    else if (height_pct >= 0.5f) {
+                        type_id = 3;
+                        density = 255.0f;
+                    } 
+                    else {
+                        type_id = 4;
+                        density = 255.0f;
                     }
+
 
                     world_cells_[index].type_id = type_id;
                     world_cells_[index].density = density;
