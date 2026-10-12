@@ -699,6 +699,112 @@ void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
     }
 }
 
+/*
+ * ALL OF THIS NEEDS A BIG REFACTOR
+ *
+ *
+ */
+// magic numbers everwhere
+bool WorldGrid::isCellSolid(float x, float y) const {
+    int cell_x = static_cast<int>(std::floor(x));
+    int cell_y = static_cast<int>(std::floor(y));
+
+    if (cell_x < 0 || cell_x >= world_x_ || cell_y < 0 || cell_y >= world_y_) {
+        return true; // Treat out-of-bounds as solid walls
+    }
+
+    size_t index = static_cast<size_t>(cell_y) * world_x_ + cell_x;
+    const Cell& c = world_cells_[index];
+    
+    return (c.type_id != 0 && c.density > 128.0f);
+}
+
+float WorldGrid::getDensityAt(float x, float y) const {
+    int cell_x = static_cast<int>(std::floor(x));
+    int cell_y = static_cast<int>(std::floor(y));
+
+    if (cell_x < 0 || cell_x >= world_x_ || cell_y < 0 || cell_y >= world_y_) {
+        return 0.0f; // Treat outside as empty air
+    }
+
+    size_t index = static_cast<size_t>(cell_y) * world_x_ + cell_x;
+    return static_cast<float>(world_cells_[index].density);
+}
+
+Vec2 WorldGrid::calculateDensityGradient(float x, float y) const {
+    float eps = 1.0f; // 1 cell offset
+    
+    float d_left   = getDensityAt(x - eps, y);
+    float d_right  = getDensityAt(x + eps, y);
+    float d_top    = getDensityAt(x, y - eps);
+    float d_bottom = getDensityAt(x, y + eps);
+
+    float gx = (d_right - d_left) * 0.5f;
+    float gy = (d_top - d_bottom) * 0.5f; // Normal points upward into air
+
+    Vec2 grad(gx, gy);
+    float len = std::sqrt(grad.x * grad.x + grad.y * grad.y);
+    if (len > 0.0001f) {
+        grad.x /= len;
+        grad.y /= len;
+    }
+    return grad;
+}
+Vec2 WorldGrid::resolveCollision(Vec2 current_pos, Vec2& velocity, float width_cells, float height_cells, double deltaTime) {
+    Vec2 new_pos = current_pos;
+
+    float dx = velocity.x * static_cast<float>(deltaTime);
+    new_pos.x += dx;
+
+    if (checkAABBCollision(new_pos, width_cells, height_cells)) {
+        new_pos.x = current_pos.x; // Stop dead on X walls
+        velocity.x = 0.0f;
+    }
+
+    float dy = velocity.y * static_cast<float>(deltaTime);
+    new_pos.y += dy;
+
+    float half_w = width_cells * 0.5f;
+    float half_h = height_cells * 0.5f;
+
+    if (velocity.y > 0.0f) {
+        // Falling: Check bottom corners
+        float left = new_pos.x - half_w;
+        float right = new_pos.x + half_w;
+        float bottom = new_pos.y + half_h;
+
+        if (isCellSolid(left, bottom) || isCellSolid(right, bottom)) {
+            velocity.y = 0.0f;
+            new_pos.y = current_pos.y; // Stop dead on ground with zero bounce
+        }
+    } 
+    else if (velocity.y < 0.0f) {
+        // Jumping/Rising: Check top corners
+        float left = new_pos.x - half_w;
+        float right = new_pos.x + half_w;
+        float top = new_pos.y - half_h;
+
+        if (isCellSolid(left, top) || isCellSolid(right, top)) {
+            velocity.y = 0.0f;
+            new_pos.y = current_pos.y; // Hit ceiling, stop rise
+        }
+    }
+
+    return new_pos;
+}
+
+bool WorldGrid::checkAABBCollision(const Vec2& pos, float width, float height) const {
+    float half_w = width * 0.5f;
+    float half_h = height * 0.5f;
+
+    float left = pos.x - half_w;
+    float right = pos.x + half_w;
+    float top = pos.y - half_h;
+    float bottom = pos.y + half_h;
+
+    return isCellSolid(left, top) || isCellSolid(right, top) ||
+           isCellSolid(left, bottom) || isCellSolid(right, bottom);
+}
 WorldGrid::WorldGrid()
 {
 }

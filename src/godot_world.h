@@ -40,6 +40,9 @@ public:
     Dictionary getStructureRegistry() const;
     void placeStructure(int x, int y, int structureID);
     void selectStructure(int x, int y);
+    Vector2 resolveCollision(Vector2 current_pos, Vector2 velocity, float width, float height, double delta);
+    void updatePlayerPosition(float x, float y);
+
 };
 
 } // namespace godot

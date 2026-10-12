@@ -14,8 +14,11 @@ var shader_mat: ShaderMaterial
 # Mesh configuration
 const MESH_SCALE := Vector2(4.0, 4.0)
 var cell_size: float = 64.0
+
+
 var world_width: int = 640
-var world_height: int = 128
+var world_height: int = 180
+
 
 
 var structure_registry: Dictionary = {}
@@ -57,6 +60,14 @@ var type_colors: Dictionary = {
 	5: Color(0.122, 0.008, 0.882, 1.0), 
 	6: Color(0.929, 0.133, 0.882, 1.0), 
 }
+
+var player: Sprite2D
+var player_velocity: Vector2 = Vector2.ZERO
+const PLAYER_GRAVITY: float = 800
+const PLAYER_SPEED: float = 60
+const PLAYER_WIDTH: float = 4.0
+const PLAYER_HEIGHT: float = 10.0
+var is_on_ground_flag = false
 
 func _ready() -> void:
 	# Create and configure Camera2D
@@ -109,6 +120,26 @@ func _ready() -> void:
 	
 		# Initialize C++ world grid (world_x, world_y, g_size)
 	world.createWorld(world_width, world_height, int(cell_size))
+	
+	player = Sprite2D.new()
+	player.texture = load("res://game/sprite/player.png")
+	
+	var tex_size = player.texture.get_size()
+	if tex_size.x > 0 and tex_size.y > 0:
+		var target_pixel_width = PLAYER_WIDTH * MESH_SCALE.x
+		var target_pixel_height = PLAYER_HEIGHT * MESH_SCALE.y
+		
+		# Scale down/up so the sprite fits the target cell bounds
+		player.scale = Vector2(
+			target_pixel_width / tex_size.x,
+			target_pixel_height / tex_size.y
+		)
+	
+	var spawn_x = (world_width * 0.5) * MESH_SCALE.x
+	var spawn_y = 10 # Spawn slightly down in the air layer
+	player.global_position = Vector2(spawn_x, spawn_y)
+	add_child(player)
+
 	structure_registry = world.getStructureRegistry()
 	#print("Loaded structures into Godot: ", structure_registry)
 	_init_building_materials()
@@ -119,7 +150,42 @@ func _ready() -> void:
 	
 	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
 	
+func _physics_process(delta: float) -> void:
+	if not player:
+		return
+	
+	player_velocity.y += PLAYER_GRAVITY * delta
+	var input_x := Input.get_axis("ui_left", "ui_right")
+	player_velocity.x = input_x * PLAYER_SPEED
 
+	var input_y := Input.get_axis("ui_up", "ui_down")
+	if input_y > 0:
+		player_velocity.y += input_y * PLAYER_SPEED / 10
+
+	# Flat jump impulse on initial press of jump/up (only when grounded)
+	if Input.is_action_just_pressed("ui_up") and is_on_ground_flag:
+		player_velocity.y = -2.0 * PLAYER_SPEED # Apply flat jump impulse
+		is_on_ground_flag = false # Instantly leave the ground state
+
+	var cell_pos = player.global_position / MESH_SCALE.x
+	var cell_velocity = player_velocity / MESH_SCALE.x
+
+	var old_y = cell_pos.y
+
+	var new_cell_pos = world.resolveCollision(cell_pos, cell_velocity, PLAYER_WIDTH, PLAYER_HEIGHT, delta)
+	
+	# Ground check update location:
+	if new_cell_pos.y < cell_pos.y + (cell_velocity.y * delta) and player_velocity.y > 0.0:
+		player_velocity.y = 0.0
+		is_on_ground_flag = true
+	else:
+		if player_velocity.y != 0.0:
+			is_on_ground_flag = false
+
+	player.global_position = new_cell_pos * MESH_SCALE.x
+	
+	world.updatePlayerPosition(player.global_position.x / MESH_SCALE.x, player.global_position.y / MESH_SCALE.x)
+	
 func _init_building_materials() -> void:
 	# Shared atlas material for ordinary blocks.
 	if ResourceLoader.exists(BLOCK_ATLAS_PATH):

@@ -1,6 +1,7 @@
 #ifndef WORLD_GRID_H
 #define WORLD_GRID_H
 
+#include "math_types.h"
 #include "world_types.h"
 #include "marching_squares.h"
 #include <cstdint>
@@ -8,6 +9,7 @@
 #include "structure.h"
 #include <unordered_map>
 #include <random>
+#include "entity.h"
 
 
 // what will be updated on each tick if any
@@ -44,6 +46,9 @@ class WorldGrid
         //Just testing the tick
         double time_accumulator_ = 0.0;
         double spawn_interval_ = 0.1;
+
+        Vec2 player_position_;
+        uint32_t player_instance_id_ = 0;
 
         
 
@@ -102,6 +107,21 @@ class WorldGrid
         struct_template selectStructure(int x, int y);
 
         const std::unordered_map<int, Structure>& getStructureRegistry() const {return structure_registry_;}
+
+        bool isCellSolid(float x, float y) const;
+        Vec2 resolveCollision(Vec2 current_pos, Vec2& velocity, float width, float height, double deltaTime);
+        bool checkAABBCollision(const Vec2& pos, float width, float height) const;
+        Vec2 calculateDensityGradient(float x, float y) const;
+        float getDensityAt(float x, float y) const;
+
+// Called from Godot every frame or when the player moves
+        void updatePlayerPosition(float x, float y) {
+            player_position_ = Vec2(x, y);
+        }
+        
+        const Vec2& getPlayerPosition() const {
+            return player_position_;
+        }
 
 
 
