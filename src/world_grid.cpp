@@ -490,12 +490,47 @@ void WorldGrid::tick(double deltaTime)
 // -> Placing blocks
 void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
 {
+
+    if (bl_x < 0 || bl_x >= world_x_ ||
+        bl_y < 0 || bl_y >= world_y_)
+        return;
+
+    size_t origin_index = static_cast<size_t>(bl_y) * world_x_ + bl_x;
+
+    const Cell& origin = placed_cells_[origin_index];
+
+    // Don't place on an occupied cell.
+    if (origin.type_id != 0 || origin.entity_on_cell_uID != -1)
+        return;
     if (structure_registry_.find(structureID) == structure_registry_.end()) return;
 
     struct_template st = structure_registry_.at(structureID).getTemplate();
 
     int w = st.x_width;
     int h = st.y_width;
+    // Validate the entire footprint before placing anything.
+    for (int dy = 0; dy < h; ++dy)
+    {
+        for (int dx = 0; dx < w; ++dx)
+        {
+            int x = bl_x + dx;
+            int y = bl_y - dy;
+
+            // Reject if any part of the structure is outside the world.
+            if (x < 0 || x >= world_x_ || y < 0 || y >= world_y_)
+                return;
+
+            size_t index = static_cast<size_t>(y) * world_x_ + x;
+            const Cell& cell = placed_cells_[index];
+
+            // Reject if any cell is already occupied.
+            if (cell.type_id != 0 ||
+                cell.entity_on_cell_uID != -1)
+            {
+                return;
+            }
+        }
+    }
 
     for (int dy = 0; dy < h; ++dy)
     {

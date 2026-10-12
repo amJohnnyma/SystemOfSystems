@@ -14,8 +14,8 @@ var shader_mat: ShaderMaterial
 # Mesh configuration
 const MESH_SCALE := Vector2(4.0, 4.0)
 var cell_size: float = 64.0
-var world_width: int = 64
-var world_height: int = 180
+var world_width: int = 6400
+var world_height: int = 1800
 
 var structure_registry: Dictionary = {}
 var selected_structure: Dictionary = {}
