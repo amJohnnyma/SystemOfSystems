@@ -335,28 +335,53 @@ func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 	var t_types: PackedInt32Array = terrain_dict.get(
 		"type_ids", PackedInt32Array()
 	)
+	var t_uvs: PackedVector2Array = terrain_dict.get(
+		"uvs", PackedVector2Array()
+	)
 
 	var terrain_mesh := ArrayMesh.new()
 
 	if not t_verts.is_empty() and not t_inds.is_empty():
-		var t_colors := PackedColorArray()
-		t_colors.resize(t_verts.size())
+		var atlas_uvs := PackedVector2Array()
+		atlas_uvs.resize(t_verts.size())
 
-		for i in range(t_verts.size()):
-			var type_id: int = t_types[i] if i < t_types.size() else -1
-			t_colors[i] = type_colors.get(type_id, Color.WHITE)
+		for tri in range(t_inds.size() / 3):
+			var i0: int = t_inds[tri * 3]
+			var i1: int = t_inds[tri * 3 + 1]
+			var i2: int = t_inds[tri * 3 + 2]
+
+			var type0: int = t_types[i0] if i0 < t_types.size() else 0
+			var type1: int = t_types[i1] if i1 < t_types.size() else 0
+			var type2: int = t_types[i2] if i2 < t_types.size() else 0
+
+			# Choose a consistent type for this triangle.
+			var type_id: int = type0
+			if type1 == type2:
+				type_id = type1
+			elif type0 == type2:
+				type_id = type0
+			elif type0 == type1:
+				type_id = type0
+
+			for idx in [i0, i1, i2]:
+				var uv: Vector2 = (
+					t_uvs[idx] if idx < t_uvs.size()
+					else t_verts[idx]
+				)
+				atlas_uvs[idx] = get_block_atlas_uv(type_id, uv)
 
 		var t_array: Array = []
 		t_array.resize(Mesh.ARRAY_MAX)
 		t_array[Mesh.ARRAY_VERTEX] = t_verts
 		t_array[Mesh.ARRAY_INDEX] = t_inds
-		t_array[Mesh.ARRAY_COLOR] = t_colors
+		t_array[Mesh.ARRAY_TEX_UV] = atlas_uvs
 
 		terrain_mesh.add_surface_from_arrays(
 			Mesh.PRIMITIVE_TRIANGLES,
 			t_array
 		)
 
+	terrain_node.material = block_atlas_material
 	terrain_node.mesh = (
 		terrain_mesh
 		if terrain_mesh.get_surface_count() > 0

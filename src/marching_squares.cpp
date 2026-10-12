@@ -136,6 +136,23 @@ MeshData MarchingSquares::GenerateMesh(const std::vector<Cell>& world, float thr
                 Vertex v2 = GetCellVertex(tris[i + 2], ix, iy, 
                         bl, br, tr, tl, bl_t, br_t, tr_t, tl_t, threshold);
 
+                constexpr float texture_scale = 4.0f;
+
+                v0.uv = Vec2{
+                    v0.position.x / texture_scale,
+                    v0.position.y / texture_scale
+                };
+
+                v1.uv = Vec2{
+                    v1.position.x / texture_scale,
+                    v1.position.y / texture_scale
+                };
+
+                v2.uv = Vec2{
+                    v2.position.x / texture_scale,
+                    v2.position.y / texture_scale
+                };
+
 
 
                 uint32_t base_index = static_cast<uint32_t>(mesh.vertices.size());
