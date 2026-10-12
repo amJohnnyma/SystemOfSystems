@@ -698,6 +698,12 @@ void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
 
     }
 }
+
+/*
+ * ALL OF THIS NEEDS A BIG REFACTOR
+ *
+ *
+ */
 // magic numbers everwhere
 bool WorldGrid::isCellSolid(float x, float y) const {
     int cell_x = static_cast<int>(std::floor(x));
@@ -747,7 +753,6 @@ Vec2 WorldGrid::calculateDensityGradient(float x, float y) const {
 Vec2 WorldGrid::resolveCollision(Vec2 current_pos, Vec2& velocity, float width_cells, float height_cells, double deltaTime) {
     Vec2 new_pos = current_pos;
 
-    // --- 1. Horizontal Movement & Collision ---
     float dx = velocity.x * static_cast<float>(deltaTime);
     new_pos.x += dx;
 
@@ -756,7 +761,6 @@ Vec2 WorldGrid::resolveCollision(Vec2 current_pos, Vec2& velocity, float width_c
         velocity.x = 0.0f;
     }
 
-    // --- 2. Vertical Movement & Collision ---
     float dy = velocity.y * static_cast<float>(deltaTime);
     new_pos.y += dy;
 
