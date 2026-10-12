@@ -36,6 +36,7 @@ public:
     void setDensity(int x, int y, float radius, float strength, uint16_t type_id);
     void fillCell(int x,int y, uint16_t type_id, bool negativeFill =false);
     void trigger_test_signal(const godot::String &msg);
+    void update_godot_mesh_signal();
     Dictionary getStructureRegistry() const;
     void placeStructure(int x, int y, int structureID);
     void selectStructure(int x, int y);

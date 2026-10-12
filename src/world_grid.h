@@ -7,8 +7,16 @@
 #include "thread_pool.h"
 #include "structure.h"
 #include <unordered_map>
+#include <random>
 
 
+// what will be updated on each tick if any
+namespace TickFlags {
+    constexpr uint32_t NONE          = 0;
+    constexpr uint32_t MESH_UPDATE   = 1 << 0; // 1
+    constexpr uint32_t UI_UPDATE     = 1 << 1; // 2
+    constexpr uint32_t ENTITY_UPDATE = 1 << 2; // 4
+}
 
 class WorldGrid
 {
@@ -32,6 +40,12 @@ class WorldGrid
 
         uint32_t current_entity_unique_ID_ = 1; // for anything that needs a uid
         std::unordered_map<int, Structure> structure_registry_;
+
+        //Just testing the tick
+        double time_accumulator_ = 0.0;
+        double spawn_interval_ = 0.1;
+
+        
 
 
 
@@ -81,7 +95,7 @@ class WorldGrid
 
         ThreadPool& get_thread_pool() { return *pool_; }
 
-        void tick(double deltaTime); // Each frame update function
+        uint32_t tick(double deltaTime); // Each frame update function
                                      //
         void placeStructure(int bl_x, int bl_y, int structureID);
 

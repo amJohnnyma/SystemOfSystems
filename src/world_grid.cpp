@@ -475,7 +475,7 @@ void WorldGrid::fill_cell(int x, int y, uint16_t type_id, bool negativeFill)
     }
 }
 
-void WorldGrid::tick(double deltaTime)
+uint32_t WorldGrid::tick(double deltaTime)
 {
     // could be parallel
  //   for(uint32_t sID : tick_structures_)
@@ -483,6 +483,31 @@ void WorldGrid::tick(double deltaTime)
         //Structure& s = structures_.at(sID); 
        // s.on_tick(deltaTime);
     }
+
+    // also do entity processes
+    
+    uint32_t active_flags = TickFlags::NONE;
+    time_accumulator_ += deltaTime;
+
+    // 2. Check if counter/interval is reached (e.g., every 2 seconds)
+    if (time_accumulator_ >= spawn_interval_)
+    {
+        time_accumulator_ -= spawn_interval_; // Reset/subtract interval
+
+        // 3. Generate random coordinates on the map
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<int> dist_x(0, world_x_- 1);
+        std::uniform_int_distribution<int> dist_y(0, world_y_- 1);
+
+        int random_x = dist_x(gen);
+        int random_y = dist_y(gen);
+
+        // 4. Place structure ID 5 at the random location
+        placeStructure(random_x, random_y, 5);
+        active_flags |= TickFlags::MESH_UPDATE;
+    }
+    return active_flags;
 
 }
 

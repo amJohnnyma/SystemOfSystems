@@ -23,6 +23,10 @@ void GodotSimulation::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("trigger_test_signal", "message"), &GodotSimulation::trigger_test_signal);
     ADD_SIGNAL(MethodInfo("test_signal_event", PropertyInfo(Variant::STRING, "message")));
+
+
+    ClassDB::bind_method(D_METHOD("update_godot_mesh_signal"), &GodotSimulation::trigger_test_signal);
+    ADD_SIGNAL(MethodInfo("update_godot_mesh_event"));
 }
 
 GodotSimulation::GodotSimulation() {}
@@ -33,9 +37,23 @@ void GodotSimulation::trigger_test_signal(const godot::String &msg)
     emit_signal("test_signal_event", msg);
 }
 
+void GodotSimulation::update_godot_mesh_signal()
+{
+    emit_signal("update_godot_mesh_event");
+}
+
 void GodotSimulation::_process(double delta)
 {
-    world_grid_.tick(delta);
+    uint32_t flags = world_grid_.tick(delta);
+    if (flags & TickFlags::MESH_UPDATE)
+    {
+        update_godot_mesh_signal();
+    }
+
+    if (flags & TickFlags::UI_UPDATE)
+    {
+        // emit_signal("update_ui_event");
+    }
 }
 
 void GodotSimulation::createWorld(int world_x, int world_y, int g_size)

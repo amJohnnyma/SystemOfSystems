@@ -14,8 +14,8 @@ var shader_mat: ShaderMaterial
 # Mesh configuration
 const MESH_SCALE := Vector2(4.0, 4.0)
 var cell_size: float = 64.0
-var world_width: int = 6400
-var world_height: int = 1800
+var world_width: int = 64
+var world_height: int = 180
 
 var structure_registry: Dictionary = {}
 var selected_structure: Dictionary = {}
@@ -101,6 +101,7 @@ func _ready() -> void:
 
 	# Connect using the standard GDScript signal syntax
 	world.test_signal_event.connect(_on_custom_event)
+	world.update_godot_mesh_event.connect(_on_required_mesh_update)
 	
 	# Call the C++ method that triggers the emission
 	world.trigger_test_signal("MEOW")
@@ -114,6 +115,8 @@ func _ready() -> void:
 	# Populate all chunk nodes initially
 	_setup_full_mesh_display()
 	update_mesh_display()
+	
+	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
 	
 
 func _init_building_materials() -> void:
@@ -179,6 +182,10 @@ func get_selected_hotbar_slot():
 
 func _on_custom_event(message: String) -> void:
 	print("Received signal from C++: - ", message)
+	
+func _on_required_mesh_update():
+	# We need a mesh update
+	update_mesh_display()
 
 # Helper to get color for a block type
 func get_block_color(block_type: int) -> Color:
@@ -259,21 +266,20 @@ func _cancel_building():
 	input_manager.set_input_mode(0)
 
 func _draw() -> void:
-	if selected_hotbar_slot == 9:
-		var grid_color := Color(1, 1, 1, 0.15)
-		var line_width := 0.5
+	var grid_color := Color(1, 1, 1, 0.15)
+	var line_width := 0.5
 
-		# Vertical grid lines
-		for x in range(world_width):
-			var start := Vector2(x, 0) * MESH_SCALE
-			var end := Vector2(x, world_height) * MESH_SCALE
-			draw_line(start, end, grid_color, line_width)
+	# Vertical grid lines
+	for x in range(world_width):
+		var start := Vector2(x, 0) * MESH_SCALE
+		var end := Vector2(x, world_height) * MESH_SCALE
+		draw_line(start, end, grid_color, line_width)
 
-		# Horizontal grid lines
-		for y in range(world_height):
-			var start := Vector2(0, y) * MESH_SCALE
-			var end := Vector2(world_width, y) * MESH_SCALE
-			draw_line(start, end, grid_color, line_width)
+	# Horizontal grid lines
+	for y in range(world_height):
+		var start := Vector2(0, y) * MESH_SCALE
+		var end := Vector2(world_width, y) * MESH_SCALE
+		draw_line(start, end, grid_color, line_width)
 
 	# Mouse Radius Circle
 	if selected_hotbar_slot == 1 or selected_hotbar_slot == 2:
