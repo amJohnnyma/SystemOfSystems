@@ -30,7 +30,7 @@ class WorldGrid
         std::unordered_map<uint32_t, Structure> structures_ = {}; // All structures
         std::vector<uint32_t> tick_structures_; // store ID and lookup data when needed
 
-        uint32_t current_entity_unique_ID_ = 0; // for anything that needs a uid
+        uint32_t current_entity_unique_ID_ = 1; // for anything that needs a uid
         std::unordered_map<int, Structure> structure_registry_;
 
 
@@ -84,6 +84,8 @@ class WorldGrid
         void tick(double deltaTime); // Each frame update function
                                      //
         void placeStructure(int bl_x, int bl_y, int structureID);
+
+        struct_template selectStructure(int x, int y);
 
         const std::unordered_map<int, Structure>& getStructureRegistry() const {return structure_registry_;}
 

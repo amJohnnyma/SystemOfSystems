@@ -91,6 +91,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			if event.pressed and (is_left_down or is_right_down) and (selected_hotbar_slot == 1 or selected_hotbar_slot == 2):
 				_apply_brush()
 				paint_cooldown = PAINT_INTERVAL
+			if event.pressed and (is_left_down or is_right_down) and selected_hotbar_slot == 9:
+				var cell_x := int(current_mouse_local.x)
+				var cell_y := int(current_mouse_local.y)
+				world.selectStructure(cell_x, cell_y)
 
 		elif event is InputEventKey and event.pressed:
 			var cell_x := int(current_mouse_local.x)

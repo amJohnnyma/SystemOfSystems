@@ -485,6 +485,42 @@ void WorldGrid::tick(double deltaTime)
 
 }
 
+ struct_template WorldGrid::selectStructure(int x, int y)
+{
+    struct_template r;
+    r.structureID = 0;
+    r.blockType = -1;
+    r.canTick = false;
+    r.instanceID = 0; // instance id 0 is possible though...
+    r.isBuilding = false;
+    r.processing_time = -1.f;
+    r.sprite = "NAN";
+
+    if (x< 0 || x >= world_x_ ||
+        y < 0 || y >= world_y_)
+        return r;
+
+    size_t index= static_cast<size_t>(y) * world_x_ + x;
+    const Cell& c= placed_cells_[index];
+
+    if (c.entity_on_cell_uID != -1)
+    {
+        //Have an entity 
+        return structures_.at(c.entity_on_cell_uID).getTemplate();
+    }
+
+    // else we may just have a regular block so lets check
+    if (c.type_id != 0)
+    {
+        //There's just a block here
+        // Will have to figure out this return at some point
+        return r;
+    }
+
+    return r;
+
+} 
+
 // placing a structure
 // -> Placing actual buildings (System not yet implemented ill figure it out)
 // -> Placing blocks

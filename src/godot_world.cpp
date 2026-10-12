@@ -17,6 +17,7 @@ void GodotSimulation::_bind_methods() {
     ClassDB::bind_method(D_METHOD("fillCell", "x", "y", "type_id", "negativeFill"), &GodotSimulation::fillCell);
     ClassDB::bind_method(D_METHOD("getStructureRegistry"), &GodotSimulation::getStructureRegistry);
     ClassDB::bind_method(D_METHOD("placeStructure", "x", "y", "structureID"), &GodotSimulation::placeStructure);
+    ClassDB::bind_method(D_METHOD("selectStructure", "x", "y"), &GodotSimulation::selectStructure);
 
 
 
@@ -184,3 +185,21 @@ void GodotSimulation::placeStructure(int x, int y, int structureID)
 {
     world_grid_.placeStructure(x,y,structureID);
 }
+
+void GodotSimulation::selectStructure(int x, int y)
+{
+    struct_template st = world_grid_.selectStructure(x,y);
+
+    godot::String dump = "--- Selected Structure Dump ---\n";
+
+    char buffer[256];
+
+    snprintf(buffer, sizeof(buffer), "ID: %u | Size: %dx%d | Tick: %s | Time: %.1f | Type: %s\n",
+             st.structureID, st.x_width, st.y_width, 
+             (st.canTick ? "yes" : "no"), st.processing_time,
+             (st.isBuilding ? "Building": "Block"));
+
+    dump += godot::String(buffer);
+    trigger_test_signal(dump);
+
+} 

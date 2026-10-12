@@ -38,6 +38,7 @@ public:
     void trigger_test_signal(const godot::String &msg);
     Dictionary getStructureRegistry() const;
     void placeStructure(int x, int y, int structureID);
+    void selectStructure(int x, int y);
 };
 
 } // namespace godot
