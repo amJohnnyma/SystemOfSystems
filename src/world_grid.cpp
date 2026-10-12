@@ -242,8 +242,8 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
     world_x_ = x_size + 1;
     world_y_ = y_size + 1;
     chunk_size_ = g_size;
-    num_chunk_x = std::max(1, world_x_ / chunk_size_);
-    num_chunk_y = std::max(1,world_y_ / chunk_size_);
+    num_chunk_x = std::max(1, (world_x_ + chunk_size_ - 1) / chunk_size_);
+    num_chunk_y = std::max(1,(world_y_ + chunk_size_ - 1) / chunk_size_);
     world_cells_.resize(world_x_ * world_y_);
     placed_cells_.resize(world_x_ * world_y_);
     float base_height = world_y_ * 1.f;       // Surface line 
@@ -362,6 +362,52 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
     {
         f.get();
     }
+// ==========================================
+    // MANUAL TEST FEATURES (Hill, Cave, Cutout)
+    // ==========================================
+    auto carve_shape = [&](int cx, int cy, float radius, uint16_t type_id, float density, bool is_additive) {
+        int sx = std::max(0, static_cast<int>(cx - radius));
+        int ex = std::min(world_x_ - 1, static_cast<int>(cx + radius));
+        int sy = std::max(0, static_cast<int>(cy - radius));
+        int ey = std::min(world_y_ - 1, static_cast<int>(cy + radius));
+        float r_sq = radius * radius;
+
+        for (int y = sy; y <= ey; ++y) {
+            for (int x = sx; x <= ex; ++x) {
+                float dx = x - cx;
+                float dy = y - cy;
+                if (dx * dx + dy * dy <= r_sq) {
+                    size_t idx = y * world_x_ + x;
+                    if (is_additive) {
+                        world_cells_[idx].type_id = type_id;
+                        world_cells_[idx].density = std::max(world_cells_[idx].density,static_cast<uint8_t>(density));
+                    } else {
+                        world_cells_[idx].type_id = type_id; // 0 for air cutout
+                        world_cells_[idx].density = density;   // 0.0f for air cutout
+                    }
+                }
+            }
+        }
+    };
+
+    // 1. A Hill (Additive mound of Dirt/Grass on the surface)
+    // Placed at 30% width, positioned near the upper surface layer
+    int hill_cx = static_cast<int>(world_x_ * 0.3f);
+    int hill_cy = static_cast<int>(world_y_ * 0.2f); 
+    carve_shape(hill_cx, hill_cy, 15.0f, 2, 255.0f, true); // Grass mound
+
+    // 2. A Cave Entrance (Subtractive circular arch cut into a wall/hillside)
+    // Placed at 50% width, deeper down in the dirt/stone layers
+    int cave_cx = static_cast<int>(world_x_ * 0.5f);
+    int cave_cy = static_cast<int>(world_y_ * 0.5f);
+    carve_shape(cave_cx, cave_cy, 8.0f, 0, 0.0f, false); // Air pocket
+
+    // 3. A Small Cutout (A distinct geometric bite taken out of the lower stone layer)
+    // Placed at 70% width, near the bottom
+    int cut_cx = static_cast<int>(world_x_ * 0.7f);
+    int cut_cy = static_cast<int>(world_y_ * 0.75f);
+    carve_shape(cut_cx, cut_cy, 10.0f, 0, 0.0f, false); // Air pocket
+    // ==========================================
 
     chunk_is_dirty_.assign(numChunks, 1);
 
