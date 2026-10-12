@@ -4,21 +4,48 @@ extends Node2D
 @onready var input_manager: InputManager = $InputManager
 @onready var ui_root_scene = preload("res://demo/ui_root.tscn")
 
-var chunk_nodes: Dictionary = {} # Vector2i(cx, cy) -> MeshInstance2D
+var chunk_nodes: Dictionary = {
+	"terrain":MeshInstance2D,
+	"structures":{"type_id" : MeshInstance2D}
+}
 var camera: Camera2D
 var shader_mat: ShaderMaterial
 
 # Mesh configuration
 const MESH_SCALE := Vector2(4.0, 4.0)
 var cell_size: float = 64.0
-var world_width: int = 6400
-var world_height: int = 1800
+var world_width: int = 64
+var world_height: int = 180
 
 var structure_registry: Dictionary = {}
 var selected_structure: Dictionary = {}
+var textured_shader: Shader
+var building_materials = {}
 
 var selected_hotbar_slot = -1
 
+const BLOCK_ATLAS_PATH := "res://game/atlas/minecraftatlas.png"
+const BLOCK_TILE_SIZE := Vector2i(256,256)
+const BLOCK_ATLAS_COORDS := {
+	1: Vector2i(0, 0),
+	2: Vector2i(1, 0),
+	3: Vector2i(2, 0),
+	4: Vector2i(3, 0),
+	5: Vector2i(0, 1),
+	6: Vector2i(1, 1),
+	7: Vector2i(2, 1),
+	8: Vector2i(3, 1),
+	9: Vector2i(0, 2),
+	10: Vector2i(1, 2),
+	11: Vector2i(2, 2),
+	12: Vector2i(3, 2),
+	13: Vector2i(0, 3),
+	14: Vector2i(1, 3),
+	15: Vector2i(2, 3),
+	16: Vector2i(3, 3),
+}
+var block_atlas: Texture2D
+var block_atlas_material: ShaderMaterial
 
 var type_colors: Dictionary = {
 	0: Color.TRANSPARENT,
@@ -39,6 +66,17 @@ func _ready() -> void:
 	# Cache shared shader material
 	shader_mat = ShaderMaterial.new()
 	shader_mat.shader = preload("res://shaders/flat_colour.gdshader")
+	textured_shader = Shader.new()
+	textured_shader.code = """
+		shader_type canvas_item;
+		uniform sampler2D building_tex : source_color, filter_nearest;
+
+	void fragment() {
+		COLOR = texture(building_tex, UV);
+		//COLOR = vec4(UV.x, UV.y, 0.0, 1.0);
+	}
+		"""
+
 
 
 	
@@ -70,12 +108,71 @@ func _ready() -> void:
 		# Initialize C++ world grid (world_x, world_y, g_size)
 	world.createWorld(world_width, world_height, int(cell_size))
 	structure_registry = world.getStructureRegistry()
-	print("Loaded structures into Godot: ", structure_registry)
+	#print("Loaded structures into Godot: ", structure_registry)
+	_init_building_materials()
 	
 	# Populate all chunk nodes initially
 	_setup_full_mesh_display()
 	update_mesh_display()
 	
+
+func _init_building_materials() -> void:
+	# Shared atlas material for ordinary blocks.
+	if ResourceLoader.exists(BLOCK_ATLAS_PATH):
+		block_atlas = load(BLOCK_ATLAS_PATH)
+
+		block_atlas_material = ShaderMaterial.new()
+		block_atlas_material.shader = textured_shader
+		block_atlas_material.set_shader_parameter(
+			"building_tex", block_atlas
+		)
+	else:
+		push_error("Block atlas not found: " + BLOCK_ATLAS_PATH)
+	print("Atlas loaded: ", block_atlas != null)
+	if block_atlas != null:
+		print("Atlas size: ", block_atlas.get_size())
+		print("Atlas resource path: ", block_atlas.resource_path)
+	# Individual textures for buildings.
+	for id in structure_registry:
+		var st: Dictionary = structure_registry[id]
+
+		if not st.get("isBuilding", false):
+			continue
+
+		var sprite_filename: String = st.get("sprite", "")
+		if sprite_filename.is_empty():
+			continue
+
+		var tex_path := "res://game/sprite/" + sprite_filename
+
+		if ResourceLoader.exists(tex_path):
+			var tex: Texture2D = load(tex_path)
+			var mat := ShaderMaterial.new()
+			mat.shader = textured_shader
+			mat.set_shader_parameter("building_tex", tex)
+			building_materials[id] = mat
+			print("Loaded building texture: ", tex_path)
+
+		else:
+			push_warning("Missing building texture: " + tex_path)
+
+
+func get_block_atlas_uv(type_id: int, uv: Vector2) -> Vector2:
+	if block_atlas == null:
+		return uv
+
+	if not BLOCK_ATLAS_COORDS.has(type_id):
+		return uv
+
+	var tile_coord: Vector2i = BLOCK_ATLAS_COORDS[type_id]
+	var atlas_size := Vector2(block_atlas.get_size())
+	var tile_size := Vector2(BLOCK_TILE_SIZE)
+
+	return (
+		Vector2(tile_coord) * tile_size + uv * tile_size
+	) / atlas_size
+
+
 func get_selected_hotbar_slot():
 	return selected_hotbar_slot
 
@@ -92,17 +189,17 @@ func get_structure_sprite_path(structure_data: Dictionary) -> String:
 	if sprite_filename.is_empty():
 		return ""
 	# Adjust path according to where your sprites are stored
-	return "res://icon.svg"# + sprite_filename
+	return "res://game/sprite" + sprite_filename
 	
 func _on_slot_action_requested(slot_number: int) -> void:
-	print("Main script heard that slot was clicked: ", slot_number)
+	#print("Main script heard that slot was clicked: ", slot_number)
 
 	UIManager.close_top_window()
 	selected_structure = structure_registry.get(slot_number, {})
 	input_manager.set_input_mode(3)
 
 func _on_hotbar_slot_selected(slot_number: int) -> void:
-	print("Main script received hotbar selection: Slot ", slot_number)
+	#print("Main script received hotbar selection: Slot ", slot_number)
 	input_manager.setSelectedHotbarSlot(slot_number)
 	
 	if slot_number == 3:
@@ -200,61 +297,250 @@ func update_mesh_display() -> void:
 		var chunk_pos: Vector2i = chunk_data["chunk_pos"]
 		_update_chunk_node(chunk_pos, chunk_data)
 
-# Internal helper to construct/update a single chunk's MeshInstance2D
 func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
-	var chunk_node: MeshInstance2D = chunk_nodes.get(chunk_pos, null)
-	if chunk_node == null:
-		chunk_node = MeshInstance2D.new()
-		chunk_node.scale = MESH_SCALE
-		chunk_node.show_behind_parent = true
-		add_child(chunk_node)
-		chunk_nodes[chunk_pos] = chunk_node
+	var chunk_entry: Dictionary = chunk_nodes.get(chunk_pos, {})
 
+	# --------------------------------------------------
+	# Create or retrieve the chunk's nodes
+	# --------------------------------------------------
+	if chunk_entry.is_empty():
+		var terrain_node := MeshInstance2D.new()
+		terrain_node.name = "Terrain_%s_%s" % [chunk_pos.x, chunk_pos.y]
+		terrain_node.scale = MESH_SCALE
+		terrain_node.show_behind_parent = true
+		terrain_node.material = shader_mat
+		add_child(terrain_node)
+
+		chunk_entry = {
+			"terrain": terrain_node,
+			"structures": {}
+		}
+
+		chunk_nodes[chunk_pos] = chunk_entry
+
+	var terrain_node: MeshInstance2D = chunk_entry["terrain"]
+	var structure_nodes: Dictionary = chunk_entry["structures"]
+
+	# --------------------------------------------------
+	# Terrain mesh
+	# --------------------------------------------------
 	var terrain_dict: Dictionary = chunk_data.get("terrain", {})
-	var struct_dict: Dictionary = chunk_data.get("structure", {})
 
-	var array_mesh := ArrayMesh.new()
+	var t_verts: PackedVector2Array = terrain_dict.get(
+		"vertices", PackedVector2Array()
+	)
+	var t_inds: PackedInt32Array = terrain_dict.get(
+		"indices", PackedInt32Array()
+	)
+	var t_types: PackedInt32Array = terrain_dict.get(
+		"type_ids", PackedInt32Array()
+	)
 
-	# --- Surface 0: Smooth Terrain ---
-	var t_verts: PackedVector2Array = terrain_dict.get("vertices", PackedVector2Array())
-	var t_inds: PackedInt32Array = terrain_dict.get("indices", PackedInt32Array())
-	var t_types: PackedInt32Array = terrain_dict.get("type_ids", PackedInt32Array())
+	var terrain_mesh := ArrayMesh.new()
 
 	if not t_verts.is_empty() and not t_inds.is_empty():
 		var t_colors := PackedColorArray()
-		t_colors.resize(t_types.size())
-		for i in range(t_types.size()):
-			t_colors[i] = type_colors.get(t_types[i], Color.WHITE)
+		t_colors.resize(t_verts.size())
+
+		for i in range(t_verts.size()):
+			var type_id: int = t_types[i] if i < t_types.size() else -1
+			t_colors[i] = type_colors.get(type_id, Color.WHITE)
 
 		var t_array: Array = []
 		t_array.resize(Mesh.ARRAY_MAX)
 		t_array[Mesh.ARRAY_VERTEX] = t_verts
 		t_array[Mesh.ARRAY_INDEX] = t_inds
 		t_array[Mesh.ARRAY_COLOR] = t_colors
-		
-		array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, t_array)
-		# Assign your marching squares shader to surface 0
-		chunk_node.material = shader_mat 
 
-	# --- Surface 1: Crisp Structures ---
-	# This should only be for blocks
-	var s_verts: PackedVector2Array = struct_dict.get("vertices", PackedVector2Array())
-	var s_inds: PackedInt32Array = struct_dict.get("indices", PackedInt32Array())
-	var s_types: PackedInt32Array = struct_dict.get("type_ids", PackedInt32Array())
+		terrain_mesh.add_surface_from_arrays(
+			Mesh.PRIMITIVE_TRIANGLES,
+			t_array
+		)
+
+	terrain_node.mesh = (
+		terrain_mesh
+		if terrain_mesh.get_surface_count() > 0
+		else null
+	)
+
+	# --------------------------------------------------
+	# Structures and blocks
+	# --------------------------------------------------
+	var struct_dict: Dictionary = chunk_data.get("structure", {})
+
+	var s_verts: PackedVector2Array = struct_dict.get(
+		"vertices", PackedVector2Array()
+	)
+	var s_inds: PackedInt32Array = struct_dict.get(
+		"indices", PackedInt32Array()
+	)
+	var s_types: PackedInt32Array = struct_dict.get(
+		"type_ids", PackedInt32Array()
+	)
+	var source_uvs: PackedVector2Array = struct_dict.get(
+		"uvs", PackedVector2Array()
+	)
+
+
+	# Track which types occur in this update so stale nodes can be cleared.
+	var active_types: Dictionary = {}
 
 	if not s_verts.is_empty() and not s_inds.is_empty():
-		var s_colors := PackedColorArray()
-		s_colors.resize(s_types.size())
-		for i in range(s_types.size()):
-			s_colors[i] = type_colors.get(s_types[i], Color.WHITE)
+		var groups: Dictionary = {}
 
-		var s_array: Array = []
-		s_array.resize(Mesh.ARRAY_MAX)
-		s_array[Mesh.ARRAY_VERTEX] = s_verts
-		s_array[Mesh.ARRAY_INDEX] = s_inds
-		s_array[Mesh.ARRAY_COLOR] = s_colors
-		
-		array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, s_array)
-		# Surface 1 will use default blocky rendering (no shader or a crisp building material)
+		# Group triangles by type ID.
+		for t in range(s_inds.size() / 3):
+			var idx0: int = s_inds[t * 3]
+			var idx1: int = s_inds[t * 3 + 1]
+			var idx2: int = s_inds[t * 3 + 2]
 
-	chunk_node.mesh = array_mesh if array_mesh.get_surface_count() > 0 else null
+			if (
+				idx0 < 0 or idx1 < 0 or idx2 < 0
+				or idx0 >= s_verts.size()
+				or idx1 >= s_verts.size()
+				or idx2 >= s_verts.size()
+			):
+				continue
+
+			var type_id: int = (
+				s_types[idx0] if idx0 < s_types.size() else -1
+			)
+
+			if type_id == -1:
+				continue
+
+			if not groups.has(type_id):
+				groups[type_id] = {
+					"vertices": PackedVector2Array(),
+					"uvs": PackedVector2Array(),
+					"indices": PackedInt32Array()
+				}
+
+			var g: Dictionary = groups[type_id]
+			var base_idx: int = g["vertices"].size()
+
+			g["vertices"].append(s_verts[idx0])
+			g["vertices"].append(s_verts[idx1])
+			g["vertices"].append(s_verts[idx2])
+
+			var uv0: Vector2 = (
+				source_uvs[idx0]
+				if idx0 < source_uvs.size()
+				else Vector2.ZERO
+			)
+			var uv1: Vector2 = (
+				source_uvs[idx1]
+				if idx1 < source_uvs.size()
+				else Vector2.ZERO
+			)
+			var uv2: Vector2 = (
+				source_uvs[idx2]
+				if idx2 < source_uvs.size()
+				else Vector2.ZERO
+			)
+
+			var st_data: Dictionary = structure_registry.get(type_id, {})
+			var is_building: bool = st_data.get("isBuilding", false)
+
+			# Blocks use atlas UVs; buildings retain their sprite UVs.
+			if not is_building:
+				uv0 = get_block_atlas_uv(type_id, uv0)
+				uv1 = get_block_atlas_uv(type_id, uv1)
+				uv2 = get_block_atlas_uv(type_id, uv2)
+
+			g["uvs"].append(uv0)
+			g["uvs"].append(uv1)
+			g["uvs"].append(uv2)
+
+			g["indices"].append(base_idx)
+			g["indices"].append(base_idx + 1)
+			g["indices"].append(base_idx + 2)
+			
+			var min_uv := Vector2(INF, INF)
+			var max_uv := Vector2(-INF, -INF)
+
+			for uv in g["uvs"]:
+				min_uv.x = minf(min_uv.x, uv.x)
+				min_uv.y = minf(min_uv.y, uv.y)
+				max_uv.x = maxf(max_uv.x, uv.x)
+				max_uv.y = maxf(max_uv.y, uv.y)
+
+			print("Building type: ", type_id,
+		  " UV range: ", min_uv, " to ", max_uv)
+			print("Type ", type_id, " first triangle UVs: ",
+			g["uvs"].slice(0, 6))
+
+		# Build one independent mesh per type ID.
+		for type_id_variant in groups.keys():
+			var type_id: int = type_id_variant
+			var g: Dictionary = groups[type_id]
+
+			active_types[type_id] = true
+
+			var st_data: Dictionary = structure_registry.get(type_id, {})
+			var is_building: bool = st_data.get("isBuilding", false)
+
+			# Create the node if this type hasn't appeared in this chunk before.
+			var structure_node: MeshInstance2D = structure_nodes.get(
+				type_id, null
+			)
+
+			if structure_node == null:
+				structure_node = MeshInstance2D.new()
+				structure_node.name = "Structure_%s_%s_%s" % [
+					chunk_pos.x,
+					chunk_pos.y,
+					type_id
+				]
+				structure_node.scale = MESH_SCALE
+				structure_node.show_behind_parent = false
+
+				add_child(structure_node)
+				structure_nodes[type_id] = structure_node
+
+			# Assign the expected material on every update.
+			if is_building:
+				structure_node.material = building_materials.get(type_id, null)
+			else:
+				structure_node.material = block_atlas_material
+
+			# Warn if this type has no assigned texture material.
+			if structure_node.material == null:
+				push_warning(
+					"No texture material assigned for type ID: "
+					+ str(type_id)
+				)
+
+			var structure_mesh := ArrayMesh.new()
+			var s_array: Array = []
+			s_array.resize(Mesh.ARRAY_MAX)
+			s_array[Mesh.ARRAY_VERTEX] = g["vertices"]
+			s_array[Mesh.ARRAY_INDEX] = g["indices"]
+			s_array[Mesh.ARRAY_TEX_UV] = g["uvs"]
+			print(
+				"TYPE=", type_id,
+				" VERTEX COUNT=", g["vertices"].size(),
+				" FIRST VERTICES=", g["vertices"].slice(0, 6),
+				" FIRST UVS=", g["uvs"].slice(0, 6)
+			)
+
+			structure_mesh.add_surface_from_arrays(
+				Mesh.PRIMITIVE_TRIANGLES,
+				s_array
+			)
+
+			structure_node.mesh = structure_mesh
+
+	# --------------------------------------------------
+	# Clear geometry for types no longer present
+	# --------------------------------------------------
+	for type_id_variant in structure_nodes.keys():
+		var type_id: int = type_id_variant
+
+		if not active_types.has(type_id):
+			var stale_node: MeshInstance2D = structure_nodes[type_id]
+			stale_node.mesh = null
+
+	# Save the updated node dictionary.
+	chunk_entry["structures"] = structure_nodes
+	chunk_nodes[chunk_pos] = chunk_entry

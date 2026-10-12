@@ -1,6 +1,7 @@
 #include "marching_squares.h"
 #include <cstddef>
 #include <cstdint>
+#include <unordered_set>
 
 
 //helpers
@@ -157,12 +158,15 @@ MeshData MarchingSquares::GenerateMesh(const std::vector<Cell>& world, float thr
     return mesh;
 }
 
-MeshData MarchingSquares::generate_blocky_mesh(const std::vector<Cell>& world, int world_x, int world_y, int cx, int cy, int chunk_size) {
+MeshData MarchingSquares::generate_blocky_mesh(const std::vector<Cell>& world, int world_x, int world_y, int cx, int cy, int chunk_size,const std::unordered_map<uint32_t, Structure>& active_structures) {
+
     MeshData mesh;
     int start_x = cx * chunk_size;
     int start_y = cy * chunk_size;
     int end_x = std::min(start_x + chunk_size, world_x);
     int end_y = std::min(start_y + chunk_size, world_y);
+
+    std::unordered_set<uint32_t> processed_uids;
 
     
     for (int iy = start_y; iy < end_y; iy++) {
@@ -172,6 +176,57 @@ MeshData MarchingSquares::generate_blocky_mesh(const std::vector<Cell>& world, i
 
             if (cell.type_id == 0) continue; // Skip air
 
+                if (cell.entity_on_cell_uID != -1) {
+                uint32_t uid = static_cast<uint32_t>(cell.entity_on_cell_uID);
+                if (processed_uids.count(uid)) {
+                    continue; // Already processed this building in this chunk scan
+                }
+                processed_uids.insert(uid);
+
+                auto it = active_structures.find(uid);
+                if (it == active_structures.end()) continue;
+
+                const auto& st = it->second.getTemplate();
+
+                // Origin Chunk Rule: Ensure only the chunk owning the origin renders the full quad
+                int owner_cx = st.x_origin / chunk_size;
+                int owner_cy = st.y_origin / chunk_size;
+
+                if (owner_cx != cx || owner_cy != cy) {
+                    continue; // Skip: The owner chunk will draw the entire building quad
+                }
+
+                // Compute exact bounding box using the map origin and template width/height
+                float x = static_cast<float>(st.x_origin);
+                float y = static_cast<float>(st.y_origin - st.y_width + 1);
+                float w = static_cast<float>(st.x_width);
+                float h = static_cast<float>(st.y_width);
+
+                Vertex v0 = {Vec2{x, y}, Vec2{0.0f, 0.0f}, static_cast<uint16_t>(st.structureID)};             // BL
+                Vertex v1 = {Vec2{x + w, y}, Vec2{1.0f, 0.0f}, static_cast<uint16_t>(st.structureID)};         // BR
+                Vertex v2 = {Vec2{x + w, y + h}, Vec2{1.0f, 1.0f}, static_cast<uint16_t>(st.structureID)};     // TR
+                Vertex v3 = {Vec2{x, y + h}, Vec2{0.0f, 1.0f}, static_cast<uint16_t>(st.structureID)};         // TL
+
+                uint32_t base_index = static_cast<uint32_t>(mesh.vertices.size());
+                
+                mesh.vertices.push_back(v0);
+                mesh.vertices.push_back(v1);
+                mesh.vertices.push_back(v2);
+                
+                mesh.vertices.push_back(v0);
+                mesh.vertices.push_back(v2);
+                mesh.vertices.push_back(v3);
+
+                mesh.indices.push_back(base_index);
+                mesh.indices.push_back(base_index + 1);
+                mesh.indices.push_back(base_index + 2);
+
+                mesh.indices.push_back(base_index + 3);
+                mesh.indices.push_back(base_index + 4);
+                mesh.indices.push_back(base_index + 5);
+
+                continue;
+            }
             // Define a full 1x1 quad for this cell
             float x = static_cast<float>(ix);
             float y = static_cast<float>(iy);

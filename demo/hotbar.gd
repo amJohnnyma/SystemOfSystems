@@ -37,5 +37,5 @@ func select_slot(slot_number: int) -> void:
 		if btn:
 			btn.button_pressed = (i + 1 == slot_number)
 
-	print("Hotbar slot selected: ", slot_number)
+	#print("Hotbar slot selected: ", slot_number)
 	hotbar_slot_selected.emit(slot_number)

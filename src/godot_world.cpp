@@ -105,21 +105,25 @@ godot::Dictionary GodotSimulation::getStructureRegistry() const {
 
 auto build_mesh_dict = [](const MeshData& mesh_data) -> Dictionary {
     PackedVector2Array vertices;
+    PackedVector2Array uvs;
     PackedInt32Array indices;
     PackedInt32Array type_ids;
 
     vertices.resize(static_cast<int64_t>(mesh_data.vertices.size()));
+    uvs.resize(static_cast<int64_t>(mesh_data.vertices.size()));
     indices.resize(static_cast<int64_t>(mesh_data.indices.size()));
     type_ids.resize(static_cast<int64_t>(mesh_data.vertices.size()));
 
     for (size_t i = 0; i < mesh_data.vertices.size(); ++i) {
         vertices[static_cast<int32_t>(i)] = Vector2(mesh_data.vertices[i].position.x, mesh_data.vertices[i].position.y);
+        uvs[static_cast<int32_t>(i)] = Vector2(mesh_data.vertices[i].uv.x, mesh_data.vertices[i].uv.y);
         type_ids[static_cast<int32_t>(i)] = static_cast<int32_t>(mesh_data.vertices[i].type_id);
         indices[static_cast<int32_t>(i)] = static_cast<int32_t>(mesh_data.indices[i]);
     }
 
     Dictionary dict;
     dict["vertices"] = vertices;
+    dict["uvs"] = uvs;
     dict["indices"] = indices;
     dict["type_ids"] = type_ids;
     return dict;

@@ -5,6 +5,7 @@
 #include "world_types.h"
 #include "json_loader.h"
 #include <set>
+#include "structure.h"
 
 
 
@@ -92,7 +93,7 @@ Vertex GetCellVertex(int id, float x, float y,
 
         MeshData GenerateMesh(const std::vector<Cell>& world, float threshold, int world_x, int world_y, int cx, int cy, int chunk_size);
 
-        MeshData generate_blocky_mesh(const std::vector<Cell>& world, int world_x, int world_y, int cx, int cy, int chunk_size);
+        MeshData generate_blocky_mesh(const std::vector<Cell>& world, int world_x, int world_y, int cx, int cy, int chunk_size,const std::unordered_map<uint32_t, Structure>& active_structures);
 
 
 

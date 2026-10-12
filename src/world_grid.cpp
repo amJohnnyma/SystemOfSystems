@@ -421,7 +421,7 @@ std::vector<std::pair<std::array<int, 2>,ChunkMeshData>> WorldGrid::updateMesh()
                     int cy = chunk_idx / num_chunk_x;
 
                     MeshData terrain_mesh= local_marching_squares.GenerateMesh(world_cells_, 128.f, world_x_, world_y_, cx, cy, chunk_size_);
-                    MeshData structure_mesh = local_marching_squares.generate_blocky_mesh(placed_cells_, world_x_, world_y_, cx, cy, chunk_size_);
+                    MeshData structure_mesh = local_marching_squares.generate_blocky_mesh(placed_cells_, world_x_, world_y_, cx, cy, chunk_size_, structures_);
 
                     ChunkMeshData chunk_data{std::move(terrain_mesh), std::move(structure_mesh)};
                     local_outputs[i] = std::make_pair(std::array<int, 2>{cx, cy}, std::move(chunk_data));
