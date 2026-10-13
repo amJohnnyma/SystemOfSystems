@@ -49,6 +49,7 @@ class WorldGrid
         double time_accumulator_ = 0.0;
         double spawn_interval_ = 1;
 
+
         Vec2 player_position_;
         uint32_t player_instance_id_ = 0;
 

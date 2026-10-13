@@ -10,6 +10,7 @@
 #include "attack_type.h"
 
 
+
 struct attack
 {
     std::string name = "";
@@ -62,15 +63,20 @@ class Entity
         float current_health_;
         float current_move_speed_;
 
+
     public:
         Entity(entity_template t) : et_(std::move(t)) 
     {
         current_health_ = t.max_health;
         current_move_speed_ = t.move_speed;
+
     
     }
         ~Entity() = default;
-        void on_tick(double deltaTime) {et_.x_smooth += (et_.move_speed * deltaTime);}
+        void on_tick(double deltaTime) 
+        {
+    et_.x_smooth += (et_.move_speed  * deltaTime);
+}
         void do_attack() {} // cycles attack patterns, changes which attack pattern to follow
         const entity_template& getTemplate() const {return et_;}
 };

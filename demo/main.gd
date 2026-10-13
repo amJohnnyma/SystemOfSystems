@@ -253,11 +253,12 @@ void vertex() {
 	
 	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
 	
-	world.placeEntity(0,2,1)
-	world.placeEntity(0,6,2)
-	world.placeEntity(2,2,3)
-	world.placeEntity(2,5,4)
-	world.placeEntity(0,7,5)
+	'''for i in range(200):
+		world.placeEntity(0,2,1)
+		world.placeEntity(0,6,2)
+		world.placeEntity(2,2,3)
+		world.placeEntity(2,5,4)
+		world.placeEntity(0,7,5)'''
 	
 	
 func _physics_process(delta: float) -> void:
@@ -431,6 +432,7 @@ func _on_required_entity_update(batch_data: Dictionary):
 		return
 		
 	mm.instance_count = batch_data.size()
+	#print(mm.instance_count)
 	
 	var idx = 0
 	for uID in batch_data:

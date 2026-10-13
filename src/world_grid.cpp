@@ -820,6 +820,7 @@ void WorldGrid::placeEntity(int bl_x, int bl_y, int entityTypeID)
     et.x_smooth = bl_x;
     et.y_smooth = bl_y;
 
+
     // 5. Register and spawn the entity instance
     entities_.try_emplace(uID, Entity(et));
 
@@ -834,6 +835,10 @@ void WorldGrid::placeEntity(int bl_x, int bl_y, int entityTypeID)
             if (x >= 0 && x < world_x_ && y >= 0 && y < world_y_)
             {
                 size_t index = static_cast<size_t>(y) * world_x_ + x;
+                // How would i track that this entity takes up the footprint of w*h?
+                // Simply adding uID is technically a solution but i can see more spaghetti forming as a result
+                // If the user attacks the entity on 5,5 with size (2x3)
+                // -> What if i attack on cell 6,4 ? It should still hit but how do i know
                 placed_cells_[index].entities_on_cell_uID.push_back(uID);
             }
         }

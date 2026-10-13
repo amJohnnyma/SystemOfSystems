@@ -1,0 +1,6 @@
+https://chatgpt.com/c/6ace6914-dd64-83ea-98d6-561291d1ef2c
+
+Check the chat:
+TLDR:
+Use buckets for entity collision checking with mouse.
+Entity collision checks should only check newly occupied cells
