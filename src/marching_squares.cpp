@@ -186,8 +186,8 @@ MeshData MarchingSquares::generate_blocky_mesh(const std::vector<Cell>& world, i
 
             if (cell.type_id == 0) continue; // Skip air
 
-                if (cell.entity_on_cell_uID != -1) {
-                uint32_t uid = static_cast<uint32_t>(cell.entity_on_cell_uID);
+                if (cell.structure_on_cell_uID != -1) {
+                uint32_t uid = static_cast<uint32_t>(cell.structure_on_cell_uID);
                 if (processed_uids.count(uid)) {
                     continue; // Already processed this building in this chunk scan
                 }

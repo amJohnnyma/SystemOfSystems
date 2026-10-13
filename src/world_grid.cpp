@@ -299,6 +299,69 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
             structure_registry_.insert({js.structureID, structure});
         }
     }
+// Step 1: Load attack.json into a lookup map
+std::unordered_map<std::string, attack> attacks_memory;
+nlohmann::json& attack_data = JsonLoader::Instance().Get("game/attack.json");
+if (attack_data.is_array()) {
+    for (const auto& item : attack_data) {
+        jAttack ja = item.get<jAttack>();
+        attack a;
+        a.name = ja.name;
+        a.damage = ja.damage;
+        a.range = ja.range;
+        a.at = ja.at;
+        a.cooldownBeforeNextAttack = ja.cooldownBeforeNextAttack;
+        
+        attacks_memory[a.name] = a;
+    }
+}
+
+// Step 2: Load attack_pattern.json into a lookup map (using attacks loaded into memory)
+std::unordered_map<std::string, attack_pattern> attack_patterns_memory;
+nlohmann::json& pattern_data = JsonLoader::Instance().Get("game/attack_pattern.json");
+if (pattern_data.is_array()) {
+    for (const auto& item : pattern_data) {
+        jAttackPattern jap = item.get<jAttackPattern>();
+        attack_pattern ap;
+        ap.name = jap.name;
+
+        for (const auto& ref : jap.attacks) {
+            if (attacks_memory.find(ref.name) != attacks_memory.end()) {
+                ap.attacks.push_back(attacks_memory[ref.name]);
+            }
+        }
+        attack_patterns_memory[ap.name] = ap;
+    }
+}
+
+// Step 3: Load entity.json and create each entity by reading the attack patterns from memory
+nlohmann::json& entity_data = JsonLoader::Instance().Get("game/entity.json");
+if (entity_data.is_array()) {
+    for (const auto& item : entity_data) {
+        jEntityTemplate jet = item.get<jEntityTemplate>();
+        entity_template et;
+        et.entityTypeID = jet.entityTypeID;
+        et.name = jet.name;
+        et.sprite = jet.sprite;
+        et.entity_class = jet.entity_class;
+        et.behavior_type = jet.behavior_type;
+        et.max_health = jet.max_health;
+        et.move_speed = jet.move_speed;
+        et.is_pickupable = jet.is_pickupable;
+        et.width = jet.width;
+        et.height= jet.height;
+
+        // Resolve attack patterns from memory using the names provided in entity.json
+        for (const auto& patRef : jet.attack_patterns) {
+            if (attack_patterns_memory.find(patRef.name) != attack_patterns_memory.end()) {
+                et.attack_patterns.push_back(attack_patterns_memory[patRef.name]);
+            }
+        }
+
+        Entity entity = Entity(et);
+        entity_registry_.insert({jet.entityTypeID, entity});
+    }
+}
 
 
     unsigned int num_threads = pool_->get_num_threads();
@@ -422,8 +485,6 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
 
 
 
-
-
 }
 
 std::vector<std::pair<std::array<int, 2>,ChunkMeshData>> WorldGrid::updateMesh()
@@ -529,10 +590,22 @@ uint32_t WorldGrid::tick(double deltaTime)
     // also do entity processes
     
     
-    uint32_t active_flags = TickFlags::NONE;
-    /*
     time_accumulator_ += deltaTime;
+    uint32_t active_flags = TickFlags::NONE;
 
+    if (!entities_.empty()) {
+        for (auto& [uID, entity] : entities_) {
+            entity.on_tick(deltaTime); // updates internal smooth positions
+        }
+        active_flags |= TickFlags::ENTITY_UPDATE;
+    }
+    /*
+
+    if (time_accumulator_ >= spawn_interval_)
+    {
+        time_accumulator_ -= spawn_interval_;
+
+    }
     // 2. Check if counter/interval is reached (e.g., every 2 seconds)
     if (time_accumulator_ >= spawn_interval_)
     {
@@ -574,10 +647,10 @@ uint32_t WorldGrid::tick(double deltaTime)
     size_t index= static_cast<size_t>(y) * world_x_ + x;
     const Cell& c= placed_cells_[index];
 
-    if (c.entity_on_cell_uID != -1)
+    if (c.structure_on_cell_uID != -1)
     {
         //Have an entity 
-        return structures_.at(c.entity_on_cell_uID).getTemplate();
+        return structures_.at(c.structure_on_cell_uID).getTemplate();
     }
 
     // else we may just have a regular block so lets check
@@ -607,7 +680,7 @@ void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
     const Cell& origin = placed_cells_[origin_index];
 
     // Don't place on an occupied cell.
-    if (origin.type_id != 0 || origin.entity_on_cell_uID != -1)
+    if (origin.type_id != 0 || origin.structure_on_cell_uID != -1)
         return;
     if (structure_registry_.find(structureID) == structure_registry_.end()) return;
 
@@ -632,7 +705,7 @@ void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
 
             // Reject if any cell is already occupied.
             if (cell.type_id != 0 ||
-                cell.entity_on_cell_uID != -1)
+                cell.structure_on_cell_uID != -1)
             {
                 return;
             }
@@ -691,13 +764,82 @@ void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
                 {
                     size_t index = static_cast<size_t>(y) * world_x_ + x;
 
-                    placed_cells_[index].entity_on_cell_uID = uID;
+                    placed_cells_[index].structure_on_cell_uID = uID;
                 }
             }
         }
 
     }
 }
+void WorldGrid::placeEntity(int bl_x, int bl_y, int entityTypeID)
+{
+    // 1. Check world boundary bounds for the origin point
+    if (bl_x < 0 || bl_x >= world_x_ ||
+        bl_y < 0 || bl_y >= world_y_)
+        return;
+
+    // 2. Ensure entity template exists in the registry
+    if (entity_registry_.find(entityTypeID) == entity_registry_.end()) 
+        return;
+
+    entity_template et = entity_registry_.at(entityTypeID).getTemplate();
+
+    int w = et.width;  
+    int h = et.height; 
+
+    // 3. Validate the entire footprint (must be air/empty blocks, can't be placed inside solid tiles)
+    for (int dy = 0; dy < h; ++dy)
+    {
+        for (int dx = 0; dx < w; ++dx)
+        {
+            int x = bl_x + dx;
+            int y = bl_y - dy;
+
+            // Reject if any part of the entity is outside the world boundary
+            if (x < 0 || x >= world_x_ || y < 0 || y >= world_y_)
+                return;
+
+            size_t index = static_cast<size_t>(y) * world_x_ + x;
+            const Cell& cell = placed_cells_[index];
+
+            // Rule: The background where placed must be air (type_id == 0 means air/empty)
+            // Note: Other entities can share the tile, but it cannot be a solid block type.
+            if (cell.type_id != 0)
+            {
+                return;
+            }
+        }
+    }
+
+    // 4. Generate unique ID for this entity instance
+    int uID = getNextEntityUniqueID(); 
+    et.instanceID = uID;
+    et.x_origin = bl_x;
+    et.y_origin = bl_y;
+
+    et.x_smooth = bl_x;
+    et.y_smooth = bl_y;
+
+    // 5. Register and spawn the entity instance
+    entities_.try_emplace(uID, Entity(et));
+
+    // you can push the uID into cell reference lists here since multiple entities can share a tile.
+    for (int dy = 0; dy < h; ++dy)
+    {
+        for (int dx = 0; dx < w; ++dx)
+        {
+            int x = bl_x + dx;
+            int y = bl_y - dy;
+
+            if (x >= 0 && x < world_x_ && y >= 0 && y < world_y_)
+            {
+                size_t index = static_cast<size_t>(y) * world_x_ + x;
+                placed_cells_[index].entities_on_cell_uID.push_back(uID);
+            }
+        }
+    }
+}
+
 
 /*
  * ALL OF THIS NEEDS A BIG REFACTOR

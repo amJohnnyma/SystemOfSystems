@@ -1,0 +1,103 @@
+[
+  {
+    "entityTypeID": 1,
+    "name": "Goblin Grunt",
+    "sprite": "goblin_sprite.png",
+    "entity_class": "enemy",
+    "behavior_type": "aggressive",
+    "max_health": 80.0,
+    "move_speed": 1.3,
+"width":2,
+"height":3,
+    "is_pickupable": false,
+    "attack_patterns": [
+      {
+        "name": "Melee Aggressive"
+      },
+{
+"name": "Melee Aggressive"
+}
+    ]
+  },
+  {
+    "entityTypeID": 2,
+    "name": "Dark Sorcerer",
+    "sprite": "sorcerer_sprite.png",
+    "entity_class": "enemy",
+    "behavior_type": "ranged",
+    "max_health": 120.0,
+    "move_speed": 1.2,
+"width":2,
+"height":4,
+    "is_pickupable": false,
+    "attack_patterns": [
+      {
+        "name": "Mage Siege"     
+      },
+      {
+        "name": "Mage Siege"     
+      }
+    ]
+  },
+{
+    "entityTypeID": 3,
+    "name": "Dark Sorcerer",
+    "sprite": "sorcerer_sprite.png",
+    "entity_class": "enemy",
+    "behavior_type": "ranged",
+    "max_health": 120.0,
+    "move_speed": 1.1,
+"width":3,
+"height":3,
+    "is_pickupable": false,
+    "attack_patterns": [
+      {
+        "name": "Mage Siege"     
+      },
+      {
+        "name": "Mage Siege"     
+      }
+    ]
+  },
+{
+    "entityTypeID": 4,
+    "name": "Dark Sorcerer",
+    "sprite": "sorcerer_sprite.png",
+    "entity_class": "enemy",
+    "behavior_type": "ranged",
+    "max_health": 120.0,
+    "move_speed": 1.4,
+"width":8,
+"height":3,
+    "is_pickupable": false,
+    "attack_patterns": [
+      {
+        "name": "Mage Siege"     
+      },
+      {
+        "name": "Mage Siege"     
+      }
+    ]
+  },
+{
+    "entityTypeID": 5,
+    "name": "Dark Sorcerer",
+    "sprite": "sorcerer_sprite.png",
+    "entity_class": "enemy",
+    "behavior_type": "ranged",
+    "max_health": 120.0,
+    "move_speed": 1.0,
+"width":1,
+"height":1,
+    "is_pickupable": false,
+    "attack_patterns": [
+      {
+        "name": "Mage Siege"     
+      },
+      {
+        "name": "Mage Siege"     
+      }
+    ]
+  }
+
+]

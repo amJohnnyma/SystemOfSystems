@@ -1,5 +1,6 @@
 
 #include "godot_world.h"
+#include "world_grid.h"
 #include <charconv>
 #include <cstdint>
 #include <godot_cpp/core/class_db.hpp>
@@ -16,7 +17,9 @@ void GodotSimulation::_bind_methods() {
     ClassDB::bind_method(D_METHOD("updateMeshData"), &GodotSimulation::updateMeshData);
     ClassDB::bind_method(D_METHOD("fillCell", "x", "y", "type_id", "negativeFill"), &GodotSimulation::fillCell);
     ClassDB::bind_method(D_METHOD("getStructureRegistry"), &GodotSimulation::getStructureRegistry);
+    ClassDB::bind_method(D_METHOD("getEntityRegistry"), &GodotSimulation::getEntityRegistry);
     ClassDB::bind_method(D_METHOD("placeStructure", "x", "y", "structureID"), &GodotSimulation::placeStructure);
+    ClassDB::bind_method(D_METHOD("placeEntity", "x", "y", "entityID"), &GodotSimulation::placeEntity);
     ClassDB::bind_method(D_METHOD("selectStructure", "x", "y"), &GodotSimulation::selectStructure);
 
 
@@ -30,6 +33,7 @@ void GodotSimulation::_bind_methods() {
 
 ClassDB::bind_method(D_METHOD("updatePlayerPosition", "x", "y"), &GodotSimulation::updatePlayerPosition);
     ClassDB::bind_method(D_METHOD("resolveCollision", "current_pos", "velocity", "width", "height", "delta"), &GodotSimulation::resolveCollision);
+ADD_SIGNAL(MethodInfo("update_entities_event", PropertyInfo(Variant::DICTIONARY, "batch_data")));
 
 }
 
@@ -58,6 +62,67 @@ void GodotSimulation::_process(double delta)
     {
         // emit_signal("update_ui_event");
     }
+
+
+    if (flags & TickFlags::ENTITY_UPDATE)
+    {
+        emit_signal("update_entities_event", getEntityTransformsForRendering());
+    }
+}
+/*
+godot::Dictionary GodotSimulation::getEntityTransformsForRendering() const {
+    godot::Dictionary batch_data;
+    
+    // Call down to your world grid or entity registry to gather active entities
+    auto const& entities = world_grid_.getEntities(); // Or however you store them
+    
+    for (auto const& [uID, entity] : entities) {
+        auto const& et = entity.getTemplate();
+
+        godot::Dictionary pos_dict;
+        pos_dict["x_origin"] = et.x_origin;
+        pos_dict["y_origin"] = et.y_origin;
+        pos_dict["x_smooth"] = et.x_smooth;
+        pos_dict["y_smooth"] = et.y_smooth;
+        pos_dict["width"] = et.width;
+        pos_dict["height"] = et.height;
+        pos_dict["entityTypeID"] = et.entityTypeID;
+
+        batch_data[uID] = pos_dict;
+    }
+    return batch_data;
+}
+*/
+godot::Dictionary GodotSimulation::getEntityTransformsForRendering() const {
+    godot::Dictionary batch_data;
+    auto const& entities = world_grid_.getEntities(); 
+    
+    // 1. Copy into a vector so we can sort by uID for stable indices
+    std::vector<std::pair<uint32_t, const Entity*>> sorted_entities;
+    sorted_entities.reserve(entities.size());
+    for (auto const& [uID, entity] : entities) {
+        sorted_entities.push_back({uID, &entity});
+    }
+    
+    // 2. Sort deterministically by instance ID (uID)
+    std::sort(sorted_entities.begin(), sorted_entities.end(), [](auto const& a, auto const& b) {
+        return a.first < b.first;
+    });
+
+    // 3. Populate dictionary in stable order
+    for (auto const& [uID, entity_ptr] : sorted_entities) {
+        auto const& et = entity_ptr->getTemplate();
+
+        godot::Dictionary pos_dict;
+        pos_dict["x_smooth"] = et.x_smooth;
+        pos_dict["y_smooth"] = et.y_smooth;
+        pos_dict["entityTypeID"] = et.entityTypeID;
+        pos_dict["width"] = et.width;
+        pos_dict["height"] = et.height;
+
+        batch_data[uID] = pos_dict;
+    }
+    return batch_data;
 }
 void GodotSimulation::updatePlayerPosition(float x, float y) {
     world_grid_.updatePlayerPosition(x, y);
@@ -77,24 +142,6 @@ void GodotSimulation::createWorld(int world_x, int world_y, int g_size)
 
     world_grid_ = WorldGrid(); 
     world_grid_.init(world_x, world_y, g_size);
-
-    auto const& sr = world_grid_.getStructureRegistry();
-    godot::String dump = "--- Registry Dump ---\n";
-
-    
-    char buffer[256];
-    for (auto it = sr.begin(); it != sr.end(); ++it) {
-        auto const& st = it->second.getTemplate();
-        
-        snprintf(buffer, sizeof(buffer), "ID: %u | Size: %dx%d | Tick: %s | Time: %.1f | Type: %s\n",
-                 st.structureID, st.x_width, st.y_width, 
-                 (st.canTick ? "yes" : "no"), st.processing_time,
-                 (st.isBuilding ? "Building": "Block"));
-                 
-        dump += godot::String(buffer);
-    }
-
-    trigger_test_signal(dump);
 
 }
 
@@ -133,6 +180,63 @@ godot::Dictionary GodotSimulation::getStructureRegistry() const {
 
         // Use the structure ID as the dictionary key
         registry_dict[st.structureID] = st_dict;
+    }
+
+    return registry_dict;
+}
+godot::Dictionary GodotSimulation::getEntityRegistry() const {
+    godot::Dictionary registry_dict;
+    auto const& er = world_grid_.getEntityRegistry(); // Or entity_registry_, depending on where it's stored
+
+    for (auto it = er.begin(); it != er.end(); ++it) {
+        auto const& et = it->second.getTemplate();
+        
+        godot::Dictionary et_dict;
+        et_dict["entityTypeID"] = et.entityTypeID;
+        et_dict["name"] = godot::String(et.name.c_str());
+        et_dict["sprite"] = godot::String(et.sprite.c_str());
+        et_dict["entity_class"] = godot::String(et.entity_class.c_str());
+        et_dict["behavior_type"] = godot::String(et.behavior_type.c_str());
+        et_dict["max_health"] = et.max_health;
+        et_dict["move_speed"] = et.move_speed;
+        et_dict["is_pickupable"] = et.is_pickupable;
+        et_dict["width"] = et.width;
+        et_dict["height"] = et.height;
+
+        // Serialize attack patterns
+        godot::Array patterns_arr;
+        for (const auto& ap : et.attack_patterns) {
+            godot::Dictionary ap_dict;
+            ap_dict["name"] = godot::String(ap.name.c_str());
+
+            godot::Array attacks_arr;
+            for (const auto& atk : ap.attacks) {
+                godot::Dictionary atk_dict;
+                atk_dict["name"] = godot::String(atk.name.c_str());
+                atk_dict["damage"] = atk.damage;
+                atk_dict["range"] = atk.range;
+                
+                // Convert attack_type enum to string for Godot readability
+                const char* at_str = "DIRECT";
+                switch (atk.at) {
+                    case DIRECT: at_str = "DIRECT"; break;
+                    case ARC:    at_str = "ARC"; break;
+                    case LINE:   at_str = "LINE"; break;
+                    case AEO:    at_str = "AEO"; break;
+                    case HEAL:   at_str = "HEAL"; break;
+                }
+                atk_dict["attack_type"] = godot::String(at_str);
+                atk_dict["cooldownBeforeNextAttack"] = atk.cooldownBeforeNextAttack;
+
+                attacks_arr.append(atk_dict);
+            }
+            ap_dict["attacks"] = attacks_arr;
+            patterns_arr.append(ap_dict);
+        }
+        et_dict["attack_patterns"] = patterns_arr;
+
+        // Use the entityTypeID as the dictionary key
+        registry_dict[et.entityTypeID] = et_dict;
     }
 
     return registry_dict;
@@ -229,6 +333,11 @@ void GodotSimulation::placeStructure(int x, int y, int structureID)
     world_grid_.placeStructure(x,y,structureID);
 }
 
+
+void GodotSimulation::placeEntity(int x, int y, int entityID)
+{
+    world_grid_.placeEntity(x,y, entityID);
+}
 void GodotSimulation::selectStructure(int x, int y)
 {
     struct_template st = world_grid_.selectStructure(x,y);

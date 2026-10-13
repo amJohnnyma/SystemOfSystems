@@ -38,10 +38,14 @@ public:
     void trigger_test_signal(const godot::String &msg);
     void update_godot_mesh_signal();
     Dictionary getStructureRegistry() const;
+    Dictionary getEntityRegistry() const;
     void placeStructure(int x, int y, int structureID);
+    void placeEntity(int x, int y, int entityID);
     void selectStructure(int x, int y);
     Vector2 resolveCollision(Vector2 current_pos, Vector2 velocity, float width, float height, double delta);
     void updatePlayerPosition(float x, float y);
+
+    Dictionary getEntityTransformsForRendering() const;
 
 };
 

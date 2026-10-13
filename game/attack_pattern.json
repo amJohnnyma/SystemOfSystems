@@ -1,0 +1,35 @@
+[
+  {
+    "name": "Melee Aggressive",
+    "attacks": [
+      {
+        "name": "Quick Slash"
+      },
+      {
+        "name": "Flame Burst"
+      }
+    ]
+  },
+  {
+    "name": "Mage Siege",
+    "attacks": [
+      {
+        "name": "Flame Burst"
+      },
+      {
+        "name": "Minor Heal"
+      }
+    ]
+  },
+  {
+    "name": "Healer Support",
+    "attacks": [
+      {
+        "name": "Minor Heal"
+      },
+      {
+        "name": "Flame Burst"
+      }
+    ]
+  }
+]

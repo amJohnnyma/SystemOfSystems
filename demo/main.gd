@@ -22,14 +22,15 @@ var world_height: int = 180
 
 
 var structure_registry: Dictionary = {}
+var entity_registry: Dictionary = {}
 var selected_structure: Dictionary = {}
 var textured_shader: Shader
 var building_materials = {}
 
 var selected_hotbar_slot = -1
 
-const BLOCK_ATLAS_PATH := "res://game/atlas/minecraftatlas.png"
-const BLOCK_TILE_SIZE := Vector2i(256,256)
+const BLOCK_ATLAS_PATH := "res://game/atlas/terrain.png"
+const BLOCK_TILE_SIZE := Vector2i(16,16)
 const BLOCK_ATLAS_COORDS := {
 	1: Vector2i(0, 0),
 	2: Vector2i(1, 0),
@@ -53,15 +54,30 @@ var block_atlas_material: ShaderMaterial
 var terrain_blend_shader: Shader
 var terrain_blend_material: ShaderMaterial
 
-var type_colors: Dictionary = {
-	0: Color.TRANSPARENT,
-	1: Color(0.4, 0.3, 0.2), # Dirt (Brown)
-	2: Color(0.2, 0.8, 0.3), # Grass (Green)
-	3: Color(0.5, 0.5, 0.5), # Stone (Gray)
-	4: Color(0.502, 0.502, 0.882, 1.0), 
-	5: Color(0.122, 0.008, 0.882, 1.0), 
-	6: Color(0.929, 0.133, 0.882, 1.0), 
+var multimesh_node: MultiMeshInstance2D
+const ENEMY_ATLAS_PATH := "res://game/atlas/character.jpeg"
+const ENEMY_TILE_SIZE := Vector2i(73,137)
+var enemy_atlas_shader: Shader
+const ENEMY_ATLAS_COORDS := {
+	1: Vector2i(0, 0),
+	2: Vector2i(1, 0),
+	3: Vector2i(2, 0),
+	4: Vector2i(3, 0),
+	5: Vector2i(0, 1),
+	6: Vector2i(1, 1),
+	7: Vector2i(2, 1),
+	8: Vector2i(3, 1),
+	9: Vector2i(0, 2),
+	10: Vector2i(1, 2),
+	11: Vector2i(2, 2),
+	12: Vector2i(3, 2),
+	13: Vector2i(0, 3),
+	14: Vector2i(1, 3),
+	15: Vector2i(2, 3),
+	16: Vector2i(3, 3),
 }
+var enemy_atlas: Texture2D
+var enemy_atlas_material: ShaderMaterial
 
 var player: Sprite2D
 var player_velocity: Vector2 = Vector2.ZERO
@@ -70,6 +86,8 @@ const PLAYER_SPEED: float = 60
 const PLAYER_WIDTH: float = 4.0
 const PLAYER_HEIGHT: float = 10.0
 var is_on_ground_flag = false
+
+
 
 func _ready() -> void:
 	# Create and configure Camera2D
@@ -130,6 +148,30 @@ void fragment() {
 	terrain_blend_material.set_shader_parameter(
 		"terrain_atlas", load(BLOCK_ATLAS_PATH)
 	)
+	
+	enemy_atlas_shader = Shader.new()
+	enemy_atlas_shader.code = """
+	shader_type canvas_item;
+
+void vertex() {
+    // INSTANCE_CUSTOM contains the data we pass from our script per sprite.
+    // x = column index, y = row index
+    float col = INSTANCE_CUSTOM.x;
+    float row = INSTANCE_CUSTOM.y;
+
+    // Define how many columns and rows are in your atlas grid
+    // Adjust these numbers to match your exact sheet grid!
+    float total_columns = 4.0;
+    float total_rows = 4.0;
+
+    // Scale down the UVs to fit a single grid frame
+    UV /= vec2(total_columns, total_rows);
+
+    // Offset the UV to point to the correct sprite frame
+    UV += vec2(col / total_columns, row / total_rows);
+}
+
+	"""
 
 
 
@@ -157,6 +199,7 @@ void fragment() {
 	# Connect using the standard GDScript signal syntax
 	world.test_signal_event.connect(_on_custom_event)
 	world.update_godot_mesh_event.connect(_on_required_mesh_update)
+	world.update_entities_event.connect(_on_required_entity_update)
 	
 	# Call the C++ method that triggers the emission
 	world.trigger_test_signal("MEOW")
@@ -184,14 +227,38 @@ void fragment() {
 	add_child(player)
 
 	structure_registry = world.getStructureRegistry()
+	entity_registry = world.getEntityRegistry()
 	#print("Loaded structures into Godot: ", structure_registry)
+	print("Loaded entities into Godot:\n", JSON.stringify(entity_registry, "\t"))
 	_init_building_materials()
+	multimesh_node = MultiMeshInstance2D.new()
+	multimesh_node.name = "EntityMultiMesh"
+	multimesh_node.scale = MESH_SCALE
+	add_child(multimesh_node)
+	if multimesh_node and multimesh_node.multimesh == null:
+		var mm = MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_2D
+		mm.use_custom_data = true  # Required so we can use INSTANCE_CUSTOM for atlas coords!
+		mm.mesh = QuadMesh.new()   # Or a custom 2D plane mesh matching sprite proportions
+		
+		# Optional: set initial texture if assigned via material properties
+		multimesh_node.multimesh = mm
+		multimesh_node.material = enemy_atlas_material
+	
 	
 	# Populate all chunk nodes initially
 	_setup_full_mesh_display()
 	update_mesh_display()
 	
+	
 	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
+	
+	world.placeEntity(0,2,1)
+	world.placeEntity(0,6,2)
+	world.placeEntity(2,2,3)
+	world.placeEntity(2,5,4)
+	world.placeEntity(0,7,5)
+	
 	
 func _physics_process(delta: float) -> void:
 	if not player:
@@ -230,6 +297,44 @@ func _physics_process(delta: float) -> void:
 	world.updatePlayerPosition(player.global_position.x / MESH_SCALE.x, player.global_position.y / MESH_SCALE.x)
 	
 func _init_building_materials() -> void:
+	# Enemy atlas loading
+	enemy_atlas_shader = Shader.new()
+	enemy_atlas_shader.code = """
+    shader_type canvas_item;
+
+    uniform sampler2D enemy_tex : source_color, filter_nearest;
+
+    void vertex() {
+        // INSTANCE_CUSTOM passes column and row indices
+        float col = INSTANCE_CUSTOM.x;
+        float row = INSTANCE_CUSTOM.y;
+
+        float total_columns = 4.0;
+        float total_rows = 4.0;
+
+        // Scale down UVs to fit a single grid frame
+        UV /= vec2(total_columns, total_rows);
+
+        // Offset UV to point to the correct sprite frame
+        UV += vec2(col / total_columns, row / total_rows);
+    }
+
+    void fragment() {
+        COLOR = texture(enemy_tex, UV);
+    }
+    """
+
+	if ResourceLoader.exists(ENEMY_ATLAS_PATH):
+		enemy_atlas = load(ENEMY_ATLAS_PATH)
+		enemy_atlas_material = ShaderMaterial.new()
+		enemy_atlas_material.shader = enemy_atlas_shader
+		
+		enemy_atlas_material.set_shader_parameter("enemy_tex", enemy_atlas)
+		
+		if multimesh_node:
+			multimesh_node.material = enemy_atlas_material
+		
+		
 	# Shared atlas material for ordinary blocks.
 	if ResourceLoader.exists(BLOCK_ATLAS_PATH):
 		block_atlas = load(BLOCK_ATLAS_PATH)
@@ -286,6 +391,20 @@ func get_block_atlas_uv(type_id: int, uv: Vector2) -> Vector2:
 		Vector2(tile_coord) * tile_size + uv * tile_size
 	) / atlas_size
 
+func get_enemy_atlas_uv(type_id: int, uv: Vector2) -> Vector2:
+	if enemy_atlas  == null:
+		return uv
+
+	if not ENEMY_ATLAS_COORDS.has(type_id):
+		return uv
+
+	var tile_coord: Vector2i = ENEMY_ATLAS_COORDS[type_id]
+	var atlas_size := Vector2(enemy_atlas.get_size())
+	var tile_size := Vector2(ENEMY_TILE_SIZE)
+
+	return (
+		Vector2(tile_coord) * tile_size + uv * tile_size
+	) / atlas_size
 
 func get_selected_hotbar_slot():
 	return selected_hotbar_slot
@@ -297,9 +416,6 @@ func _on_required_mesh_update():
 	# We need a mesh update
 	update_mesh_display()
 
-# Helper to get color for a block type
-func get_block_color(block_type: int) -> Color:
-	return type_colors.get(block_type, Color.WHITE)
 
 # Helper to get the full texture path for a structure sprite
 func get_structure_sprite_path(structure_data: Dictionary) -> String:
@@ -308,7 +424,47 @@ func get_structure_sprite_path(structure_data: Dictionary) -> String:
 		return ""
 	# Adjust path according to where your sprites are stored
 	return "res://game/sprite" + sprite_filename
+
+func _on_required_entity_update(batch_data: Dictionary):
+	var mm = multimesh_node.multimesh
+	if not mm:
+		return
+		
+	mm.instance_count = batch_data.size()
 	
+	var idx = 0
+	for uID in batch_data:
+		var pos_data = batch_data[uID]
+		
+		var grid_x: float = float(pos_data["x_smooth"])
+		var grid_y: float = float(pos_data["y_smooth"])
+		var w: float = float(pos_data.get("width", 2))
+		var h: float = float(pos_data.get("height", 2))
+
+		# Position of the center of the occupied cells.
+		var center := Vector2(
+			grid_x + (w ) * 0.5,
+			grid_y - h * 0.5 + 1.0
+		)
+
+		# Explicitly set the size and position of the centered quad.
+		var xform := Transform2D(
+			Vector2(w, 0.0),
+			Vector2(0.0, -h),
+			center
+		)
+
+		mm.set_instance_transform_2d(idx, xform)
+		
+		# 3. Set Atlas Index
+		var type_id = pos_data.get("entityTypeID", 1) 
+		var grid_coord: Vector2i = ENEMY_ATLAS_COORDS.get(type_id, Vector2i(0, 0))
+		var custom_color = Color(grid_coord.x, grid_coord.y, 0, 0)
+		mm.set_instance_custom_data(idx, custom_color)
+		
+		idx += 1
+
+		
 func _on_slot_action_requested(slot_number: int) -> void:
 	#print("Main script heard that slot was clicked: ", slot_number)
 

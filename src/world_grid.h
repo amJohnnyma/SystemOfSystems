@@ -40,15 +40,20 @@ class WorldGrid
         std::unordered_map<uint32_t, Structure> structures_ = {}; // All structures
         std::vector<uint32_t> tick_structures_; // store ID and lookup data when needed
 
+        uint32_t current_structure_unique_ID_ = 1; // for anything that needs a uid
         uint32_t current_entity_unique_ID_ = 1; // for anything that needs a uid
         std::unordered_map<int, Structure> structure_registry_;
+        std::unordered_map<int, Entity> entity_registry_;
 
         //Just testing the tick
         double time_accumulator_ = 0.0;
-        double spawn_interval_ = 0.1;
+        double spawn_interval_ = 1;
 
         Vec2 player_position_;
         uint32_t player_instance_id_ = 0;
+
+        std::unordered_map<uint32_t, Entity> entities_ = {};
+        std::vector<uint32_t> tick_entities_ = {}; // basically all of them
 
         
 
@@ -69,6 +74,13 @@ class WorldGrid
         void flag_dirty_chunk(int cx, int cy);
         std::array<int, 2> get_chunk_coords(int x, int y);
         uint32_t getNextStructureUniqueID() 
+        {
+            uint32_t ID = current_structure_unique_ID_;
+            current_structure_unique_ID_ ++;
+            return ID;
+        }
+
+        uint32_t getNextEntityUniqueID() 
         {
             uint32_t ID = current_entity_unique_ID_;
             current_entity_unique_ID_ ++;
@@ -103,10 +115,13 @@ class WorldGrid
         uint32_t tick(double deltaTime); // Each frame update function
                                      //
         void placeStructure(int bl_x, int bl_y, int structureID);
+        void placeEntity(int bl_x, int bl_y, int entityID);
 
         struct_template selectStructure(int x, int y);
 
         const std::unordered_map<int, Structure>& getStructureRegistry() const {return structure_registry_;}
+        const std::unordered_map<int, Entity>& getEntityRegistry() const {return entity_registry_;}
+        const std::unordered_map<uint32_t, Entity>& getEntities() const {return entities_;}
 
         bool isCellSolid(float x, float y) const;
         Vec2 resolveCollision(Vec2 current_pos, Vec2& velocity, float width, float height, double deltaTime);

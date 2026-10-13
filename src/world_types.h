@@ -9,7 +9,8 @@ struct Cell
     uint16_t type_id = 0; // material type
     uint8_t density = 0; // 0 - 255
     uint8_t state_flags = 0; // environmental flags
-    int entity_on_cell_uID = -1; // there is an entity on this cell -> we store the uniqueID
+    int structure_on_cell_uID = -1; // there is an entity on this cell -> we store the uniqueID
+    std::vector<int> entities_on_cell_uID = {}; // multiple entities can be on the same cell
 };
 
 struct Vertex

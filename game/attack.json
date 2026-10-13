@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Quick Slash",
+    "damage": 12.5,
+    "range": 2.0,
+    "at": "DIRECT",
+    "cooldownBeforeNextAttack": 0.5
+  },
+  {
+    "name": "Flame Burst",
+    "damage": 35.0,
+    "range": 12.0,
+    "at": "AEO",
+    "cooldownBeforeNextAttack": 2.0
+  },
+  {
+    "name": "Minor Heal",
+    "damage": -20.0,
+    "range": 10.0,
+    "at": "HEAL",
+    "cooldownBeforeNextAttack": 3.5
+  }
+]
