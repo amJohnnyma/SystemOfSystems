@@ -1,20 +1,16 @@
 shader_type canvas_item;
 
-varying vec4 v_color;
+uniform sampler2D terrain_atlas : source_color, filter_nearest;
+
+varying vec2 secondary_uv;
 
 void vertex() {
-    v_color = COLOR;
+    secondary_uv = CUSTOM0.xy;
 }
 
 void fragment() {
-    vec4 tex_color = v_color;
-    
-    // Discard pixels that blend too close to air/transparent
-    if (tex_color.a < 0.5) {
-        discard;
-    }
-    
-    // Keep full opacity for valid terrain boundaries
-    tex_color.a = 1.0;
-    COLOR = tex_color;
+    vec4 texture_a = texture(terrain_atlas, UV);
+    vec4 texture_b = texture(terrain_atlas, secondary_uv);
+
+    COLOR = mix(texture_a, texture_b, 0.5);
 }

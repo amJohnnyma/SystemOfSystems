@@ -31,16 +31,29 @@ Vertex MarchingSquares::GetEdgeVertex(int edge, float x, float y,
         float d1, float d2, uint16_t t1, uint16_t t2, float threshold)
 {
     float t = GetInterpolationT(d1, d2, threshold);
-    uint16_t edge_type = ResolvePrecedence(t1, d1, t2, d2);
+   // uint16_t edge_type = ResolvePrecedence(t1, d1, t2, d2);
+   if (t1 == t2)
+   {
+        switch (edge) {
+            case 0: return {Vec2{x + t, y + 1.0f}, Vec2{0.f, 0.f}, t1, t1, Vec2(1.0f, 0.0f)};
+            case 1: return {Vec2{x + 1.0f, y + t}, Vec2{0.f, 0.f}, t1, t1, Vec2(1.0f, 0.0f)};
+            case 2: return {Vec2{x + t, y + 0.0f}, Vec2{0.f, 0.f}, t1, t1, Vec2(1.0f, 0.0f)};
+            case 3: return {Vec2{x + 0.0f, y + t}, Vec2{0.f, 0.f}, t1, t1, Vec2(1.0f, 0.0f)};
+            default: return {Vec2{x, y}, Vec2{0.f, 0.f}, t1, t1, Vec2(1.0f, 0.0f)};
+        }
+
+   }
+    Vec2 weights(1.0f - t, t);
 
     switch (edge)
     {
-        case 0: return {Vec2{x + t, y + 1.0f}, Vec2{0.f, 0.f}, edge_type}; // Top: TL -> TR
-        case 1: return {Vec2{x + 1.0f, y + t}, Vec2{0.f, 0.f}, edge_type}; // Right: BR -> TR
-        case 2: return {Vec2{x + t, y + 0.0f}, Vec2{0.f, 0.f}, edge_type}; // Bottom: BL -> BR
-        case 3: return {Vec2{x + 0.0f, y + t}, Vec2{0.f, 0.f}, edge_type}; // Left: BL -> TL
-        default: return {Vec2{x, y}, Vec2{0.f, 0.f}, edge_type};
+        case 0: return {Vec2{x + t, y + 1.0f}, Vec2{0.f, 0.f}, t1, t2, weights}; // Top: TL -> TR
+        case 1: return {Vec2{x + 1.0f, y + t}, Vec2{0.f, 0.f}, t1, t2, weights}; // Right: BR -> TR
+        case 2: return {Vec2{x + t, y + 0.0f}, Vec2{0.f, 0.f}, t1, t2, weights}; // Bottom: BL -> BR
+        case 3: return {Vec2{x + 0.0f, y + t}, Vec2{0.f, 0.f}, t1, t2, weights}; // Left: BL -> TL
+        default: return {Vec2{x, y}, Vec2{0.f, 0.f}, t1, t2, weights};
     }
+
 }
 
 Vertex MarchingSquares::GetCellVertex(int id, float x, float y, 
@@ -136,33 +149,12 @@ MeshData MarchingSquares::GenerateMesh(const std::vector<Cell>& world, float thr
                 Vertex v2 = GetCellVertex(tris[i + 2], ix, iy, 
                         bl, br, tr, tl, bl_t, br_t, tr_t, tl_t, threshold);
 
-                /*
-                constexpr float texture_scale = 4.0f;
-
-                v0.uv = Vec2{
-                    v0.position.x / texture_scale,
-                    v0.position.y / texture_scale
-                };
-
-                v1.uv = Vec2{
-                    v1.position.x / texture_scale,
-                    v1.position.y / texture_scale
-                };
-
-                v2.uv = Vec2{
-                    v2.position.x / texture_scale,
-                    v2.position.y / texture_scale
-                };
-
-*/
 
                 uint32_t base_index = static_cast<uint32_t>(mesh.vertices.size());
 
-                // May need to swap winding order
                 mesh.vertices.push_back(v0);
                 mesh.vertices.push_back(v1);
                 mesh.vertices.push_back(v2);
-                //Maybe better? mesh.vertices.emplace_back(GetCellVertex(tris[i], ix, iy, bl, br, tr, tl, bl_t, br_t, tr_t, tl_t, threshold));
 
                 mesh.indices.push_back(base_index);
                 mesh.indices.push_back(base_index+1);

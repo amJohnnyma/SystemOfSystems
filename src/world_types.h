@@ -16,7 +16,9 @@ struct Vertex
 {
     Vec2 position;
     Vec2 uv;
-    uint16_t type_id;
+    uint16_t type_id; // primary type
+    uint16_t other_type_id; // secondary type
+    Vec2 weights; //0 = mine/primary, 1 = other/secondary
 };
 
 struct MeshData

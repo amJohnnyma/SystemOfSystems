@@ -9,7 +9,7 @@ var chunk_nodes: Dictionary = {
 	"structures":{"type_id" : MeshInstance2D}
 }
 var camera: Camera2D
-var shader_mat: ShaderMaterial
+#var shader_mat: ShaderMaterial
 
 # Mesh configuration
 const MESH_SCALE := Vector2(4.0, 4.0)
@@ -50,6 +50,8 @@ const BLOCK_ATLAS_COORDS := {
 }
 var block_atlas: Texture2D
 var block_atlas_material: ShaderMaterial
+var terrain_blend_shader: Shader
+var terrain_blend_material: ShaderMaterial
 
 var type_colors: Dictionary = {
 	0: Color.TRANSPARENT,
@@ -76,8 +78,8 @@ func _ready() -> void:
 	camera.make_current()
 
 	# Cache shared shader material
-	shader_mat = ShaderMaterial.new()
-	shader_mat.shader = preload("res://shaders/flat_colour.gdshader")
+	#shader_mat = ShaderMaterial.new()
+	#shader_mat.shader = preload("res://shaders/flat_colour.gdshader")
 	textured_shader = Shader.new()
 	textured_shader.code = """
 		shader_type canvas_item;
@@ -88,6 +90,47 @@ func _ready() -> void:
 		//COLOR = vec4(UV.x, UV.y, 0.0, 1.0);
 	}
 		"""
+		
+	terrain_blend_shader = Shader.new()
+	terrain_blend_shader.code = """
+
+shader_type canvas_item;
+render_mode unshaded;
+
+uniform sampler2D terrain_atlas : source_color, filter_nearest;
+
+varying vec2 secondary_uv;
+
+void vertex() {
+    secondary_uv = CUSTOM0.xy;
+}
+
+void fragment() {
+    vec4 texture_a = texture(terrain_atlas, UV);
+    vec4 texture_b = texture(terrain_atlas, secondary_uv);
+
+    float weight_a = COLOR.r;
+    float weight_b = COLOR.g;
+    float total = weight_a + weight_b;
+
+    if (total > 0.0001) {
+        COLOR = (
+            texture_a * weight_a +
+            texture_b * weight_b
+        ) / total;
+    } else {
+        COLOR = texture_a;
+    }
+}
+
+	"""
+
+	terrain_blend_material = ShaderMaterial.new()
+	terrain_blend_material.shader = terrain_blend_shader
+	terrain_blend_material.set_shader_parameter(
+		"terrain_atlas", load(BLOCK_ATLAS_PATH)
+	)
+
 
 
 
@@ -373,6 +416,7 @@ func update_mesh_display() -> void:
 		var chunk_pos: Vector2i = chunk_data["chunk_pos"]
 		_update_chunk_node(chunk_pos, chunk_data)
 
+
 func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 	var chunk_entry: Dictionary = chunk_nodes.get(chunk_pos, {})
 
@@ -384,7 +428,7 @@ func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 		terrain_node.name = "Terrain_%s_%s" % [chunk_pos.x, chunk_pos.y]
 		terrain_node.scale = MESH_SCALE
 		terrain_node.show_behind_parent = true
-		terrain_node.material = shader_mat
+		terrain_node.material = terrain_blend_material
 		add_child(terrain_node)
 
 		chunk_entry = {
@@ -397,9 +441,9 @@ func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 	var terrain_node: MeshInstance2D = chunk_entry["terrain"]
 	var structure_nodes: Dictionary = chunk_entry["structures"]
 
-	# --------------------------------------------------
-	# Terrain mesh
-	# --------------------------------------------------
+# --------------------------------------------------
+# Terrain mesh with two-texture blending
+# --------------------------------------------------
 	var terrain_dict: Dictionary = chunk_data.get("terrain", {})
 
 	var t_verts: PackedVector2Array = terrain_dict.get(
@@ -408,61 +452,88 @@ func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 	var t_inds: PackedInt32Array = terrain_dict.get(
 		"indices", PackedInt32Array()
 	)
-	var t_types: PackedInt32Array = terrain_dict.get(
-		"type_ids", PackedInt32Array()
-	)
 	var t_uvs: PackedVector2Array = terrain_dict.get(
 		"uvs", PackedVector2Array()
+	)
+	var t_colors: PackedColorArray = terrain_dict.get(
+		"colors", PackedColorArray()
 	)
 
 	var terrain_mesh := ArrayMesh.new()
 
 	if not t_verts.is_empty() and not t_inds.is_empty():
-		var atlas_uvs := PackedVector2Array()
-		atlas_uvs.resize(t_verts.size())
-
-		for tri in range(t_inds.size() / 3):
-			var i0: int = t_inds[tri * 3]
-			var i1: int = t_inds[tri * 3 + 1]
-			var i2: int = t_inds[tri * 3 + 2]
-
-			var type0: int = t_types[i0] if i0 < t_types.size() else 0
-			var type1: int = t_types[i1] if i1 < t_types.size() else 0
-			var type2: int = t_types[i2] if i2 < t_types.size() else 0
-
-			# Choose a consistent type for this triangle.
-			var type_id: int = type0
-			if type1 == type2:
-				type_id = type1
-			elif type0 == type2:
-				type_id = type0
-			elif type0 == type1:
-				type_id = type0
-
-			for idx in [i0, i1, i2]:
-				var uv: Vector2 = (
-					t_uvs[idx] if idx < t_uvs.size()
-					else t_verts[idx]
-				)
-				atlas_uvs[idx] = get_block_atlas_uv(type_id, uv)
-
-		var t_array: Array = []
-		t_array.resize(Mesh.ARRAY_MAX)
-		t_array[Mesh.ARRAY_VERTEX] = t_verts
-		t_array[Mesh.ARRAY_INDEX] = t_inds
-		t_array[Mesh.ARRAY_TEX_UV] = atlas_uvs
-
-		terrain_mesh.add_surface_from_arrays(
-			Mesh.PRIMITIVE_TRIANGLES,
-			t_array
+		var valid_data := (
+			t_uvs.size() == t_verts.size()
+			and t_colors.size() == t_verts.size()
 		)
 
-	terrain_node.material = block_atlas_material
+		if not valid_data:
+			push_warning(
+	            "Terrain mesh arrays have mismatched vertex counts."
+			)
+		else:
+			var atlas_uvs_a := PackedVector2Array()
+			var atlas_uvs_b := PackedFloat32Array()
+			var blend_colors := PackedColorArray()
+
+			atlas_uvs_a.resize(t_verts.size())
+			atlas_uvs_b.resize(t_verts.size() * 2)
+			blend_colors.resize(t_verts.size())
+
+			for i in range(t_verts.size()):
+				var local_uv: Vector2 = t_uvs[i]
+				var source_color: Color = t_colors[i]
+
+				var type_a: int = int(round(source_color.b))
+				var type_b: int = int(round(source_color.a))
+
+				# Resolve both terrain types to their atlas UVs.
+				atlas_uvs_a[i] = get_block_atlas_uv(
+					type_a, local_uv
+				)
+				var uv_b: Vector2 = get_block_atlas_uv(type_b, local_uv)
+
+				var offset := i * 2
+				atlas_uvs_b[offset] = uv_b.x
+				atlas_uvs_b[offset + 1] = uv_b.y
+
+				# Only pass blend weights to the shader.
+				blend_colors[i] = Color(
+					source_color.r,
+					source_color.g,
+					0.0,
+					1.0
+				)
+
+			var t_array: Array = []
+			t_array.resize(Mesh.ARRAY_MAX)
+
+			t_array[Mesh.ARRAY_VERTEX] = t_verts
+			t_array[Mesh.ARRAY_INDEX] = t_inds
+			t_array[Mesh.ARRAY_TEX_UV] = atlas_uvs_a
+			t_array[Mesh.ARRAY_CUSTOM0] = atlas_uvs_b
+			t_array[Mesh.ARRAY_COLOR] = blend_colors
+
+			var format := (
+				Mesh.ARRAY_FORMAT_CUSTOM0
+				| (Mesh.ARRAY_CUSTOM_RG_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT)
+			)
+
+			terrain_mesh.add_surface_from_arrays(
+				Mesh.PRIMITIVE_TRIANGLES,
+				t_array,
+				[],
+				{},
+				format
+			)
+
+	terrain_node.material = terrain_blend_material
 	terrain_node.mesh = (
 		terrain_mesh
 		if terrain_mesh.get_surface_count() > 0
 		else null
 	)
+
 
 	# --------------------------------------------------
 	# Structures and blocks
