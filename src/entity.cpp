@@ -128,6 +128,7 @@ void Entity::moveTo(float x, float y, EntityTickContext etx)
             {
                 et_.x_smooth = static_cast<float>(et_.x_origin);
                 et_.velocity.x = 0.0f;
+                et_.velocity.y = -2.0f * etx.gts.gravity;
                 return;
             }
         }
@@ -198,6 +199,8 @@ void Entity::moveTo(float x, float y, EntityTickContext etx)
         if (blocked)
         {
             et_.velocity.x = 0.0f;
+
+            et_.velocity.y = -2.0f * etx.gts.gravity;
             return;
         }
 
