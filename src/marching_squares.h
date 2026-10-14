@@ -96,6 +96,10 @@ Vertex GetCellVertex(int id, float x, float y,
         MeshData generate_blocky_mesh(const std::vector<Cell>& world, int world_x, int world_y, int cx, int cy, int chunk_size,const std::unordered_map<uint32_t, Structure>& active_structures);
 
 
+        std::array<float, 9> getNeighbourhood(const std::vector<Cell>& world, int world_x, int world_y, int ix, int iy);
+        int getBlockSlopeType(const std::array<float, 9>& nb, float threshold);
+
+
 
 };
 

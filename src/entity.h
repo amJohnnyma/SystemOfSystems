@@ -76,6 +76,7 @@ class Entity
         void on_tick(double deltaTime) 
         {
     et_.x_smooth += (et_.move_speed  * deltaTime);
+    et_.y_smooth += (et_.move_speed  * deltaTime);
 }
         void do_attack() {} // cycles attack patterns, changes which attack pattern to follow
         const entity_template& getTemplate() const {return et_;}

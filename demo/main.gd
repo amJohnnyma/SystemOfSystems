@@ -18,6 +18,7 @@ var cell_size: float = 64.0
 
 var world_width: int = 640
 var world_height: int = 180
+var threshold: float = 128.0
 
 
 
@@ -184,7 +185,7 @@ void vertex() {
 	world.trigger_test_signal("MEOW")
 	
 		# Initialize C++ world grid (world_x, world_y, g_size)
-	world.createWorld(world_width, world_height, int(cell_size))
+	world.createWorld(world_width, world_height, int(cell_size), threshold)
 	
 	player = Sprite2D.new()
 	player.texture = load("res://game/sprite/player.png")
@@ -232,6 +233,7 @@ void vertex() {
 	
 	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
 	
+	world.placeEntity(0,2,1)
 	'''for i in range(200):
 		world.placeEntity(0,2,1)
 		world.placeEntity(0,6,2)
@@ -529,10 +531,9 @@ func _draw() -> void:
 		draw_line(start, end, grid_color, line_width)
 
 	# Mouse Radius Circle
-	if selected_hotbar_slot == 1 or selected_hotbar_slot == 2:
-		var circle_center := input_manager.current_mouse_local * MESH_SCALE
-		var pixel_radius := input_manager.brush_radius_cells * MESH_SCALE.x
-		draw_arc(circle_center, pixel_radius, 0, TAU, 32, Color(1, 1, 0, 0.8), 0.5)
+	var circle_center := input_manager.current_mouse_local * MESH_SCALE
+	var pixel_radius := input_manager.brush_radius_cells * MESH_SCALE.x
+	draw_arc(circle_center, pixel_radius, 0, TAU, 32, Color(1, 1, 0, 0.8), 0.5)
 	
 	if not selected_structure.is_empty():
 		_draw_building_overlay()

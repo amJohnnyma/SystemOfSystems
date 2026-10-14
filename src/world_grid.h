@@ -28,6 +28,7 @@ class WorldGrid
         int chunk_size_ = 64; // always square
         int num_chunk_x = 0;
         int num_chunk_y = 0;
+        float threshold = 0.f;
         std::vector<Cell> world_cells_;
         std::vector<Cell> placed_cells_;
         std::vector<ChunkMeshData> mesh;
@@ -91,7 +92,7 @@ class WorldGrid
 
         
     public:
-        void init(int x_size = 6400, int y_size = 1800, int g_size = 64);
+        void init(int x_size = 6400, int y_size = 1800, int g_size = 64, float threshold = 128.f);
         WorldGrid();
         ~WorldGrid();
 

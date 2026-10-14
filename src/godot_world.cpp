@@ -11,7 +11,7 @@
 using namespace godot;
 
 void GodotSimulation::_bind_methods() {
-    ClassDB::bind_method(D_METHOD("createWorld", "world_x", "world_y", "g_size"), &GodotSimulation::createWorld);
+    ClassDB::bind_method(D_METHOD("createWorld", "world_x", "world_y", "g_size", "threshold"), &GodotSimulation::createWorld);
     ClassDB::bind_method(D_METHOD("getMeshData"), &GodotSimulation::getMeshData);
     ClassDB::bind_method(D_METHOD("setDensity", "x", "y", "radius", "strength", "type_id"), &GodotSimulation::setDensity);
     ClassDB::bind_method(D_METHOD("updateMeshData"), &GodotSimulation::updateMeshData);
@@ -137,11 +137,11 @@ Vector2 GodotSimulation::resolveCollision(Vector2 current_pos, Vector2 velocity,
     return rr; 
 }
 
-void GodotSimulation::createWorld(int world_x, int world_y, int g_size)
+void GodotSimulation::createWorld(int world_x, int world_y, int g_size, float threshold)
 {
 
     world_grid_ = WorldGrid(); 
-    world_grid_.init(world_x, world_y, g_size);
+    world_grid_.init(world_x, world_y, g_size,threshold );
 
 }
 

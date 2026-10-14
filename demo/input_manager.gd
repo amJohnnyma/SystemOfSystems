@@ -26,7 +26,7 @@ var camera: Camera2D
 var mesh_scale: Vector2 = Vector2(4.0, 4.0)
 
 # Brush & Timing
-var brush_radius_cells: float = 6.0
+var brush_radius_cells: float = 2.0
 var current_mouse_local: Vector2 = Vector2.ZERO
 var is_left_down: bool = false
 var is_right_down: bool = false

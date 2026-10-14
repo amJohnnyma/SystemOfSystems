@@ -181,7 +181,7 @@ MeshData MarchingSquares::GenerateMesh(const std::vector<Cell>& world, float thr
 // arr[6] = BL 
 // arr[7] = BM 
 // arr[8] = BR 
-std::array<float, 9> getNeighbourhood(const std::vector<Cell>& world, int world_x, int world_y, int ix, int iy)
+std::array<float, 9> MarchingSquares::getNeighbourhood(const std::vector<Cell>& world, int world_x, int world_y, int ix, int iy)
 {
     // i suppose this couldjust store orthogonals...
     int indexCount = 0;
@@ -221,18 +221,13 @@ std::array<float, 9> getNeighbourhood(const std::vector<Cell>& world, int world_
 // 10 = half_centered_vertical
 // 11 = half_centered_horizontal
 // 12 = half_block_full // The full block but half size -> "Floats", maybe a star shape could look nicer. we'll see
-int getBlockSlopeType(const std::array<float, 9>& nb, float threshold)
+int MarchingSquares::getBlockSlopeType(const std::array<float, 9>& nb, float threshold)
 {
     float center_density = nb[4]; // Center is index 4 in a 3x3 (-1 to 1)
 
     // 1. Air / Empty rule
     if (center_density <= 0.0f) {
         return 0;
-    }
-
-    // 2. Full block rule (above upper density threshold)
-    if (center_density >= threshold) { 
-        return 1;
     }
 
     // 3. Within diagonal/slope range (e.g., 1 to 128)
@@ -242,6 +237,12 @@ int getBlockSlopeType(const std::array<float, 9>& nb, float threshold)
     bool bottom = nb[7] >= threshold;
     bool left   = nb[3] >= threshold;
     bool right  = nb[5] >= threshold;
+    // 2. Full block rule (above upper density threshold)
+    if (center_density >= threshold) { 
+
+        return 1;
+    }
+
 
     // Apply directional neighbor rules
     // The center_density is NOT FULL
@@ -256,6 +257,7 @@ int getBlockSlopeType(const std::array<float, 9>& nb, float threshold)
     if (bottom && right) return 5;
     if (top && bottom) return 10;
     if (left && right) return 11; 
+
 
     return 12;
 

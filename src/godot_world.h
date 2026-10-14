@@ -30,7 +30,7 @@ public:
     void _process(double delta) override;
     
     // Exposed wrapper methods
-    void createWorld(int world_x, int world_y, int g_size);
+    void createWorld(int world_x, int world_y, int g_size, float threshold);
     Dictionary getMeshData();
     Array updateMeshData();
     void setDensity(int x, int y, float radius, float strength, uint16_t type_id);

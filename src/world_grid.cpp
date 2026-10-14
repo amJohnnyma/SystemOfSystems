@@ -237,19 +237,20 @@ namespace NativeNoise {
     }
 }
 
-void WorldGrid::init(int x_size, int y_size, int g_size)
+void WorldGrid::init(int x_size, int y_size, int g_size, float t)
 {
     world_x_ = x_size + 1;
     world_y_ = y_size + 1;
     chunk_size_ = g_size;
+    threshold = t;
     num_chunk_x = std::max(1, (world_x_ + chunk_size_ - 1) / chunk_size_);
     num_chunk_y = std::max(1,(world_y_ + chunk_size_ - 1) / chunk_size_);
     world_cells_.resize(world_x_ * world_y_);
     placed_cells_.resize(world_x_ * world_y_);
     float base_height = world_y_ * 1.f;       // Surface line 
-                                               //
+                                              //
     float height_amplitude = world_y_ * 0.f; // Hill variance height
-                                               // PARALLEL TIME !!!
+                                             // PARALLEL TIME !!!
 
     pool_ = std::make_unique<ThreadPool>();
 
@@ -276,7 +277,7 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
             s.processing_time = js.processing_time;
             s.blockType = js.blockType;
             s.sprite = js.sprite;
-            
+
             for (const auto& ri : js.resource_input)
             {
                 resource_requirement r;
@@ -299,70 +300,69 @@ void WorldGrid::init(int x_size, int y_size, int g_size)
             structure_registry_.insert({js.structureID, structure});
         }
     }
-// Step 1: Load attack.json into a lookup map
-std::unordered_map<std::string, attack> attacks_memory;
-nlohmann::json& attack_data = JsonLoader::Instance().Get("game/attack.json");
-if (attack_data.is_array()) {
-    for (const auto& item : attack_data) {
-        jAttack ja = item.get<jAttack>();
-        attack a;
-        a.name = ja.name;
-        a.damage = ja.damage;
-        a.range = ja.range;
-        a.at = ja.at;
-        a.cooldownBeforeNextAttack = ja.cooldownBeforeNextAttack;
-        
-        attacks_memory[a.name] = a;
-    }
-}
+    // Step 1: Load attack.json into a lookup map
+    std::unordered_map<std::string, attack> attacks_memory;
+    nlohmann::json& attack_data = JsonLoader::Instance().Get("game/attack.json");
+    if (attack_data.is_array()) {
+        for (const auto& item : attack_data) {
+            jAttack ja = item.get<jAttack>();
+            attack a;
+            a.name = ja.name;
+            a.damage = ja.damage;
+            a.range = ja.range;
+            a.at = ja.at;
+            a.cooldownBeforeNextAttack = ja.cooldownBeforeNextAttack;
 
-// Step 2: Load attack_pattern.json into a lookup map (using attacks loaded into memory)
-std::unordered_map<std::string, attack_pattern> attack_patterns_memory;
-nlohmann::json& pattern_data = JsonLoader::Instance().Get("game/attack_pattern.json");
-if (pattern_data.is_array()) {
-    for (const auto& item : pattern_data) {
-        jAttackPattern jap = item.get<jAttackPattern>();
-        attack_pattern ap;
-        ap.name = jap.name;
-
-        for (const auto& ref : jap.attacks) {
-            if (attacks_memory.find(ref.name) != attacks_memory.end()) {
-                ap.attacks.push_back(attacks_memory[ref.name]);
-            }
+            attacks_memory[a.name] = a;
         }
-        attack_patterns_memory[ap.name] = ap;
     }
-}
 
-// Step 3: Load entity.json and create each entity by reading the attack patterns from memory
-nlohmann::json& entity_data = JsonLoader::Instance().Get("game/entity.json");
-if (entity_data.is_array()) {
-    for (const auto& item : entity_data) {
-        jEntityTemplate jet = item.get<jEntityTemplate>();
-        entity_template et;
-        et.entityTypeID = jet.entityTypeID;
-        et.name = jet.name;
-        et.sprite = jet.sprite;
-        et.entity_class = jet.entity_class;
-        et.behavior_type = jet.behavior_type;
-        et.max_health = jet.max_health;
-        et.move_speed = jet.move_speed;
-        et.is_pickupable = jet.is_pickupable;
-        et.width = jet.width;
-        et.height= jet.height;
+    // Step 2: Load attack_pattern.json into a lookup map (using attacks loaded into memory)
+    std::unordered_map<std::string, attack_pattern> attack_patterns_memory;
+    nlohmann::json& pattern_data = JsonLoader::Instance().Get("game/attack_pattern.json");
+    if (pattern_data.is_array()) {
+        for (const auto& item : pattern_data) {
+            jAttackPattern jap = item.get<jAttackPattern>();
+            attack_pattern ap;
+            ap.name = jap.name;
 
-        // Resolve attack patterns from memory using the names provided in entity.json
-        for (const auto& patRef : jet.attack_patterns) {
-            if (attack_patterns_memory.find(patRef.name) != attack_patterns_memory.end()) {
-                et.attack_patterns.push_back(attack_patterns_memory[patRef.name]);
+            for (const auto& ref : jap.attacks) {
+                if (attacks_memory.find(ref.name) != attacks_memory.end()) {
+                    ap.attacks.push_back(attacks_memory[ref.name]);
+                }
             }
+            attack_patterns_memory[ap.name] = ap;
         }
-
-        Entity entity = Entity(et);
-        entity_registry_.insert({jet.entityTypeID, entity});
     }
-}
 
+    // Step 3: Load entity.json and create each entity by reading the attack patterns from memory
+    nlohmann::json& entity_data = JsonLoader::Instance().Get("game/entity.json");
+    if (entity_data.is_array()) {
+        for (const auto& item : entity_data) {
+            jEntityTemplate jet = item.get<jEntityTemplate>();
+            entity_template et;
+            et.entityTypeID = jet.entityTypeID;
+            et.name = jet.name;
+            et.sprite = jet.sprite;
+            et.entity_class = jet.entity_class;
+            et.behavior_type = jet.behavior_type;
+            et.max_health = jet.max_health;
+            et.move_speed = jet.move_speed;
+            et.is_pickupable = jet.is_pickupable;
+            et.width = jet.width;
+            et.height= jet.height;
+
+            // Resolve attack patterns from memory using the names provided in entity.json
+            for (const auto& patRef : jet.attack_patterns) {
+                if (attack_patterns_memory.find(patRef.name) != attack_patterns_memory.end()) {
+                    et.attack_patterns.push_back(attack_patterns_memory[patRef.name]);
+                }
+            }
+
+            Entity entity = Entity(et);
+            entity_registry_.insert({jet.entityTypeID, entity});
+        }
+    }
 
     unsigned int num_threads = pool_->get_num_threads();
     size_t x_cells_per_thread = ((world_x_) + num_threads - 1) / num_threads;
@@ -372,106 +372,111 @@ if (entity_data.is_array()) {
 
     for (unsigned int t = 0; t < num_threads; t++)
     {
-
         size_t start_idx = t * x_cells_per_thread;
         size_t end_idx = std::min(start_idx + x_cells_per_thread, static_cast<size_t>(world_x_));
 
         if (start_idx >= world_x_) break;
 
-        futures.push_back(pool_->enqueue([this, start_idx, end_idx, &base_height, &height_amplitude]
+        futures.push_back(pool_->enqueue([this, start_idx, end_idx]()
                     {
+                    for (size_t i = start_idx; i < end_idx; i++)
+                    {
+                    float noise_val = NativeNoise::fBm(static_cast<float>(i) * 0.008f, 0.0f, 4, 1.0f, 0.5f);
+                    float base_surface_y = static_cast<float>(world_y_) * 0.25f;
+                    float amplitude = static_cast<float>(world_y_) * 0.1f;
+                    float surface_y = base_surface_y + (noise_val * amplitude);
 
-                    for (size_t i = start_idx; i < end_idx; i ++)
-                    {
-                    for (size_t j = 0; j < world_y_; j ++)
-                    {
+                    // Find the exact integer row containing the surface line
+                    int surf_row = static_cast<int>(std::floor(surface_y));
+                    float frac = surface_y - static_cast<float>(surf_row);
 
+                    for (size_t j = 0; j < world_y_; j++)
+                    {
                     size_t index = j * world_x_ + i;
-// Calculate percentage height from bottom (0.0) to top (1.0)
-                    float height_pct = 1.f - (static_cast<float>(j) / static_cast<float>(world_y_));
+                    int int_y = static_cast<int>(j);
 
-                    uint16_t type_id = 0; // Default: Air (ID 0)
+                    uint16_t type_id = 0;
                     float density = 0.0f;
 
-                    if (height_pct >= 0.9f) {
-                        // Top 10%: Air
+                    if (int_y < surf_row) {
+                        // Above surface -> Air
                         type_id = 0;
                         density = 0.0f;
-                    } 
-                    else if (height_pct >= 0.8f) {
-                        type_id = 1;
-                        density = 255.0f;
-                    } 
-                    else if (height_pct >= 0.5f) {
-                        type_id = 3;
-                        density = 255.0f;
-                    } 
-                    else {
-                        type_id = 4;
-                        density = 255.0f;
                     }
+                    else if (int_y == surf_row) {
+                        // Exactly one surface cell gets a partial density based on fractional height
+                        // Adjust the multiplier if you want steeper or flatter slope generation
+                        density = std::clamp((1.0f - frac) * 128.0f + 64.0f, 1.0f, 254.0f);
+                        type_id = 2; // Grass / Surface material
+                    }
+                    else {
+                        // Below surface -> Full solid blocks
+                        density = 255.0f;
 
+                        int depth = int_y - surf_row;
+                        if (depth < 8) {
+                            type_id = 2; // Dirt layer
+                        } else {
+                            type_id = 3; // Stone layer
+                        }
+                    }
 
                     world_cells_[index].type_id = type_id;
                     world_cells_[index].density = density;
                     world_cells_[index].state_flags = 0;
-
                     }
                     }
                     }));
     }
 
+
     for (auto& f:futures)
     {
         f.get();
     }
-// ==========================================
-    // MANUAL TEST FEATURES (Hill, Cave, Cutout)
-    // ==========================================
-    auto carve_shape = [&](int cx, int cy, float radius, uint16_t type_id, float density, bool is_additive) {
-        int sx = std::max(0, static_cast<int>(cx - radius));
-        int ex = std::min(world_x_ - 1, static_cast<int>(cx + radius));
-        int sy = std::max(0, static_cast<int>(cy - radius));
-        int ey = std::min(world_y_ - 1, static_cast<int>(cy + radius));
-        float r_sq = radius * radius;
+// 2. Fast O(W log H) Binary-Search Surface Crawler
+    MarchingSquares cleanup_ms;
+    for (int ix = 0; ix < world_x_; ix++)
+    {
+        // Interval halving (Binary search) to find the first non-air block from the top
+        int low = 0;
+        int high = world_y_ - 1;
+        int surface_iy = -1;
 
-        for (int y = sy; y <= ey; ++y) {
-            for (int x = sx; x <= ex; ++x) {
-                float dx = x - cx;
-                float dy = y - cy;
-                if (dx * dx + dy * dy <= r_sq) {
-                    size_t idx = y * world_x_ + x;
-                    if (is_additive) {
-                        world_cells_[idx].type_id = type_id;
-                        world_cells_[idx].density = std::max(world_cells_[idx].density,static_cast<uint8_t>(density));
-                    } else {
-                        world_cells_[idx].type_id = type_id; // 0 for air cutout
-                        world_cells_[idx].density = density;   // 0.0f for air cutout
-                    }
-                }
+        while (low <= high)
+        {
+            int mid = low + (high - low) / 2;
+            size_t index = static_cast<size_t>(mid) * world_x_ + ix;
+
+            if (world_cells_[index].type_id == 0)
+            {
+                // It's air -> surface is further down (+50% / +25% direction)
+                low = mid + 1;
+            }
+            else
+            {
+                // It's solid -> record it and check higher up (-12.5% direction)
+                surface_iy = mid;
+                high = mid - 1;
             }
         }
-    };
 
-    // 1. A Hill (Additive mound of Dirt/Grass on the surface)
-    // Placed at 30% width, positioned near the upper surface layer
-    int hill_cx = static_cast<int>(world_x_ * 0.3f);
-    int hill_cy = static_cast<int>(world_y_ * 0.2f); 
-    carve_shape(hill_cx, hill_cy, 15.0f, 2, 255.0f, true); // Grass mound
+        // 3. Inspect the located surface block for shape 12 artifacts
+        if (surface_iy != -1 && surface_iy < world_y_)
+        {
+            size_t index = static_cast<size_t>(surface_iy) * world_x_ + ix;
+            
+            std::array<float, 9> nb = cleanup_ms.getNeighbourhood(world_cells_, world_x_, world_y_, ix, surface_iy);
+            int shape_id = cleanup_ms.getBlockSlopeType(nb, threshold);
 
-    // 2. A Cave Entrance (Subtractive circular arch cut into a wall/hillside)
-    // Placed at 50% width, deeper down in the dirt/stone layers
-    int cave_cx = static_cast<int>(world_x_ * 0.5f);
-    int cave_cy = static_cast<int>(world_y_ * 0.5f);
-    carve_shape(cave_cx, cave_cy, 8.0f, 0, 0.0f, false); // Air pocket
-
-    // 3. A Small Cutout (A distinct geometric bite taken out of the lower stone layer)
-    // Placed at 70% width, near the bottom
-    int cut_cx = static_cast<int>(world_x_ * 0.7f);
-    int cut_cy = static_cast<int>(world_y_ * 0.75f);
-    carve_shape(cut_cx, cut_cy, 10.0f, 0, 0.0f, false); // Air pocket
-    // ==========================================
-
+            if (shape_id == 12)
+            {
+                // Erase the awkward half-block fallback to air
+                world_cells_[index].type_id = 0;
+                world_cells_[index].density = 0.0f;
+            }
+        }
+    }
     chunk_is_dirty_.assign(numChunks, 1);
 
     dirty_chunk_indices_.clear();
@@ -524,7 +529,7 @@ std::vector<std::pair<std::array<int, 2>,ChunkMeshData>> WorldGrid::updateMesh()
                     int cx = chunk_idx % num_chunk_x;
                     int cy = chunk_idx / num_chunk_x;
 
-                    MeshData terrain_mesh= local_marching_squares.GenerateMesh(world_cells_, 128.f, world_x_, world_y_, cx, cy, chunk_size_);
+                    MeshData terrain_mesh= local_marching_squares.GenerateMesh(world_cells_,threshold, world_x_, world_y_, cx, cy, chunk_size_);
                     MeshData structure_mesh = local_marching_squares.generate_blocky_mesh(placed_cells_, world_x_, world_y_, cx, cy, chunk_size_, structures_);
 
                     ChunkMeshData chunk_data{std::move(terrain_mesh), std::move(structure_mesh)};
@@ -581,15 +586,15 @@ void WorldGrid::fill_cell(int x, int y, uint16_t type_id, bool negativeFill)
 uint32_t WorldGrid::tick(double deltaTime)
 {
     // could be parallel
- //   for(uint32_t sID : tick_structures_)
+    //   for(uint32_t sID : tick_structures_)
     {
         //Structure& s = structures_.at(sID); 
-       // s.on_tick(deltaTime);
+        // s.on_tick(deltaTime);
     }
 
     // also do entity processes
-    
-    
+
+
     time_accumulator_ += deltaTime;
     uint32_t active_flags = TickFlags::NONE;
 
@@ -601,35 +606,35 @@ uint32_t WorldGrid::tick(double deltaTime)
     }
     /*
 
-    if (time_accumulator_ >= spawn_interval_)
-    {
-        time_accumulator_ -= spawn_interval_;
+       if (time_accumulator_ >= spawn_interval_)
+       {
+       time_accumulator_ -= spawn_interval_;
 
-    }
+       }
     // 2. Check if counter/interval is reached (e.g., every 2 seconds)
     if (time_accumulator_ >= spawn_interval_)
     {
-        time_accumulator_ -= spawn_interval_; // Reset/subtract interval
+    time_accumulator_ -= spawn_interval_; // Reset/subtract interval
 
-        // 3. Generate random coordinates on the map
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<int> dist_x(0, world_x_- 1);
-        std::uniform_int_distribution<int> dist_y(0, world_y_- 1);
+    // 3. Generate random coordinates on the map
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dist_x(0, world_x_- 1);
+    std::uniform_int_distribution<int> dist_y(0, world_y_- 1);
 
-        int random_x = dist_x(gen);
-        int random_y = dist_y(gen);
+    int random_x = dist_x(gen);
+    int random_y = dist_y(gen);
 
-        // 4. Place structure ID 5 at the random location
-        placeStructure(random_x, random_y, 5);
-        active_flags |= TickFlags::MESH_UPDATE;
+    // 4. Place structure ID 5 at the random location
+    placeStructure(random_x, random_y, 5);
+    active_flags |= TickFlags::MESH_UPDATE;
     }
     */
     return active_flags;
 
 }
 
- struct_template WorldGrid::selectStructure(int x, int y)
+struct_template WorldGrid::selectStructure(int x, int y)
 {
     struct_template r;
     r.structureID = 0;
@@ -641,7 +646,7 @@ uint32_t WorldGrid::tick(double deltaTime)
     r.sprite = "NAN";
 
     if (x< 0 || x >= world_x_ ||
-        y < 0 || y >= world_y_)
+            y < 0 || y >= world_y_)
         return r;
 
     size_t index= static_cast<size_t>(y) * world_x_ + x;
@@ -672,7 +677,7 @@ void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
 {
 
     if (bl_x < 0 || bl_x >= world_x_ ||
-        bl_y < 0 || bl_y >= world_y_)
+            bl_y < 0 || bl_y >= world_y_)
         return;
 
     size_t origin_index = static_cast<size_t>(bl_y) * world_x_ + bl_x;
@@ -705,7 +710,7 @@ void WorldGrid::placeStructure(int bl_x, int bl_y, int structureID)
 
             // Reject if any cell is already occupied.
             if (cell.type_id != 0 ||
-                cell.structure_on_cell_uID != -1)
+                    cell.structure_on_cell_uID != -1)
             {
                 return;
             }
@@ -775,7 +780,7 @@ void WorldGrid::placeEntity(int bl_x, int bl_y, int entityTypeID)
 {
     // 1. Check world boundary bounds for the origin point
     if (bl_x < 0 || bl_x >= world_x_ ||
-        bl_y < 0 || bl_y >= world_y_)
+            bl_y < 0 || bl_y >= world_y_)
         return;
 
     // 2. Ensure entity template exists in the registry
@@ -862,8 +867,8 @@ bool WorldGrid::isCellSolid(float x, float y) const {
 
     size_t index = static_cast<size_t>(cell_y) * world_x_ + cell_x;
     const Cell& c = world_cells_[index];
-    
-    return (c.type_id != 0 && c.density > 128.0f);
+
+    return (c.type_id != 0 && c.density > threshold);
 }
 
 float WorldGrid::getDensityAt(float x, float y) const {
@@ -880,7 +885,7 @@ float WorldGrid::getDensityAt(float x, float y) const {
 
 Vec2 WorldGrid::calculateDensityGradient(float x, float y) const {
     float eps = 1.0f; // 1 cell offset
-    
+
     float d_left   = getDensityAt(x - eps, y);
     float d_right  = getDensityAt(x + eps, y);
     float d_top    = getDensityAt(x, y - eps);
@@ -950,7 +955,7 @@ bool WorldGrid::checkAABBCollision(const Vec2& pos, float width, float height) c
     float bottom = pos.y + half_h;
 
     return isCellSolid(left, top) || isCellSolid(right, top) ||
-           isCellSolid(left, bottom) || isCellSolid(right, bottom);
+        isCellSolid(left, bottom) || isCellSolid(right, bottom);
 }
 WorldGrid::WorldGrid()
 {
