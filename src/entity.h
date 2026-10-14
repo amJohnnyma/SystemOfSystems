@@ -81,6 +81,7 @@ class Entity
         const entity_template& getTemplate() const {return et_;}
         void applyGravity(EntityTickContext etx);
         void alignPosition();
+        void moveTo(float x, float y, EntityTickContext etx);
 
 };
 

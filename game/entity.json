@@ -6,7 +6,7 @@
     "entity_class": "enemy",
     "behavior_type": "aggressive",
     "max_health": 80.0,
-    "move_speed": 1.3,
+    "move_speed": 6.0,
 "width":2,
 "height":3,
     "is_pickupable": false,

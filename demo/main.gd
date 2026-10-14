@@ -84,7 +84,7 @@ var enemy_atlas_material: ShaderMaterial
 var player: Sprite2D
 var player_velocity: Vector2 = Vector2.ZERO
 const PLAYER_GRAVITY: float = 800
-const PLAYER_SPEED: float = 60
+const PLAYER_SPEED: float = 100
 const PLAYER_WIDTH: float = 4.0
 const PLAYER_HEIGHT: float = 10.0
 var is_on_ground_flag = false
@@ -250,7 +250,7 @@ void vertex() {
 	
 	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
 	
-	world.placeEntity(0,2,1)
+	world.placeEntity(320,10,1)
 	'''for i in range(200):
 		world.placeEntity(0,2,1)
 		world.placeEntity(0,6,2)

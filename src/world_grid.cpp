@@ -586,6 +586,8 @@ void WorldGrid::fill_cell(int x, int y, uint16_t type_id, bool negativeFill)
 
 uint32_t WorldGrid::tick(double deltaTime)
 {
+
+    updateMesh();
     // could be parallel
     //   for(uint32_t sID : tick_structures_)
     {
