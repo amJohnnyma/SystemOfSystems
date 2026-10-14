@@ -95,8 +95,10 @@ void Entity::applyGravity(EntityTickContext etx)
         if (blocked)
         {
             et_.velocity.y = 0.0f;
+            et_.isGrounded = true;
             return;
         }
+        et_.isGrounded = false;
 
         et_.y_smooth = candidate_y;
     }
@@ -128,7 +130,11 @@ void Entity::moveTo(float x, float y, EntityTickContext etx)
             {
                 et_.x_smooth = static_cast<float>(et_.x_origin);
                 et_.velocity.x = 0.0f;
+                if(et_.isGrounded)
+                {
                 et_.velocity.y = -2.0f * etx.gts.gravity;
+                et_.isGrounded = false;
+                }
                 return;
             }
         }
@@ -200,7 +206,13 @@ void Entity::moveTo(float x, float y, EntityTickContext etx)
         {
             et_.velocity.x = 0.0f;
 
+            if (et_.isGrounded)
+            {
+
             et_.velocity.y = -2.0f * etx.gts.gravity;
+
+            et_.isGrounded = false;
+            }
             return;
         }
 

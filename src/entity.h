@@ -49,6 +49,8 @@ struct entity_template
     float x_smooth = 0;
     float y_smooth = 0;
 
+    bool isGrounded = true;
+
     Vec2 velocity = Vec2{0,0};
     
     
@@ -65,6 +67,7 @@ class Entity
         entity_template et_;
         float current_health_;
         float current_move_speed_;
+
 
 
     public:

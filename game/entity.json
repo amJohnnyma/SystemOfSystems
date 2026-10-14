@@ -26,9 +26,9 @@
     "entity_class": "enemy",
     "behavior_type": "ranged",
     "max_health": 120.0,
-    "move_speed": 1.2,
-"width":2,
-"height":4,
+    "move_speed": 7.0,
+"width":7,
+"height":22,
     "is_pickupable": false,
     "attack_patterns": [
       {

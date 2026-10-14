@@ -251,6 +251,7 @@ void vertex() {
 	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
 	
 	world.placeEntity(320,10,1)
+	world.placeEntity(320,30,2)
 	'''for i in range(200):
 		world.placeEntity(0,2,1)
 		world.placeEntity(0,6,2)
