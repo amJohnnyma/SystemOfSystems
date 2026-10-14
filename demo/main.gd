@@ -111,34 +111,13 @@ func _ready() -> void:
 		
 	terrain_blend_shader = Shader.new()
 	terrain_blend_shader.code = """
-
 shader_type canvas_item;
 render_mode unshaded;
 
 uniform sampler2D terrain_atlas : source_color, filter_nearest;
 
-varying vec2 secondary_uv;
-
-void vertex() {
-    secondary_uv = CUSTOM0.xy;
-}
-
 void fragment() {
-    vec4 texture_a = texture(terrain_atlas, UV);
-    vec4 texture_b = texture(terrain_atlas, secondary_uv);
-
-    float weight_a = COLOR.r;
-    float weight_b = COLOR.g;
-    float total = weight_a + weight_b;
-
-    if (total > 0.0001) {
-        COLOR = (
-            texture_a * weight_a +
-            texture_b * weight_b
-        ) / total;
-    } else {
-        COLOR = texture_a;
-    }
+    COLOR = texture(terrain_atlas, UV);
 }
 
 	"""

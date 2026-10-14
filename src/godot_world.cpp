@@ -255,18 +255,30 @@ auto build_mesh_dict = [](const MeshData& mesh_data) -> Dictionary {
     type_ids.resize(static_cast<int64_t>(mesh_data.vertices.size()));
     colors.resize(static_cast<int64_t>(mesh_data.vertices.size()));
 
-    for (size_t i = 0; i < mesh_data.vertices.size(); ++i) {
-        vertices[static_cast<int32_t>(i)] = Vector2(mesh_data.vertices[i].position.x, mesh_data.vertices[i].position.y);
-        uvs[static_cast<int32_t>(i)] = Vector2(mesh_data.vertices[i].uv.x, mesh_data.vertices[i].uv.y);
-        type_ids[static_cast<int32_t>(i)] = static_cast<int32_t>(mesh_data.vertices[i].type_id);
-        indices[static_cast<int32_t>(i)] = static_cast<int32_t>(mesh_data.indices[i]);
-        colors[i] = Color(
-                mesh_data.vertices[i].weights.x,
-                mesh_data.vertices[i].weights.y,
-                static_cast<float>(mesh_data.vertices[i].type_id),
-                static_cast<float>(mesh_data.vertices[i].other_type_id)
-                );
-    }
+for (size_t i = 0; i < mesh_data.vertices.size(); ++i) {
+    const auto& vertex = mesh_data.vertices[i];
+
+    vertices[static_cast<int32_t>(i)] =
+        Vector2(vertex.position.x, vertex.position.y);
+
+    uvs[static_cast<int32_t>(i)] =
+        Vector2(vertex.uv.x, vertex.uv.y);
+
+    type_ids[static_cast<int32_t>(i)] =
+        static_cast<int32_t>(vertex.type_id);
+
+    colors[static_cast<int32_t>(i)] = Color(
+        vertex.weights.x,
+        vertex.weights.y,
+        static_cast<float>(vertex.type_id),
+        static_cast<float>(vertex.other_type_id)
+    );
+}
+
+for (size_t i = 0; i < mesh_data.indices.size(); ++i) {
+    indices[static_cast<int32_t>(i)] =
+        static_cast<int32_t>(mesh_data.indices[i]);
+}
 
     Dictionary dict;
     dict["vertices"] = vertices;

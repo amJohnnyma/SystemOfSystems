@@ -1,4 +1,5 @@
 #include "marching_squares.h"
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <unordered_set>
@@ -87,6 +88,7 @@ MarchingSquares::MarchingSquares()
 }
 //Helpers for threads
 
+/*
 MeshData MarchingSquares::GenerateMesh(const std::vector<Cell>& world, float threshold, int world_x, int world_y, int cx, int cy, int chunk_size)
 {
     MeshData mesh;
@@ -162,6 +164,288 @@ MeshData MarchingSquares::GenerateMesh(const std::vector<Cell>& world, float thr
 
 
             }
+        }
+    }
+    //
+    return mesh;
+}
+*/
+
+//density of surrounding
+// arr[0] = TL 
+// arr[1] = TM 
+// arr[2] = TR 
+// arr[3] = ML 
+// arr[4] = M // the cell called from 
+// arr[5] = MR 
+// arr[6] = BL 
+// arr[7] = BM 
+// arr[8] = BR 
+std::array<float, 9> getNeighbourhood(const std::vector<Cell>& world, int world_x, int world_y, int ix, int iy)
+{
+    // i suppose this couldjust store orthogonals...
+    int indexCount = 0;
+    std::array<float , 9> arr = {};
+    for (int dy = -1; dy <= 1; dy++)
+    {
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            int nx = ix + dx;
+            int ny = iy + dy;
+
+            if (nx < 0 || nx >= world_x || ny < 0 || ny >= world_y) {
+                arr[indexCount] = 0.0f;
+                
+            } else {
+                size_t idx = static_cast<size_t>(ny) * world_x + nx;
+                arr[indexCount] = world[idx].density; 
+            }
+            indexCount ++;
+
+        }
+    }
+
+    return arr;
+}
+
+// 0 = empty
+// 1 = full
+// 2 = slope_bl
+// 3 = slop_br
+// 4 = slope_tl
+// 5 = slope_tr
+// 6 = half_b
+// 7 = half_t
+// 8 = half_l
+// 9 = half_r
+// 10 = half_centered_vertical
+// 11 = half_centered_horizontal
+// 12 = half_block_full // The full block but half size -> "Floats", maybe a star shape could look nicer. we'll see
+int getBlockSlopeType(const std::array<float, 9>& nb, float threshold)
+{
+    float center_density = nb[4]; // Center is index 4 in a 3x3 (-1 to 1)
+
+    // 1. Air / Empty rule
+    if (center_density <= 0.0f) {
+        return 0;
+    }
+
+    // 2. Full block rule (above upper density threshold)
+    if (center_density >= threshold) { 
+        return 1;
+    }
+
+    // 3. Within diagonal/slope range (e.g., 1 to 128)
+    // Extract neighbor solidity (boolean flags based on threshold)
+    // Each of these are "solid"
+    bool top    = nb[1] >= threshold;
+    bool bottom = nb[7] >= threshold;
+    bool left   = nb[3] >= threshold;
+    bool right  = nb[5] >= threshold;
+
+    // Apply directional neighbor rules
+    // The center_density is NOT FULL
+    if (top && bottom && left && right) return 12;
+    if (top && left && right) return 6;
+    if (bottom && left && right) return 7;
+    if (top && left && bottom) return 8;
+    if (top && right && bottom) return 9;
+    if (top && left) return 2;
+    if (top && right) return 3;
+    if (bottom && left) return 4;
+    if (bottom && right) return 5;
+    if (top && bottom) return 10;
+    if (left && right) return 11; 
+
+    return 12;
+
+}
+void AppendShapeGeometry(int shape_id, int ix, int iy, uint16_t material_id, MeshData& mesh)
+{
+    if (shape_id == 0) return; // Empty, do nothing
+
+    float fx = static_cast<float>(ix);
+    float fy = static_cast<float>(iy);
+    uint32_t base_index = static_cast<uint32_t>(mesh.vertices.size());
+
+    // Helper lambda to push a vertex with world offset and material mapping
+auto add_v = [&](float x, float y, float u, float v) {
+    Vertex vert;
+    vert.position = Vec2{fx + x, fy + y};
+    vert.uv = Vec2{u, v};
+    vert.type_id = material_id;
+    vert.other_type_id = material_id; // Or 0 if no secondary material
+    vert.weights = Vec2(1.0f, 0.0f);   // 100% weight to primary material
+    mesh.vertices.push_back(vert);
+};
+
+    switch (shape_id)
+    {
+        case 1: // Full block (Quad: 4 vertices, 6 indices)
+            add_v(0.0f, 0.0f, 0.0f, 0.0f); // BL
+            add_v(1.0f, 0.0f, 1.0f, 0.0f); // BR
+            add_v(1.0f, 1.0f, 1.0f, 1.0f); // TR
+            add_v(0.0f, 1.0f, 0.0f, 1.0f); // TL
+            
+            mesh.indices.insert(mesh.indices.end(), {
+                base_index, base_index + 1, base_index + 2,
+                base_index, base_index + 2, base_index + 3
+            });
+            break;
+
+        case 2: // slope_bl (Triangle: BL, BR, TL)
+            add_v(0.0f, 0.0f, 0.0f, 0.0f);
+            add_v(1.0f, 0.0f, 1.0f, 0.0f);
+            add_v(0.0f, 1.0f, 0.0f, 1.0f);
+
+            mesh.indices.insert(mesh.indices.end(), { base_index, base_index + 1, base_index + 2 });
+            break;
+
+        case 3: // slope_br (Triangle: BL, BR, TR)
+            add_v(0.0f, 0.0f, 0.0f, 0.0f);
+            add_v(1.0f, 0.0f, 1.0f, 0.0f);
+            add_v(1.0f, 1.0f, 1.0f, 1.0f);
+
+            mesh.indices.insert(mesh.indices.end(), { base_index, base_index + 1, base_index + 2 });
+            break;
+
+        case 4: // slope_tl (Triangle: BL, TR, TL)
+            add_v(0.0f, 0.0f, 0.0f, 0.0f);
+            add_v(1.0f, 1.0f, 1.0f, 1.0f);
+            add_v(0.0f, 1.0f, 0.0f, 1.0f);
+
+            mesh.indices.insert(mesh.indices.end(), { base_index, base_index + 1, base_index + 2 });
+            break;
+
+        case 5: // slope_tr (Triangle: BR, TR, TL)
+            add_v(1.0f, 0.0f, 1.0f, 0.0f);
+            add_v(1.0f, 1.0f, 1.0f, 1.0f);
+            add_v(0.0f, 1.0f, 0.0f, 1.0f);
+
+            mesh.indices.insert(mesh.indices.end(), { base_index, base_index + 1, base_index + 2 });
+            break;
+
+        case 6: // half_b (Bottom half slab)
+            add_v(0.0f, 0.0f, 0.0f, 0.0f);
+            add_v(1.0f, 0.0f, 1.0f, 0.0f);
+            add_v(1.0f, 0.5f, 1.0f, 0.5f);
+            add_v(0.0f, 0.5f, 0.0f, 0.5f);
+
+            mesh.indices.insert(mesh.indices.end(), {
+                base_index, base_index + 1, base_index + 2,
+                base_index, base_index + 2, base_index + 3
+            });
+            break;
+
+        case 7: // half_t (Top half slab)
+            add_v(0.0f, 0.5f, 0.0f, 0.5f);
+            add_v(1.0f, 0.5f, 1.0f, 0.5f);
+            add_v(1.0f, 1.0f, 1.0f, 1.0f);
+            add_v(0.0f, 1.0f, 0.0f, 1.0f);
+
+            mesh.indices.insert(mesh.indices.end(), {
+                base_index, base_index + 1, base_index + 2,
+                base_index, base_index + 2, base_index + 3
+            });
+            break;
+
+        case 8: // half_l (Left half strip)
+            add_v(0.0f, 0.0f, 0.0f, 0.0f);
+            add_v(0.5f, 0.0f, 0.5f, 0.0f);
+            add_v(0.5f, 1.0f, 0.5f, 1.0f);
+            add_v(0.0f, 1.0f, 0.0f, 1.0f);
+
+            mesh.indices.insert(mesh.indices.end(), {
+                base_index, base_index + 1, base_index + 2,
+                base_index, base_index + 2, base_index + 3
+            });
+            break;
+
+        case 9: // half_r (Right half strip)
+            add_v(0.5f, 0.0f, 0.5f, 0.0f);
+            add_v(1.0f, 0.0f, 1.0f, 0.0f);
+            add_v(1.0f, 1.0f, 1.0f, 1.0f);
+            add_v(0.5f, 1.0f, 0.5f, 1.0f);
+
+            mesh.indices.insert(mesh.indices.end(), {
+                base_index, base_index + 1, base_index + 2,
+                base_index, base_index + 2, base_index + 3
+            });
+            break;
+
+        case 10: // half_centered_vertical
+            add_v(0.25f, 0.0f, 0.25f, 0.0f);
+            add_v(0.75f, 0.0f, 0.75f, 0.0f);
+            add_v(0.75f, 1.0f, 0.75f, 1.0f);
+            add_v(0.25f, 1.0f, 0.25f, 1.0f);
+
+            mesh.indices.insert(mesh.indices.end(), {
+                base_index, base_index + 1, base_index + 2,
+                base_index, base_index + 2, base_index + 3
+            });
+            break;
+
+        case 11: // half_centered_horizontal
+            add_v(0.0f, 0.25f, 0.0f, 0.25f);
+            add_v(1.0f, 0.25f, 1.0f, 0.25f);
+            add_v(1.0f, 0.75f, 1.0f, 0.75f);
+            add_v(0.0f, 0.75f, 0.0f, 0.75f);
+
+            mesh.indices.insert(mesh.indices.end(), {
+                base_index, base_index + 1, base_index + 2,
+                base_index, base_index + 2, base_index + 3
+            });
+            break;
+
+        case 12: // half_block_full (Shrunk centered square / placeholder)
+            add_v(0.25f, 0.25f, 0.25f, 0.25f);
+            add_v(0.75f, 0.25f, 0.75f, 0.25f);
+            add_v(0.75f, 0.75f, 0.75f, 0.75f);
+            add_v(0.25f, 0.75f, 0.25f, 0.75f);
+
+            mesh.indices.insert(mesh.indices.end(), {
+                base_index, base_index + 1, base_index + 2,
+                base_index, base_index + 2, base_index + 3
+            });
+            break;
+
+        default:
+            break;
+    }
+}
+MeshData MarchingSquares::GenerateMesh(const std::vector<Cell>& world, float threshold, int world_x, int world_y, int cx, int cy, int chunk_size)
+{
+    MeshData mesh;
+    size_t estimated_max = static_cast<size_t>(chunk_size) * chunk_size * 2;
+    mesh.vertices.reserve(estimated_max*3);
+    mesh.indices.reserve(estimated_max*3);
+
+   
+    int start_x = cx * chunk_size;
+    int start_y = cy * chunk_size;
+    // Iterate up to chunk bounds, stopping at world limits - 1 for 3x3 sampling
+    int end_x = std::min(start_x + chunk_size, world_x - 1);
+    int end_y = std::min(start_y + chunk_size, world_y - 1);
+
+
+    
+    for(int iy = start_y; iy < end_y; iy++)
+    {
+        for (int ix = start_x; ix < end_x; ix++)
+        {
+            size_t center_idx = static_cast<size_t>(iy) * world_x + ix;
+            if (world[center_idx].density <= 0.0f) continue;
+
+            std::array<float, 9> arr = getNeighbourhood(world, world_x, world_y, ix, iy);
+            int shape_id = getBlockSlopeType(arr, threshold);
+
+            if (shape_id == 0) continue;
+
+            uint16_t material_id = world[center_idx].type_id;
+
+            // Append geometry directly into the mesh by reference
+            AppendShapeGeometry(shape_id, ix, iy, material_id, mesh);
+
         }
     }
     //
