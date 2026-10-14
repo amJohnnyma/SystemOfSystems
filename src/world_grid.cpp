@@ -41,6 +41,10 @@ bool WorldGrid::set_cell(int x, int y, uint16_t type_id, uint8_t density, uint8_
             Cell& c = world_cells_[index];
             c.type_id = type_id;
             c.density = density;
+            if (density == 0)
+            {
+                c.type_id = 0;
+            }
             c.state_flags = state_flags;
 
             int chunk_x = coord[0] / chunk_size_;
@@ -569,6 +573,11 @@ void WorldGrid::fill_cell(int x, int y, uint16_t type_id, bool negativeFill)
     size_t index = static_cast<size_t>(y) * world_x_ + x;
     world_cells_[index].density = density;
     world_cells_[index].type_id = type_id;
+
+    if (density == 0)
+    {
+        world_cells_[index].type_id = 0;
+    }
 
     int cx = x / chunk_size_;
     int cy = y / chunk_size_;
