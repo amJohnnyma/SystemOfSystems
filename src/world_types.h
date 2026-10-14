@@ -34,6 +34,26 @@ struct ChunkMeshData
     MeshData structure_mesh;
 };
 
+struct global_tick_settings
+{
+    float gravity = 3.f;
+};
+
+struct EntityTickContext
+{
+    double deltaTime;
+    const std::vector<Cell>& world_cells;
+    int world_x;
+    int world_y;
+    float threshold;
+    Vec2 playerPos; // will also need the size but for now this is good
+    global_tick_settings gts;
+
+
+};
+
+
+
 
 
 struct LineSegment {Vertex p1; Vertex p2;};

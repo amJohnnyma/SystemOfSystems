@@ -8,6 +8,7 @@
 #include <vector>
 #include <iostream>
 #include "attack_type.h"
+#include "world_types.h"
 
 
 
@@ -47,6 +48,8 @@ struct entity_template
 
     float x_smooth = 0;
     float y_smooth = 0;
+
+    Vec2 velocity = Vec2{0,0};
     
     
     // Optional item/particle fields
@@ -73,13 +76,12 @@ class Entity
     
     }
         ~Entity() = default;
-        void on_tick(double deltaTime) 
-        {
-    et_.x_smooth += (et_.move_speed  * deltaTime);
-    et_.y_smooth += (et_.move_speed  * deltaTime);
-}
-        void do_attack() {} // cycles attack patterns, changes which attack pattern to follow
+        void on_tick(EntityTickContext etx);
+        void do_attack(); // cycles attack patterns, changes which attack pattern to follow
         const entity_template& getTemplate() const {return et_;}
+        void applyGravity(EntityTickContext etx);
+        void alignPosition();
+
 };
 
 #endif

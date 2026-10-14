@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <array>
+#include <filesystem>
 #include <memory>
 #include <utility>
 
@@ -599,8 +600,18 @@ uint32_t WorldGrid::tick(double deltaTime)
     uint32_t active_flags = TickFlags::NONE;
 
     if (!entities_.empty()) {
+        EntityTickContext etx
+        {
+            .deltaTime = deltaTime,
+            .world_cells = world_cells_,
+            .world_x = world_x_,
+            .world_y = world_y_,
+            .threshold = threshold,
+            .playerPos = player_position_,
+            .gts = gts
+        };
         for (auto& [uID, entity] : entities_) {
-            entity.on_tick(deltaTime); // updates internal smooth positions
+            entity.on_tick(etx); // updates internal smooth positions
         }
         active_flags |= TickFlags::ENTITY_UPDATE;
     }
@@ -856,7 +867,6 @@ void WorldGrid::placeEntity(int bl_x, int bl_y, int entityTypeID)
  *
  *
  */
-// magic numbers everwhere
 bool WorldGrid::isCellSolid(float x, float y) const {
     int cell_x = static_cast<int>(std::floor(x));
     int cell_y = static_cast<int>(std::floor(y));

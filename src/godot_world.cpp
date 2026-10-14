@@ -116,6 +116,8 @@ godot::Dictionary GodotSimulation::getEntityTransformsForRendering() const {
         godot::Dictionary pos_dict;
         pos_dict["x_smooth"] = et.x_smooth;
         pos_dict["y_smooth"] = et.y_smooth;
+        pos_dict["x_origin"] = et.x_origin;
+        pos_dict["y_origin"] = et.y_origin;
         pos_dict["entityTypeID"] = et.entityTypeID;
         pos_dict["width"] = et.width;
         pos_dict["height"] = et.height;

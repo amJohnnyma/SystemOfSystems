@@ -56,6 +56,7 @@ var terrain_blend_shader: Shader
 var terrain_blend_material: ShaderMaterial
 
 var multimesh_node: MultiMeshInstance2D
+var debug_multimesh_node: MultiMeshInstance2D
 const ENEMY_ATLAS_PATH := "res://game/atlas/character.jpeg"
 const ENEMY_TILE_SIZE := Vector2i(73,137)
 var enemy_atlas_shader: Shader
@@ -211,6 +212,7 @@ void vertex() {
 	#print("Loaded structures into Godot: ", structure_registry)
 	print("Loaded entities into Godot:\n", JSON.stringify(entity_registry, "\t"))
 	_init_building_materials()
+	
 	multimesh_node = MultiMeshInstance2D.new()
 	multimesh_node.name = "EntityMultiMesh"
 	multimesh_node.scale = MESH_SCALE
@@ -225,6 +227,21 @@ void vertex() {
 		multimesh_node.multimesh = mm
 		multimesh_node.material = enemy_atlas_material
 	
+	''''''
+	debug_multimesh_node = MultiMeshInstance2D.new()
+	debug_multimesh_node.name = "DebugOriginMultiMesh"
+	debug_multimesh_node.scale = MESH_SCALE
+	add_child(debug_multimesh_node)	
+	var mmd = MultiMesh.new()
+	mmd.transform_format = MultiMesh.TRANSFORM_2D
+	mmd.use_custom_data = true # Needed if you want to pass custom colors
+	mmd.mesh = QuadMesh.new()  # Uses a default engine square mesh
+	mmd.mesh.size = Vector2(1, 1) 	
+	debug_multimesh_node.multimesh = mmd	
+	debug_multimesh_node.z_index = 10 	
+	var mat = CanvasItemMaterial.new()
+	debug_multimesh_node.material = mat
+	''''''
 	
 	# Populate all chunk nodes initially
 	_setup_full_mesh_display()
@@ -304,7 +321,7 @@ func _init_building_materials() -> void:
     void fragment() {
         COLOR = texture(enemy_tex, UV);
     }
-    """
+	"""
 
 	if ResourceLoader.exists(ENEMY_ATLAS_PATH):
 		enemy_atlas = load(ENEMY_ATLAS_PATH)
@@ -414,13 +431,18 @@ func _on_required_entity_update(batch_data: Dictionary):
 		
 	mm.instance_count = batch_data.size()
 	#print(mm.instance_count)
-	
+	var debug_mm = debug_multimesh_node.multimesh if debug_multimesh_node else null
+	if debug_mm:
+		debug_mm.instance_count = batch_data.size()
+		
 	var idx = 0
 	for uID in batch_data:
 		var pos_data = batch_data[uID]
 		
 		var grid_x: float = float(pos_data["x_smooth"])
 		var grid_y: float = float(pos_data["y_smooth"])
+		var origin_x: int = int(pos_data.get("x_origin", floor(grid_x)))
+		var origin_y: int = int(pos_data.get("y_origin", floor(grid_y)))
 		var w: float = float(pos_data.get("width", 2))
 		var h: float = float(pos_data.get("height", 2))
 
@@ -444,6 +466,21 @@ func _on_required_entity_update(batch_data: Dictionary):
 		var grid_coord: Vector2i = ENEMY_ATLAS_COORDS.get(type_id, Vector2i(0, 0))
 		var custom_color = Color(grid_coord.x, grid_coord.y, 0, 0)
 		mm.set_instance_custom_data(idx, custom_color)
+		
+		if debug_mm:
+			var origin_center := Vector2(
+				float(origin_x) + 0.5,
+				float(origin_y) + 0.5
+			)
+			var origin_xform := Transform2D(
+				Vector2(1.0, 0.0),
+				Vector2(0.0, -1.0),
+				origin_center
+			)
+			debug_mm.set_instance_transform_2d(idx, origin_xform)
+			
+			# Give the origin marker a distinct debug color (e.g., Bright Magenta/Pink)
+			debug_mm.set_instance_custom_data(idx, Color(1, 0, 1, 1))
 		
 		idx += 1
 

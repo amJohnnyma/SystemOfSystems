@@ -46,6 +46,8 @@ class WorldGrid
         std::unordered_map<int, Structure> structure_registry_;
         std::unordered_map<int, Entity> entity_registry_;
 
+
+        global_tick_settings gts;
         //Just testing the tick
         double time_accumulator_ = 0.0;
         double spawn_interval_ = 1;
