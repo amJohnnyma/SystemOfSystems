@@ -16,8 +16,8 @@ const MESH_SCALE := Vector2(4.0, 4.0)
 var cell_size: float = 64.0
 
 
-var world_width: int = 640
-var world_height: int = 180
+var world_width: int = 6400
+var world_height: int = 1800
 var threshold: float = 128.0
 
 
@@ -31,25 +31,14 @@ var building_materials = {}
 var selected_hotbar_slot = -1
 
 const BLOCK_ATLAS_PATH := "res://game/atlas/terrain.png"
-const BLOCK_TILE_SIZE := Vector2i(16,16)
-const BLOCK_ATLAS_COORDS := {
-	1: Vector2i(0, 0),
-	2: Vector2i(1, 0),
-	3: Vector2i(2, 0),
-	4: Vector2i(3, 0),
-	5: Vector2i(0, 1),
-	6: Vector2i(1, 1),
-	7: Vector2i(2, 1),
-	8: Vector2i(3, 1),
-	9: Vector2i(0, 2),
-	10: Vector2i(1, 2),
-	11: Vector2i(2, 2),
-	12: Vector2i(3, 2),
-	13: Vector2i(0, 3),
-	14: Vector2i(1, 3),
-	15: Vector2i(2, 3),
-	16: Vector2i(3, 3),
-}
+const BLOCK_TILE_SIZE := Vector2i(16, 16)
+
+var BLOCK_ATLAS_COORDS: Dictionary[int, Vector2i] = \
+	AtlasUtils.generate_atlas_coords(
+		Vector2i(256, 256),
+		BLOCK_TILE_SIZE
+	)
+	
 var block_atlas: Texture2D
 var block_atlas_material: ShaderMaterial
 var terrain_blend_shader: Shader
@@ -60,24 +49,11 @@ var debug_multimesh_node: MultiMeshInstance2D
 const ENEMY_ATLAS_PATH := "res://game/atlas/character.jpeg"
 const ENEMY_TILE_SIZE := Vector2i(73,137)
 var enemy_atlas_shader: Shader
-const ENEMY_ATLAS_COORDS := {
-	1: Vector2i(0, 0),
-	2: Vector2i(1, 0),
-	3: Vector2i(2, 0),
-	4: Vector2i(3, 0),
-	5: Vector2i(0, 1),
-	6: Vector2i(1, 1),
-	7: Vector2i(2, 1),
-	8: Vector2i(3, 1),
-	9: Vector2i(0, 2),
-	10: Vector2i(1, 2),
-	11: Vector2i(2, 2),
-	12: Vector2i(3, 2),
-	13: Vector2i(0, 3),
-	14: Vector2i(1, 3),
-	15: Vector2i(2, 3),
-	16: Vector2i(3, 3),
-}
+var ENEMY_ATLAS_COORDS : Dictionary[int, Vector2i] = \
+	AtlasUtils.generate_atlas_coords(
+		Vector2i(366,546),
+		ENEMY_TILE_SIZE
+	)
 var enemy_atlas: Texture2D
 var enemy_atlas_material: ShaderMaterial
 
@@ -243,6 +219,13 @@ void vertex() {
 	debug_multimesh_node.material = mat
 	''''''
 	
+	for type_id: int in BLOCK_ATLAS_COORDS:
+		var atlas_coords: Vector2i = BLOCK_ATLAS_COORDS[type_id]
+
+		var x: int = atlas_coords.x
+		var y: int = atlas_coords.y
+
+		world.placeStructure(x, y, type_id)
 	# Populate all chunk nodes initially
 	_setup_full_mesh_display()
 	update_mesh_display()
@@ -258,6 +241,7 @@ void vertex() {
 		world.placeEntity(2,2,3)
 		world.placeEntity(2,5,4)
 		world.placeEntity(0,7,5)'''
+
 	
 	
 func _physics_process(delta: float) -> void:
@@ -295,6 +279,9 @@ func _physics_process(delta: float) -> void:
 	player.global_position = new_cell_pos * MESH_SCALE.x
 	
 	world.updatePlayerPosition(player.global_position.x / MESH_SCALE.x, player.global_position.y / MESH_SCALE.x)
+	
+
+	
 	
 func _init_building_materials() -> void:
 	# Enemy atlas loading
@@ -510,10 +497,10 @@ func _on_hotbar_slot_selected(slot_number: int) -> void:
 		selected_structure = structure_registry.get(4, {})
 		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
 	elif slot_number == 7:
-		selected_structure = structure_registry.get(5, {})
+		selected_structure = structure_registry.get(257, {})
 		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
 	elif slot_number == 8:
-		selected_structure = structure_registry.get(6, {})
+		selected_structure = structure_registry.get(258, {})
 		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
 	else:
 		selected_structure = {}

@@ -1,67 +1,2083 @@
 [
   {
-    "structureID": 1,
-    "x_width": 1,
-    "y_width": 1,
-    "cantick": false,
-	"isBuilding" : false,
-	"blockType" : 1
+	"structureID": 1,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 1
   },
   {
-    "structureID": 2,
-    "x_width": 1,
-    "y_width": 1,
-    "cantick": false,
-	"isBuilding" : false,
-	"blockType" : 2
+	"structureID": 2,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 2
   },
   {
-    "structureID": 3,
-    "x_width": 1,
-    "y_width": 1,
-    "cantick": false,
-	"isBuilding" : false,
-	"blockType" : 3
+	"structureID": 3,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 3
   },
   {
-    "structureID": 4,
-    "x_width": 1,
-    "y_width": 1,
-    "cantick": false,
-	"isBuilding" : false,
-	"blockType" : 4
+	"structureID": 4,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 4
   },
   {
-    "structureID": 5,
-    "x_width": 4,
-    "y_width": 3,
-    "cantick": false,
+	"structureID": 5,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 5
+  },
+  {
+	"structureID": 6,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 6
+  },
+  {
+	"structureID": 7,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 7
+  },
+  {
+	"structureID": 8,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 8
+  },
+  {
+	"structureID": 9,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 9
+  },
+  {
+	"structureID": 10,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 10
+  },
+  {
+	"structureID": 11,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 11
+  },
+  {
+	"structureID": 12,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 12
+  },
+  {
+	"structureID": 13,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 13
+  },
+  {
+	"structureID": 14,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 14
+  },
+  {
+	"structureID": 15,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 15
+  },
+  {
+	"structureID": 16,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 16
+  },
+  {
+	"structureID": 17,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 17
+  },
+  {
+	"structureID": 18,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 18
+  },
+  {
+	"structureID": 19,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 19
+  },
+  {
+	"structureID": 20,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 20
+  },
+  {
+	"structureID": 21,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 21
+  },
+  {
+	"structureID": 22,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 22
+  },
+  {
+	"structureID": 23,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 23
+  },
+  {
+	"structureID": 24,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 24
+  },
+  {
+	"structureID": 25,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 25
+  },
+  {
+	"structureID": 26,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 26
+  },
+  {
+	"structureID": 27,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 27
+  },
+  {
+	"structureID": 28,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 28
+  },
+  {
+	"structureID": 29,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 29
+  },
+  {
+	"structureID": 30,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 30
+  },
+  {
+	"structureID": 31,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 31
+  },
+  {
+	"structureID": 32,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 32
+  },
+  {
+	"structureID": 33,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 33
+  },
+  {
+	"structureID": 34,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 34
+  },
+  {
+	"structureID": 35,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 35
+  },
+  {
+	"structureID": 36,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 36
+  },
+  {
+	"structureID": 37,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 37
+  },
+  {
+	"structureID": 38,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 38
+  },
+  {
+	"structureID": 39,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 39
+  },
+  {
+	"structureID": 40,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 40
+  },
+  {
+	"structureID": 41,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 41
+  },
+  {
+	"structureID": 42,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 42
+  },
+  {
+	"structureID": 43,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 43
+  },
+  {
+	"structureID": 44,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 44
+  },
+  {
+	"structureID": 45,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 45
+  },
+  {
+	"structureID": 46,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 46
+  },
+  {
+	"structureID": 47,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 47
+  },
+  {
+	"structureID": 48,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 48
+  },
+  {
+	"structureID": 49,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 49
+  },
+  {
+	"structureID": 50,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 50
+  },
+  {
+	"structureID": 51,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 51
+  },
+  {
+	"structureID": 52,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 52
+  },
+  {
+	"structureID": 53,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 53
+  },
+  {
+	"structureID": 54,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 54
+  },
+  {
+	"structureID": 55,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 55
+  },
+  {
+	"structureID": 56,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 56
+  },
+  {
+	"structureID": 57,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 57
+  },
+  {
+	"structureID": 58,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 58
+  },
+  {
+	"structureID": 59,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 59
+  },
+  {
+	"structureID": 60,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 60
+  },
+  {
+	"structureID": 61,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 61
+  },
+  {
+	"structureID": 62,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 62
+  },
+  {
+	"structureID": 63,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 63
+  },
+  {
+	"structureID": 64,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 64
+  },
+  {
+	"structureID": 65,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 65
+  },
+  {
+	"structureID": 66,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 66
+  },
+  {
+	"structureID": 67,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 67
+  },
+  {
+	"structureID": 68,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 68
+  },
+  {
+	"structureID": 69,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 69
+  },
+  {
+	"structureID": 70,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 70
+  },
+  {
+	"structureID": 71,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 71
+  },
+  {
+	"structureID": 72,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 72
+  },
+  {
+	"structureID": 73,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 73
+  },
+  {
+	"structureID": 74,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 74
+  },
+  {
+	"structureID": 75,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 75
+  },
+  {
+	"structureID": 76,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 76
+  },
+  {
+	"structureID": 77,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 77
+  },
+  {
+	"structureID": 78,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 78
+  },
+  {
+	"structureID": 79,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 79
+  },
+  {
+	"structureID": 80,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 80
+  },
+  {
+	"structureID": 81,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 81
+  },
+  {
+	"structureID": 82,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 82
+  },
+  {
+	"structureID": 83,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 83
+  },
+  {
+	"structureID": 84,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 84
+  },
+  {
+	"structureID": 85,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 85
+  },
+  {
+	"structureID": 86,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 86
+  },
+  {
+	"structureID": 87,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 87
+  },
+  {
+	"structureID": 88,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 88
+  },
+  {
+	"structureID": 89,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 89
+  },
+  {
+	"structureID": 90,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 90
+  },
+  {
+	"structureID": 91,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 91
+  },
+  {
+	"structureID": 92,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 92
+  },
+  {
+	"structureID": 93,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 93
+  },
+  {
+	"structureID": 94,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 94
+  },
+  {
+	"structureID": 95,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 95
+  },
+  {
+	"structureID": 96,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 96
+  },
+  {
+	"structureID": 97,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 97
+  },
+  {
+	"structureID": 98,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 98
+  },
+  {
+	"structureID": 99,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 99
+  },
+  {
+	"structureID": 100,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 100
+  },
+  {
+	"structureID": 101,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 101
+  },
+  {
+	"structureID": 102,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 102
+  },
+  {
+	"structureID": 103,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 103
+  },
+  {
+	"structureID": 104,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 104
+  },
+  {
+	"structureID": 105,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 105
+  },
+  {
+	"structureID": 106,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 106
+  },
+  {
+	"structureID": 107,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 107
+  },
+  {
+	"structureID": 108,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 108
+  },
+  {
+	"structureID": 109,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 109
+  },
+  {
+	"structureID": 110,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 110
+  },
+  {
+	"structureID": 111,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 111
+  },
+  {
+	"structureID": 112,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 112
+  },
+  {
+	"structureID": 113,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 113
+  },
+  {
+	"structureID": 114,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 114
+  },
+  {
+	"structureID": 115,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 115
+  },
+  {
+	"structureID": 116,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 116
+  },
+  {
+	"structureID": 117,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 117
+  },
+  {
+	"structureID": 118,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 118
+  },
+  {
+	"structureID": 119,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 119
+  },
+  {
+	"structureID": 120,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 120
+  },
+  {
+	"structureID": 121,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 121
+  },
+  {
+	"structureID": 122,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 122
+  },
+  {
+	"structureID": 123,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 123
+  },
+  {
+	"structureID": 124,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 124
+  },
+  {
+	"structureID": 125,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 125
+  },
+  {
+	"structureID": 126,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 126
+  },
+  {
+	"structureID": 127,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 127
+  },
+  {
+	"structureID": 128,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 128
+  },
+  {
+	"structureID": 129,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 129
+  },
+  {
+	"structureID": 130,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 130
+  },
+  {
+	"structureID": 131,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 131
+  },
+  {
+	"structureID": 132,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 132
+  },
+  {
+	"structureID": 133,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 133
+  },
+  {
+	"structureID": 134,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 134
+  },
+  {
+	"structureID": 135,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 135
+  },
+  {
+	"structureID": 136,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 136
+  },
+  {
+	"structureID": 137,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 137
+  },
+  {
+	"structureID": 138,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 138
+  },
+  {
+	"structureID": 139,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 139
+  },
+  {
+	"structureID": 140,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 140
+  },
+  {
+	"structureID": 141,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 141
+  },
+  {
+	"structureID": 142,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 142
+  },
+  {
+	"structureID": 143,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 143
+  },
+  {
+	"structureID": 144,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 144
+  },
+  {
+	"structureID": 145,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 145
+  },
+  {
+	"structureID": 146,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 146
+  },
+  {
+	"structureID": 147,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 147
+  },
+  {
+	"structureID": 148,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 148
+  },
+  {
+	"structureID": 149,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 149
+  },
+  {
+	"structureID": 150,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 150
+  },
+  {
+	"structureID": 151,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 151
+  },
+  {
+	"structureID": 152,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 152
+  },
+  {
+	"structureID": 153,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 153
+  },
+  {
+	"structureID": 154,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 154
+  },
+  {
+	"structureID": 155,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 155
+  },
+  {
+	"structureID": 156,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 156
+  },
+  {
+	"structureID": 157,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 157
+  },
+  {
+	"structureID": 158,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 158
+  },
+  {
+	"structureID": 159,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 159
+  },
+  {
+	"structureID": 160,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 160
+  },
+  {
+	"structureID": 161,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 161
+  },
+  {
+	"structureID": 162,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 162
+  },
+  {
+	"structureID": 163,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 163
+  },
+  {
+	"structureID": 164,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 164
+  },
+  {
+	"structureID": 165,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 165
+  },
+  {
+	"structureID": 166,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 166
+  },
+  {
+	"structureID": 167,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 167
+  },
+  {
+	"structureID": 168,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 168
+  },
+  {
+	"structureID": 169,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 169
+  },
+  {
+	"structureID": 170,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 170
+  },
+  {
+	"structureID": 171,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 171
+  },
+  {
+	"structureID": 172,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 172
+  },
+  {
+	"structureID": 173,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 173
+  },
+  {
+	"structureID": 174,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 174
+  },
+  {
+	"structureID": 175,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 175
+  },
+  {
+	"structureID": 176,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 176
+  },
+  {
+	"structureID": 177,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 177
+  },
+  {
+	"structureID": 178,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 178
+  },
+  {
+	"structureID": 179,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 179
+  },
+  {
+	"structureID": 180,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 180
+  },
+  {
+	"structureID": 181,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 181
+  },
+  {
+	"structureID": 182,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 182
+  },
+  {
+	"structureID": 183,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 183
+  },
+  {
+	"structureID": 184,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 184
+  },
+  {
+	"structureID": 185,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 185
+  },
+  {
+	"structureID": 186,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 186
+  },
+  {
+	"structureID": 187,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 187
+  },
+  {
+	"structureID": 188,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 188
+  },
+  {
+	"structureID": 189,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 189
+  },
+  {
+	"structureID": 190,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 190
+  },
+  {
+	"structureID": 191,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 191
+  },
+  {
+	"structureID": 192,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 192
+  },
+  {
+	"structureID": 193,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 193
+  },
+  {
+	"structureID": 194,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 194
+  },
+  {
+	"structureID": 195,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 195
+  },
+  {
+	"structureID": 196,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 196
+  },
+  {
+	"structureID": 197,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 197
+  },
+  {
+	"structureID": 198,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 198
+  },
+  {
+	"structureID": 199,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 199
+  },
+  {
+	"structureID": 200,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 200
+  },
+  {
+	"structureID": 201,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 201
+  },
+  {
+	"structureID": 202,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 202
+  },
+  {
+	"structureID": 203,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 203
+  },
+  {
+	"structureID": 204,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 204
+  },
+  {
+	"structureID": 205,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 205
+  },
+  {
+	"structureID": 206,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 206
+  },
+  {
+	"structureID": 207,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 207
+  },
+  {
+	"structureID": 208,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 208
+  },
+  {
+	"structureID": 209,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 209
+  },
+  {
+	"structureID": 210,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 210
+  },
+  {
+	"structureID": 211,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 211
+  },
+  {
+	"structureID": 212,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 212
+  },
+  {
+	"structureID": 213,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 213
+  },
+  {
+	"structureID": 214,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 214
+  },
+  {
+	"structureID": 215,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 215
+  },
+  {
+	"structureID": 216,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 216
+  },
+  {
+	"structureID": 217,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 217
+  },
+  {
+	"structureID": 218,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 218
+  },
+  {
+	"structureID": 219,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 219
+  },
+  {
+	"structureID": 220,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 220
+  },
+  {
+	"structureID": 221,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 221
+  },
+  {
+	"structureID": 222,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 222
+  },
+  {
+	"structureID": 223,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 223
+  },
+  {
+	"structureID": 224,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 224
+  },
+  {
+	"structureID": 225,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 225
+  },
+  {
+	"structureID": 226,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 226
+  },
+  {
+	"structureID": 227,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 227
+  },
+  {
+	"structureID": 228,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 228
+  },
+  {
+	"structureID": 229,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 229
+  },
+  {
+	"structureID": 230,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 230
+  },
+  {
+	"structureID": 231,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 231
+  },
+  {
+	"structureID": 232,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 232
+  },
+  {
+	"structureID": 233,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 233
+  },
+  {
+	"structureID": 234,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 234
+  },
+  {
+	"structureID": 235,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 235
+  },
+  {
+	"structureID": 236,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 236
+  },
+  {
+	"structureID": 237,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 237
+  },
+  {
+	"structureID": 238,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 238
+  },
+  {
+	"structureID": 239,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 239
+  },
+  {
+	"structureID": 240,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 240
+  },
+  {
+	"structureID": 241,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 241
+  },
+  {
+	"structureID": 242,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 242
+  },
+  {
+	"structureID": 243,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 243
+  },
+  {
+	"structureID": 244,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 244
+  },
+  {
+	"structureID": 245,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 245
+  },
+  {
+	"structureID": 246,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 246
+  },
+  {
+	"structureID": 247,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 247
+  },
+  {
+	"structureID": 248,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 248
+  },
+  {
+	"structureID": 249,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 249
+  },
+  {
+	"structureID": 250,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 250
+  },
+  {
+	"structureID": 251,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 251
+  },
+  {
+	"structureID": 252,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 252
+  },
+  {
+	"structureID": 253,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 253
+  },
+  {
+	"structureID": 254,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 254
+  },
+  {
+	"structureID": 255,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 255
+  },
+  {
+	"structureID": 256,
+	"x_width": 1,
+	"y_width": 1,
+	"cantick": false,
+	"isBuilding": false,
+	"blockType": 256
+  },
+  {
+	"structureID": 257,
+	"x_width": 4,
+	"y_width": 3,
+	"cantick": false,
 "isBuilding" : true,
 "sprite" : "chest.png"
   },
   {
-    "structureID": 6,
-    "x_width": 3,
-    "y_width": 3,
-    "cantick": true,
-    "processing_time": 2.5,
+	"structureID": 258,
+	"x_width": 3,
+	"y_width": 3,
+	"cantick": true,
+	"processing_time": 2.5,
 "isBuilding" : true,
 "sprite" : "furnace.png",
-    "resource_input": [
-      {
-        "objectID": 103,
-        "count": 10
-      }
-    ],
-    "resource_output": [
-      {
-        "objectID": 202,
-        "count": 2
-      },
-      {
-        "objectID": 203,
-        "count": 1
-      }
-    ]
+	"resource_input": [
+	  {
+		"objectID": 103,
+		"count": 10
+	  }
+	],
+	"resource_output": [
+	  {
+		"objectID": 202,
+		"count": 2
+	  },
+	  {
+		"objectID": 203,
+		"count": 1
+	  }
+	]
   }
 ]

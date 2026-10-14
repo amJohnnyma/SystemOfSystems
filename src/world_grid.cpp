@@ -424,6 +424,7 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
                         } else {
                             type_id = 3; // Stone layer
                         }
+
                     }
 
                     world_cells_[index].type_id = type_id;
@@ -439,7 +440,7 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
     {
         f.get();
     }
-// 2. Fast O(W log H) Binary-Search Surface Crawler
+    // 2. Fast O(W log H) Binary-Search Surface Crawler
     MarchingSquares cleanup_ms;
     for (int ix = 0; ix < world_x_; ix++)
     {
@@ -470,7 +471,7 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
         if (surface_iy != -1 && surface_iy < world_y_)
         {
             size_t index = static_cast<size_t>(surface_iy) * world_x_ + ix;
-            
+
             std::array<float, 9> nb = cleanup_ms.getNeighbourhood(world_cells_, world_x_, world_y_, ix, surface_iy);
             int shape_id = cleanup_ms.getBlockSlopeType(nb, threshold);
 
@@ -482,6 +483,45 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
             }
         }
     }
+
+    std::random_device rd;
+    std::mt19937 rng(rd());
+    for (int i = 0; i < num_chunk_x; i ++)
+    {
+        for (int j = 0; j < num_chunk_y; j ++)
+        {
+
+            // random patches :)
+            std::uniform_real_distribution<float> chance_dist(0.0f, 1.0f);
+
+            if (chance_dist(rng) < 0.8f) {
+                // Random block ID from 1 to 256
+                std::uniform_int_distribution<uint16_t> type_dist(1, 256);
+
+                // Random patch position within this chunk
+                std::uniform_int_distribution<int> x_dist(0, world_x_- 1);
+                std::uniform_int_distribution<int> y_dist((int)(world_y_ * 0.3), world_y_ - 1);
+
+                // Random patch size
+                std::uniform_real_distribution<float> radius_dist(3.0f, 10.0f);
+
+                int patch_x = x_dist(rng);
+                int patch_y = y_dist(rng);
+
+                float radius = radius_dist(rng);
+                uint16_t random_type = type_dist(rng);
+
+                set_density(
+                        patch_x,
+                        patch_y,
+                        radius,
+                        255.0f,
+                        random_type
+                        );
+            }
+        }
+    }
+
     chunk_is_dirty_.assign(numChunks, 1);
 
     dirty_chunk_indices_.clear();
@@ -614,12 +654,12 @@ uint32_t WorldGrid::tick(double deltaTime)
         EntityTickContext etx
         {
             .deltaTime = deltaTime,
-            .world_cells = world_cells_,
-            .world_x = world_x_,
-            .world_y = world_y_,
-            .threshold = threshold,
-            .playerPos = player_position_,
-            .gts = gts
+                .world_cells = world_cells_,
+                .world_x = world_x_,
+                .world_y = world_y_,
+                .threshold = threshold,
+                .playerPos = player_position_,
+                .gts = gts
         };
         for (auto& [uID, entity] : entities_) {
             entity.on_tick(etx); // updates internal smooth positions
