@@ -122,6 +122,11 @@ godot::Dictionary GodotSimulation::getEntityTransformsForRendering() const {
         pos_dict["width"] = et.width;
         pos_dict["height"] = et.height;
 
+// --- ADDED ANIMATION FIELDS ---
+        // TODO: Replace these temporary values with actual logic from entity state machine
+        pos_dict["state"] = "idle";             // Current state string (matches keys in entity.json animations)
+        pos_dict["animPhase"] = 0.0;            // Progress from 0.0 to 1.0 across the animation frames
+
         batch_data[uID] = pos_dict;
     }
     return batch_data;

@@ -16,8 +16,8 @@ const MESH_SCALE := Vector2(4.0, 4.0)
 var cell_size: float = 64.0
 
 
-var world_width: int = 6400
-var world_height: int = 1800
+var world_width: int = 640
+var world_height: int = 180
 var threshold: float = 128.0
 
 
@@ -44,18 +44,11 @@ var block_atlas_material: ShaderMaterial
 var terrain_blend_shader: Shader
 var terrain_blend_material: ShaderMaterial
 
-var multimesh_node: MultiMeshInstance2D
+var enemy_multimeshes : Dictionary = {}
+var enemy_materials : Dictionary = {}
 var debug_multimesh_node: MultiMeshInstance2D
-const ENEMY_ATLAS_PATH := "res://game/atlas/character.jpeg"
-const ENEMY_TILE_SIZE := Vector2i(73,137)
-var enemy_atlas_shader: Shader
-var ENEMY_ATLAS_COORDS : Dictionary[int, Vector2i] = \
-	AtlasUtils.generate_atlas_coords(
-		Vector2i(366,546),
-		ENEMY_TILE_SIZE
-	)
-var enemy_atlas: Texture2D
-var enemy_atlas_material: ShaderMaterial
+var enemy_shader: Shader
+
 
 var player: Sprite2D
 var player_velocity: Vector2 = Vector2.ZERO
@@ -106,29 +99,7 @@ void fragment() {
 		"terrain_atlas", load(BLOCK_ATLAS_PATH)
 	)
 	
-	enemy_atlas_shader = Shader.new()
-	enemy_atlas_shader.code = """
-	shader_type canvas_item;
 
-void vertex() {
-    // INSTANCE_CUSTOM contains the data we pass from our script per sprite.
-    // x = column index, y = row index
-    float col = INSTANCE_CUSTOM.x;
-    float row = INSTANCE_CUSTOM.y;
-
-    // Define how many columns and rows are in your atlas grid
-    // Adjust these numbers to match your exact sheet grid!
-    float total_columns = 4.0;
-    float total_rows = 4.0;
-
-    // Scale down the UVs to fit a single grid frame
-    UV /= vec2(total_columns, total_rows);
-
-    // Offset the UV to point to the correct sprite frame
-    UV += vec2(col / total_columns, row / total_rows);
-}
-
-	"""
 
 
 
@@ -183,25 +154,14 @@ void vertex() {
 	player.global_position = Vector2(spawn_x, spawn_y)
 	add_child(player)
 
-	structure_registry = world.getStructureRegistry()
-	entity_registry = world.getEntityRegistry()
+	
+	
+	
+	_init_entity_materials()
+	_init_building_materials()
 	#print("Loaded structures into Godot: ", structure_registry)
 	print("Loaded entities into Godot:\n", JSON.stringify(entity_registry, "\t"))
-	_init_building_materials()
 	
-	multimesh_node = MultiMeshInstance2D.new()
-	multimesh_node.name = "EntityMultiMesh"
-	multimesh_node.scale = MESH_SCALE
-	add_child(multimesh_node)
-	if multimesh_node and multimesh_node.multimesh == null:
-		var mm = MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_2D
-		mm.use_custom_data = true  # Required so we can use INSTANCE_CUSTOM for atlas coords!
-		mm.mesh = QuadMesh.new()   # Or a custom 2D plane mesh matching sprite proportions
-		
-		# Optional: set initial texture if assigned via material properties
-		multimesh_node.multimesh = mm
-		multimesh_node.material = enemy_atlas_material
 	
 	''''''
 	debug_multimesh_node = MultiMeshInstance2D.new()
@@ -282,44 +242,107 @@ func _physics_process(delta: float) -> void:
 	
 
 	
+func _init_entity_materials() -> void:
+	# 1. Fetch base entity registry from C++
+	entity_registry = world.getEntityRegistry()
 	
+	# 2. Load entity.json and merge/append animation/sprite data into entity_registry
+	var file = FileAccess.open("res://game/entity.json", FileAccess.READ)
+	if file:
+		var json = JSON.new()
+		var error = json.parse(file.get_as_text())
+		if error == OK:
+			var arr = json.get_data()
+			for entry in arr:
+				var type_id = int(entry.get("entityTypeID", 0))
+				if entity_registry.has(type_id):
+					var existing_entry: Dictionary = entity_registry[type_id]
+					for key in entry:
+						existing_entry[key] = entry[key]
+
+	# 3. Enemy shader setup
+	enemy_shader = Shader.new()
+	enemy_shader.code = """
+        shader_type canvas_item;
+
+        uniform sampler2D enemy_tex : source_color, filter_nearest;
+
+        void vertex() {
+            // INSTANCE_CUSTOM passed from set_instance_custom_data:
+            // r = col, g = row, b = total_columns, a = total_rows
+            float col = INSTANCE_CUSTOM.r;
+            float row = INSTANCE_CUSTOM.g;
+            float total_columns = max(1.0, INSTANCE_CUSTOM.b);
+            float total_rows = max(1.0, INSTANCE_CUSTOM.a);
+
+            // Scale UVs down to fit a single grid frame
+            UV /= vec2(total_columns, total_rows);
+
+            // Offset UV to point to the correct frame tile
+            UV += vec2(col / total_columns, row / total_rows);
+        }
+
+        void fragment() {
+            COLOR = texture(enemy_tex, UV);
+        }
+        """
+
+	# 4. Initialize materials and MultiMeshInstance2D nodes per state for each enemy type
+	for type_id_key in entity_registry:
+		var type_id: int = int(type_id_key)
+		var entity_data: Dictionary = entity_registry[type_id_key]
+		
+		var animations: Dictionary = entity_data.get("animations", {})
+		
+		# Loop through every defined animation state (idle, walk, attack, etc.)
+		for anim_state in animations:
+			var anim_data: Dictionary = animations[anim_state]
+			var sprite_name: String = anim_data.get("sprite", "")
+			
+			if sprite_name.is_empty():
+				continue
+
+			var tex_path := "res://game/atlas/" + sprite_name
+			if ResourceLoader.exists(tex_path):
+				var tex: Texture2D = load(tex_path)
+				
+				# Create unique material for this specific entity type + state combo
+				var mat := ShaderMaterial.new()
+				mat.shader = enemy_shader
+				mat.set_shader_parameter("enemy_tex", tex)
+				
+				# Use a composite key for materials: "typeID_state"
+				var material_key := "%d_%s" % [type_id, anim_state]
+				enemy_materials[material_key] = mat
+
+				# Create dedicated MultiMeshInstance2D for this state
+				var mm_node := MultiMeshInstance2D.new()
+				mm_node.name = "EnemyMultiMesh_%d_%s" % [type_id, anim_state]
+				mm_node.scale = MESH_SCALE
+				mm_node.material = mat
+
+				var mm := MultiMesh.new()
+				mm.transform_format = MultiMesh.TRANSFORM_2D
+				mm.use_custom_data = true
+				mm.mesh = QuadMesh.new()
+				mm_node.multimesh = mm
+				
+				# Read grid columns and rows directly from this animation block
+				var cols: float = float(anim_data.get("cols", 1))
+				var rows: float = float(anim_data.get("rows", 1))
+				mm_node.set_meta("cols", cols)
+				mm_node.set_meta("rows", rows)
+
+				add_child(mm_node)
+				
+				# Store in dictionary using composite key
+				enemy_multimeshes[material_key] = mm_node
+			else:
+				push_warning("Missing enemy texture path: " + tex_path)
+
 func _init_building_materials() -> void:
-	# Enemy atlas loading
-	enemy_atlas_shader = Shader.new()
-	enemy_atlas_shader.code = """
-    shader_type canvas_item;
-
-    uniform sampler2D enemy_tex : source_color, filter_nearest;
-
-    void vertex() {
-        // INSTANCE_CUSTOM passes column and row indices
-        float col = INSTANCE_CUSTOM.x;
-        float row = INSTANCE_CUSTOM.y;
-
-        float total_columns = 4.0;
-        float total_rows = 4.0;
-
-        // Scale down UVs to fit a single grid frame
-        UV /= vec2(total_columns, total_rows);
-
-        // Offset UV to point to the correct sprite frame
-        UV += vec2(col / total_columns, row / total_rows);
-    }
-
-    void fragment() {
-        COLOR = texture(enemy_tex, UV);
-    }
-	"""
-
-	if ResourceLoader.exists(ENEMY_ATLAS_PATH):
-		enemy_atlas = load(ENEMY_ATLAS_PATH)
-		enemy_atlas_material = ShaderMaterial.new()
-		enemy_atlas_material.shader = enemy_atlas_shader
-		
-		enemy_atlas_material.set_shader_parameter("enemy_tex", enemy_atlas)
-		
-		if multimesh_node:
-			multimesh_node.material = enemy_atlas_material
+	structure_registry = world.getStructureRegistry()
+	
 		
 		
 	# Shared atlas material for ordinary blocks.
@@ -378,20 +401,6 @@ func get_block_atlas_uv(type_id: int, uv: Vector2) -> Vector2:
 		Vector2(tile_coord) * tile_size + uv * tile_size
 	) / atlas_size
 
-func get_enemy_atlas_uv(type_id: int, uv: Vector2) -> Vector2:
-	if enemy_atlas  == null:
-		return uv
-
-	if not ENEMY_ATLAS_COORDS.has(type_id):
-		return uv
-
-	var tile_coord: Vector2i = ENEMY_ATLAS_COORDS[type_id]
-	var atlas_size := Vector2(enemy_atlas.get_size())
-	var tile_size := Vector2(ENEMY_TILE_SIZE)
-
-	return (
-		Vector2(tile_coord) * tile_size + uv * tile_size
-	) / atlas_size
 
 func get_selected_hotbar_slot():
 	return selected_hotbar_slot
@@ -412,50 +421,84 @@ func get_structure_sprite_path(structure_data: Dictionary) -> String:
 	# Adjust path according to where your sprites are stored
 	return "res://game/sprite" + sprite_filename
 
-func _on_required_entity_update(batch_data: Dictionary):
-	var mm = multimesh_node.multimesh
-	if not mm:
-		return
+func _on_required_entity_update(batch_data: Dictionary) -> void:
+	# 1. Group entity data by composite key: "type_id_state"
+	var grouped_entities: Dictionary = {} # "type_id_state" -> Array of pos_data dicts
+	var all_entities: Array = []
+
+	for uID in batch_data:
+		var pos_data: Dictionary = batch_data[uID]
+		all_entities.append(pos_data)
 		
-	mm.instance_count = batch_data.size()
-	#print(mm.instance_count)
+		var type_id: int = int(pos_data.get("entityTypeID", 1))
+		var state: String = str(pos_data.get("state", "idle")) # Read state passed from C++
+		
+		var group_key := "%d_%s" % [type_id, state]
+
+		if not grouped_entities.has(group_key):
+			grouped_entities[group_key] = []
+		grouped_entities[group_key].append(pos_data)
+
+	# 2. Update each MultiMeshInstance2D per state bucket
+	for group_key in enemy_multimeshes:
+		var mm_node: MultiMeshInstance2D = enemy_multimeshes[group_key]
+		var mm: MultiMesh = mm_node.multimesh
+		var entities: Array = grouped_entities.get(group_key, [])
+		
+		# Retrieve this animation state's sheet dimensions from metadata
+		var total_cols: float = mm_node.get_meta("cols", 1.0)
+		var total_rows: float = mm_node.get_meta("rows", 1.0)
+
+		mm.instance_count = entities.size()
+
+		for idx in range(entities.size()):
+			var pos_data: Dictionary = entities[idx]
+
+			var grid_x: float = float(pos_data["x_smooth"])
+			var grid_y: float = float(pos_data["y_smooth"])
+			var w: float = float(pos_data.get("width", 2))
+			var h: float = float(pos_data.get("height", 2))
+
+			var center := Vector2(
+				grid_x + w * 0.5,
+				grid_y - h * 0.5 + 1.0
+			)
+
+			var xform := Transform2D(
+				Vector2(w, 0.0),
+				Vector2(0.0, -h),
+				center
+			)
+
+			mm.set_instance_transform_2d(idx, xform)
+
+			# -----------------------------------------------------------------
+			# TEMPORARY / DYNAMIC: Map animPhase (0.0 to 1.0) to frame index
+			# -----------------------------------------------------------------
+			var anim_phase: float = float(pos_data.get("animPhase", 0.0))
+			var total_frames: int = int(total_cols * total_rows)
+			
+			# Snap phase to a discrete frame index
+			var current_frame: int = int(floor(anim_phase * total_frames)) % max(1, total_frames)
+			
+			# Convert linear frame index back into 2D grid column and row coordinates
+			var frame_col: float = float(current_frame % int(total_cols))
+			var frame_row: float = float(current_frame / int(total_cols))
+
+			mm.set_instance_custom_data(
+				idx, 
+				Color(frame_col, frame_row, total_cols, total_rows)
+			)
+
+	# 3. Update Debug Origin MultiMesh
 	var debug_mm = debug_multimesh_node.multimesh if debug_multimesh_node else null
 	if debug_mm:
-		debug_mm.instance_count = batch_data.size()
-		
-	var idx = 0
-	for uID in batch_data:
-		var pos_data = batch_data[uID]
-		
-		var grid_x: float = float(pos_data["x_smooth"])
-		var grid_y: float = float(pos_data["y_smooth"])
-		var origin_x: int = int(pos_data.get("x_origin", floor(grid_x)))
-		var origin_y: int = int(pos_data.get("y_origin", floor(grid_y)))
-		var w: float = float(pos_data.get("width", 2))
-		var h: float = float(pos_data.get("height", 2))
+		debug_mm.instance_count = all_entities.size()
+		for idx in range(all_entities.size()):
+			var pos_data: Dictionary = all_entities[idx]
+			var origin_x: int = int(pos_data.get("x_origin", floor(float(pos_data["x_smooth"]))))
+			var origin_y: int = int(pos_data.get("y_origin", floor(float(pos_data["y_smooth"]))))
 
-		# Position of the center of the occupied cells.
-		var center := Vector2(
-			grid_x + (w ) * 0.5,
-			grid_y - h * 0.5 + 1.0
-		)
-
-		# Explicitly set the size and position of the centered quad.
-		var xform := Transform2D(
-			Vector2(w, 0.0),
-			Vector2(0.0, -h),
-			center
-		)
-
-		mm.set_instance_transform_2d(idx, xform)
-		
-		# 3. Set Atlas Index
-		var type_id = pos_data.get("entityTypeID", 1) 
-		var grid_coord: Vector2i = ENEMY_ATLAS_COORDS.get(type_id, Vector2i(0, 0))
-		var custom_color = Color(grid_coord.x, grid_coord.y, 0, 0)
-		mm.set_instance_custom_data(idx, custom_color)
-		
-		if debug_mm:
 			var origin_center := Vector2(
 				float(origin_x) + 0.5,
 				float(origin_y) + 0.5
@@ -466,11 +509,7 @@ func _on_required_entity_update(batch_data: Dictionary):
 				origin_center
 			)
 			debug_mm.set_instance_transform_2d(idx, origin_xform)
-			
-			# Give the origin marker a distinct debug color (e.g., Bright Magenta/Pink)
-			debug_mm.set_instance_custom_data(idx, Color(1, 0, 1, 1))
-		
-		idx += 1
+			debug_mm.set_instance_custom_data(idx, Color(1, 0, 1, 1)) # Magenta debug marker
 
 		
 func _on_slot_action_requested(slot_number: int) -> void:
