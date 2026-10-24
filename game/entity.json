@@ -1,32 +1,32 @@
 [
   {
     "entityTypeID": 1,
-    "name": "Minotaur",
-    "sprite": "Minotaur.png",
+    "name": "Monster",
+    "sprite": "Monster.png",
     "entity_class": "enemy",
     "behavior_type": "aggressive",
     "max_health": 80.0,
     "move_speed": 6.0,
-    "width": 3,
-    "height": 7,
+    "width": 4,
+    "height": 9,
     "is_pickupable": false,
     "animations": {
       "idle": {
-        "sprite": "Minotaur_idle.png",
-        "cols": 18,
-        "rows": 7,
-        "frame_width": 80,
-        "frame_height": 80
+        "sprite": "Monster_idle.png",
+        "cols": 24,
+        "rows": 1,
+        "frame_width": 64,
+        "frame_height": 64
       },
       "walk": {
-        "sprite": "Minotaur_walk.png",
+        "sprite": "Monster_walk.png",
         "cols": 18,
-        "rows": 7,
+        "rows": 1,
         "frame_width": 80,
         "frame_height": 80
       },
       "attack": {
-        "sprite": "Minotaur_attack.png",
+        "sprite": "Monster_attack.png",
         "cols": 5,
         "rows": 1,
         "frame_width": 64,
@@ -91,8 +91,8 @@
     "sprite": "Mushroom.png",
     "entity_class": "enemy",
     "behavior_type": "ranged",
-    "max_health": 120.0,
-    "move_speed": 7.0,
+    "max_health": 40.0,
+    "move_speed": 3.0,
     "width": 1,
     "height": 1,
     "is_pickupable": false,

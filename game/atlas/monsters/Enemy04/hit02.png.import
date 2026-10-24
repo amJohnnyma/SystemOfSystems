@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://df4y4hkmh37gr"
-path="res://.godot/imported/Minotaur_idle.png-e39571e6a629ed86cf1a1a77058aeec8.ctex"
+uid="uid://debai2y8vp0p3"
+path="res://.godot/imported/hit02.png-1bdb5b82aba55f8a78990f9619c93020.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://game/atlas/Minotaur_idle.png"
-dest_files=["res://.godot/imported/Minotaur_idle.png-e39571e6a629ed86cf1a1a77058aeec8.ctex"]
+source_file="res://game/atlas/monsters/Enemy04/hit02.png"
+dest_files=["res://.godot/imported/hit02.png-1bdb5b82aba55f8a78990f9619c93020.ctex"]
 
 [params]
 

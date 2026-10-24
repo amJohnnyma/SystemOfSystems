@@ -211,9 +211,9 @@ void fragment() {
 	
 	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
 	
-	#world.placeEntity(320,10,1)
+	world.placeEntity(320,10,1)
 	world.placeEntity(320,30,2)
-	#world.placeEntity(330,30,3)
+	world.placeEntity(330,30,3)
 	'''for i in range(200):
 		world.placeEntity(0,2,1)
 		world.placeEntity(0,6,2)
@@ -517,23 +517,31 @@ func _on_required_entity_update(batch_data: Dictionary) -> void:
 
 	
 	var debug_mm = debug_multimesh_node.multimesh if debug_multimesh_node else null
-	if debug_mm:
+	if debug_mm:		
 		debug_mm.instance_count = all_entities.size()
 		for idx in range(all_entities.size()):
 			var pos_data: Dictionary = all_entities[idx]
 			var origin_x: int = int(pos_data.get("x_origin", floor(float(pos_data["x_smooth"]))))
 			var origin_y: int = int(pos_data.get("y_origin", floor(float(pos_data["y_smooth"]))))
+			var w: float = float(pos_data.get("width", 2))
+			var h: float = float(pos_data.get("height", 2))
+			
+			var center := Vector2(
+				origin_x + w * 0.5,
+				origin_y - h * 0.5 + 1.0
+			)
 
-			var origin_center := Vector2(
-				float(origin_x) + 0.5,
-				float(origin_y) + 0.5
+			var facing_right: bool = bool(pos_data.get("facingRight", true))
+			var x_scale: float = w if facing_right else -w
+
+			var xform := Transform2D(
+				Vector2(x_scale, 0.0), # Flips width scale when facing left
+				Vector2(0.0, -h),
+				center
 			)
-			var origin_xform := Transform2D(
-				Vector2(1.0, 0.0),
-				Vector2(0.0, -1.0),
-				origin_center
-			)
-			debug_mm.set_instance_transform_2d(idx, origin_xform)
+
+
+			debug_mm.set_instance_transform_2d(idx, xform)
 			debug_mm.set_instance_custom_data(idx, Color(1, 0, 1, 0.3)) # Magenta debug marker
 
 		
