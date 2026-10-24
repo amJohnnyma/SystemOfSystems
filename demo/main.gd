@@ -193,7 +193,7 @@ void fragment() {
 	
 	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
 	
-	world.placeEntity(320,10,1)
+	#world.placeEntity(320,10,1)
 	world.placeEntity(320,30,2)
 	'''for i in range(200):
 		world.placeEntity(0,2,1)
@@ -433,6 +433,7 @@ func _on_required_entity_update(batch_data: Dictionary) -> void:
 		var type_id: int = int(pos_data.get("entityTypeID", 1))
 		var state: String = str(pos_data.get("state", "idle")) # Read state passed from C++
 		
+		
 		var group_key := "%d_%s" % [type_id, state]
 
 		if not grouped_entities.has(group_key):
@@ -476,6 +477,7 @@ func _on_required_entity_update(batch_data: Dictionary) -> void:
 			# TEMPORARY / DYNAMIC: Map animPhase (0.0 to 1.0) to frame index
 			# -----------------------------------------------------------------
 			var anim_phase: float = float(pos_data.get("animPhase", 0.0))
+			#print(anim_phase)
 			var total_frames: int = int(total_cols * total_rows)
 			
 			# Snap phase to a discrete frame index
@@ -491,6 +493,8 @@ func _on_required_entity_update(batch_data: Dictionary) -> void:
 			)
 
 	# 3. Update Debug Origin MultiMesh
+	"""
+	
 	var debug_mm = debug_multimesh_node.multimesh if debug_multimesh_node else null
 	if debug_mm:
 		debug_mm.instance_count = all_entities.size()
@@ -510,7 +514,7 @@ func _on_required_entity_update(batch_data: Dictionary) -> void:
 			)
 			debug_mm.set_instance_transform_2d(idx, origin_xform)
 			debug_mm.set_instance_custom_data(idx, Color(1, 0, 1, 1)) # Magenta debug marker
-
+"""
 		
 func _on_slot_action_requested(slot_number: int) -> void:
 	#print("Main script heard that slot was clicked: ", slot_number)

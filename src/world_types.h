@@ -37,6 +37,8 @@ struct ChunkMeshData
 struct global_tick_settings
 {
     float gravity = 3.f;
+    double animationSpeed = 1.25;
+    double idleAnimSpeed = 1.0;
 };
 
 struct EntityTickContext

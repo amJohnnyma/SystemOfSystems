@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 #include "attack_type.h"
 #include "world_types.h"
 
@@ -37,6 +38,7 @@ struct entity_template
     std::string sprite = "";
     std::string entity_class = "enemy"; // "player", "enemy", "item", "particle"
     std::string behavior_type = "idle";
+
     
     float max_health = 100.0f;
     float move_speed = 5.0f;
@@ -65,8 +67,11 @@ class Entity
 {
     private:
         entity_template et_;
+        std::string state = "idle";
+        double animationProgress = 0.0;
         float current_health_;
         float current_move_speed_;
+        bool facingRight = true;
 
 
 
@@ -85,6 +90,11 @@ class Entity
         void applyGravity(EntityTickContext etx);
         void alignPosition();
         void moveTo(float x, float y, EntityTickContext etx);
+        std::string getState() const {return state;}
+        double getAnimProgress() const {return animationProgress;}
+        bool isFacingRight() const {return facingRight;}
+        void changeState(std::string state); 
+
 
 };
 

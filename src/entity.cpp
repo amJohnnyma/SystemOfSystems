@@ -1,7 +1,6 @@
 #include "entity.h"
 #include "math_types.h"
 #include "world_types.h"
-
 void Entity::on_tick(EntityTickContext etx) 
 {
     applyGravity(etx);
@@ -21,6 +20,39 @@ void Entity::on_tick(EntityTickContext etx)
     // 3.1 TBD
 
     // done after all changes
+    if (et_.velocity.x == 0.f)
+    {
+        changeState("idle");
+    }
+    else
+    {
+
+        changeState("walk");
+    }
+
+    double prog = 0.0;
+    if (state == "idle")
+    {
+        prog =(etx.deltaTime * etx.gts.idleAnimSpeed);
+    }
+    else
+    {
+        prog =(etx.deltaTime * etx.gts.animationSpeed); 
+    }
+    animationProgress = std::clamp(animationProgress + prog,0.0,1.0);
+    if (animationProgress >= 1.0)
+    {
+        animationProgress = 0.0;
+    }
+}
+
+void Entity::changeState(std::string new_state) 
+{
+    if (state != new_state) 
+    {
+        state = new_state;
+        animationProgress = 0.0; // Only reset when transitioning to a different state!
+    }
 }
 
 void Entity::alignPosition()
