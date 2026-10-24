@@ -84,5 +84,48 @@
         "name": "Mage Siege"
       }
     ]
+  },
+  {
+    "entityTypeID": 3,
+    "name": "Mushroom",
+    "sprite": "Mushroom.png",
+    "entity_class": "enemy",
+    "behavior_type": "ranged",
+    "max_health": 120.0,
+    "move_speed": 7.0,
+    "width": 1,
+    "height": 1,
+    "is_pickupable": false,
+    "animations": {
+      "idle": {
+        "sprite": "Mushroom_idle.png",
+        "cols": 7,
+        "rows": 1,
+        "frame_width": 64,
+        "frame_height": 64
+      },
+      "walk": {
+        "sprite": "Mushroom_walk.png",
+        "cols": 8,
+        "rows": 1,
+        "frame_width": 64,
+        "frame_height": 64
+      },
+      "attack": {
+        "sprite": "Mushroom_attack.png",
+        "cols": 8,
+        "rows": 1,
+        "frame_width": 64,
+        "frame_height": 64
+      }
+    },
+    "attack_patterns": [
+      {
+        "name": "Mage Siege"
+      },
+      {
+        "name": "Mage Siege"
+      }
+    ]
   }
 ]

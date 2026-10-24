@@ -144,6 +144,11 @@ void Entity::moveTo(float x, float y, EntityTickContext etx)
 
     const float distance = x - et_.x_smooth;
     const float direction = distance > 0.0f ? 1.0f : -1.0f;
+
+    if (std::abs(distance) > 0.001f)
+    {
+        facingRight= (direction > 0.0f);
+    }
     if (left_col >= 0 && left_col < etx.world_x && direction < 0.f)
     {
         for (int h = 0; h < et_.height; ++h)

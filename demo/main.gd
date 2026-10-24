@@ -54,8 +54,8 @@ var player: Sprite2D
 var player_velocity: Vector2 = Vector2.ZERO
 const PLAYER_GRAVITY: float = 800
 const PLAYER_SPEED: float = 100
-const PLAYER_WIDTH: float = 4.0
-const PLAYER_HEIGHT: float = 10.0
+const PLAYER_WIDTH: float = 2.0
+const PLAYER_HEIGHT: float = 3.0
 var is_on_ground_flag = false
 
 
@@ -163,21 +163,39 @@ void fragment() {
 	print("Loaded entities into Godot:\n", JSON.stringify(entity_registry, "\t"))
 	
 	
-	''''''
+	
 	debug_multimesh_node = MultiMeshInstance2D.new()
 	debug_multimesh_node.name = "DebugOriginMultiMesh"
 	debug_multimesh_node.scale = MESH_SCALE
-	add_child(debug_multimesh_node)	
+	add_child(debug_multimesh_node)     
 	var mmd = MultiMesh.new()
 	mmd.transform_format = MultiMesh.TRANSFORM_2D
-	mmd.use_custom_data = true # Needed if you want to pass custom colors
-	mmd.mesh = QuadMesh.new()  # Uses a default engine square mesh
-	mmd.mesh.size = Vector2(1, 1) 	
-	debug_multimesh_node.multimesh = mmd	
-	debug_multimesh_node.z_index = 10 	
-	var mat = CanvasItemMaterial.new()
-	debug_multimesh_node.material = mat
-	''''''
+	mmd.use_custom_data = true # Enables INSTANCE_CUSTOM color
+	mmd.mesh = QuadMesh.new()     
+	mmd.mesh.size = Vector2(1, 1)      
+	debug_multimesh_node.multimesh = mmd     
+	debug_multimesh_node.z_index = 10      
+
+	var debug_mat := ShaderMaterial.new()
+	var debug_shad := Shader.new()
+	debug_shad.code = """
+        shader_type canvas_item;
+        render_mode unshaded;
+
+        varying vec4 inst_color;
+
+        void vertex() {
+            // INSTANCE_CUSTOM holds the Color passed from set_instance_custom_data
+            inst_color = INSTANCE_CUSTOM;
+        }
+
+        void fragment() {
+            COLOR = inst_color;
+        }
+    """
+	debug_mat.shader = debug_shad
+	debug_multimesh_node.material = debug_mat
+	
 	
 	for type_id: int in BLOCK_ATLAS_COORDS:
 		var atlas_coords: Vector2i = BLOCK_ATLAS_COORDS[type_id]
@@ -195,6 +213,7 @@ void fragment() {
 	
 	#world.placeEntity(320,10,1)
 	world.placeEntity(320,30,2)
+	#world.placeEntity(330,30,3)
 	'''for i in range(200):
 		world.placeEntity(0,2,1)
 		world.placeEntity(0,6,2)
@@ -208,13 +227,13 @@ func _physics_process(delta: float) -> void:
 	if not player:
 		return
 	
-	player_velocity.y += PLAYER_GRAVITY * delta
+	#player_velocity.y += PLAYER_GRAVITY * delta
 	var input_x := Input.get_axis("ui_left", "ui_right")
 	player_velocity.x = input_x * PLAYER_SPEED
 
 	var input_y := Input.get_axis("ui_up", "ui_down")
-	if input_y > 0:
-		player_velocity.y += input_y * PLAYER_SPEED / 10
+	#if input_y > 0:
+	#	player_velocity.y += input_y * PLAYER_SPEED / 10
 
 	# Flat jump impulse on initial press of jump/up (only when grounded)
 	if Input.is_action_just_pressed("ui_up") and is_on_ground_flag:
@@ -465,12 +484,14 @@ func _on_required_entity_update(batch_data: Dictionary) -> void:
 				grid_y - h * 0.5 + 1.0
 			)
 
+			var facing_right: bool = bool(pos_data.get("facingRight", true))
+			var x_scale: float = w if facing_right else -w
+
 			var xform := Transform2D(
-				Vector2(w, 0.0),
+				Vector2(x_scale, 0.0), # Flips width scale when facing left
 				Vector2(0.0, -h),
 				center
 			)
-
 			mm.set_instance_transform_2d(idx, xform)
 
 			# -----------------------------------------------------------------
@@ -493,7 +514,7 @@ func _on_required_entity_update(batch_data: Dictionary) -> void:
 			)
 
 	# 3. Update Debug Origin MultiMesh
-	"""
+
 	
 	var debug_mm = debug_multimesh_node.multimesh if debug_multimesh_node else null
 	if debug_mm:
@@ -513,8 +534,8 @@ func _on_required_entity_update(batch_data: Dictionary) -> void:
 				origin_center
 			)
 			debug_mm.set_instance_transform_2d(idx, origin_xform)
-			debug_mm.set_instance_custom_data(idx, Color(1, 0, 1, 1)) # Magenta debug marker
-"""
+			debug_mm.set_instance_custom_data(idx, Color(1, 0, 1, 0.3)) # Magenta debug marker
+
 		
 func _on_slot_action_requested(slot_number: int) -> void:
 	#print("Main script heard that slot was clicked: ", slot_number)
