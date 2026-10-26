@@ -4,6 +4,8 @@
 #include "math_types.h"
 #include <cstdint>
 #include <vector>
+#include <iostream>
+
 struct Cell
 {
     uint16_t type_id = 0; // material type
@@ -52,6 +54,28 @@ struct EntityTickContext
     global_tick_settings gts;
 
 
+};
+struct WorldEventContext
+{
+    const std::vector<Cell>& world_cells;
+    int world_x;
+    int world_y;
+    float threshold;
+};
+struct PlayerTickContext
+{
+    double deltaTime;
+    global_tick_settings gts;
+    const WorldEventContext& world;
+};
+
+struct PlayerSettings
+{
+    double maxHealth;
+    double speed;
+    std::string sprite;
+    // ...
+    
 };
 
 

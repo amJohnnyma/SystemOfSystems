@@ -49,14 +49,23 @@ var enemy_materials : Dictionary = {}
 var debug_multimesh_node: MultiMeshInstance2D
 var enemy_shader: Shader
 
+const PLAYER_ANIMATIONS := {
+	"idle": {
+		"sprite": "Knight_walk.png",
+		"cols": 8,
+		"rows": 1
+	},
+	"walk": {
+		"sprite": "Knight_walk.png",
+		"cols": 8,
+		"rows": 1
+	}
+}
 
-var player: Sprite2D
-var player_velocity: Vector2 = Vector2.ZERO
-const PLAYER_GRAVITY: float = 800
-const PLAYER_SPEED: float = 100
-const PLAYER_WIDTH: float = 2.0
-const PLAYER_HEIGHT: float = 3.0
-var is_on_ground_flag = false
+var player_multimeshes: Dictionary = {}
+var player_materials: Dictionary = {}
+
+
 
 
 
@@ -112,6 +121,7 @@ void fragment() {
 	input_manager.brush_radius_changed.connect(func(_radius): queue_redraw())
 	input_manager.building_placed.connect(_place_selected_building)
 	input_manager.building_cancelled.connect(_cancel_building)
+	input_manager.player_data_updated.connect(_on_player_data_updated)
 
 	# Instantiate UI CanvasLayer above the world
 	var ui_root = ui_root_scene.instantiate()
@@ -134,31 +144,16 @@ void fragment() {
 	
 		# Initialize C++ world grid (world_x, world_y, g_size)
 	world.createWorld(world_width, world_height, int(cell_size), threshold)
-	
-	player = Sprite2D.new()
-	player.texture = load("res://game/sprite/player.png")
-	
-	var tex_size = player.texture.get_size()
-	if tex_size.x > 0 and tex_size.y > 0:
-		var target_pixel_width = PLAYER_WIDTH * MESH_SCALE.x
-		var target_pixel_height = PLAYER_HEIGHT * MESH_SCALE.y
 		
-		# Scale down/up so the sprite fits the target cell bounds
-		player.scale = Vector2(
-			target_pixel_width / tex_size.x,
-			target_pixel_height / tex_size.y
-		)
-	
-	var spawn_x = (world_width * 0.5) * MESH_SCALE.x
-	var spawn_y = 10 # Spawn slightly down in the air layer
-	player.global_position = Vector2(spawn_x, spawn_y)
-	add_child(player)
-
-	
 	
 	
 	_init_entity_materials()
 	_init_building_materials()
+	_init_player_materials()
+	
+	_on_player_data_updated(world.getPlayerData())
+	
+	
 	#print("Loaded structures into Godot: ", structure_registry)
 	print("Loaded entities into Godot:\n", JSON.stringify(entity_registry, "\t"))
 	
@@ -211,8 +206,8 @@ void fragment() {
 	
 	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
 	
-	world.placeEntity(320,10,1)
-	world.placeEntity(320,30,2)
+	#world.placeEntity(320,10,1)
+	#world.placeEntity(320,30,2)
 	world.placeEntity(330,30,3)
 	'''for i in range(200):
 		world.placeEntity(0,2,1)
@@ -223,44 +218,127 @@ void fragment() {
 
 	
 	
-func _physics_process(delta: float) -> void:
-	if not player:
+
+func _on_player_data_updated(data: Dictionary) -> void:
+	if data.is_empty() or player_multimeshes.is_empty():
 		return
-	
-	#player_velocity.y += PLAYER_GRAVITY * delta
-	var input_x := Input.get_axis("ui_left", "ui_right")
-	player_velocity.x = input_x * PLAYER_SPEED
 
-	var input_y := Input.get_axis("ui_up", "ui_down")
-	#if input_y > 0:
-	#	player_velocity.y += input_y * PLAYER_SPEED / 10
+	var state: String = str(data.get("state", "idle"))
 
-	# Flat jump impulse on initial press of jump/up (only when grounded)
-	if Input.is_action_just_pressed("ui_up") and is_on_ground_flag:
-		player_velocity.y = -2.0 * PLAYER_SPEED # Apply flat jump impulse
-		is_on_ground_flag = false # Instantly leave the ground state
+	# Fall back to idle when the player reports
+	# a state without a configured spritesheet.
+	if not player_multimeshes.has(state):
+		state = "idle" if player_multimeshes.has("idle") else str(player_multimeshes.keys()[0])
 
-	var cell_pos = player.global_position / MESH_SCALE.x
-	var cell_velocity = player_velocity / MESH_SCALE.x
+	# Hide inactive animation states
+	for anim_state in player_multimeshes:
+		if anim_state != state:
+			var inactive_mm: MultiMesh = player_multimeshes[anim_state].multimesh
+			if inactive_mm.instance_count != 0:
+				inactive_mm.instance_count = 0
 
-	var old_y = cell_pos.y
+	var mm_node: MultiMeshInstance2D = player_multimeshes[state]
+	var mm: MultiMesh = mm_node.multimesh
 
-	var new_cell_pos = world.resolveCollision(cell_pos, cell_velocity, PLAYER_WIDTH, PLAYER_HEIGHT, delta)
-	
-	# Ground check update location:
-	if new_cell_pos.y < cell_pos.y + (cell_velocity.y * delta) and player_velocity.y > 0.0:
-		player_velocity.y = 0.0
-		is_on_ground_flag = true
-	else:
-		if player_velocity.y != 0.0:
-			is_on_ground_flag = false
+	if mm.instance_count != 1:
+		mm.instance_count = 1
 
-	player.global_position = new_cell_pos * MESH_SCALE.x
-	
-	world.updatePlayerPosition(player.global_position.x / MESH_SCALE.x, player.global_position.y / MESH_SCALE.x)
-	
+	# Position and size from C++
+	var grid_x: float = float(data.get("x_smooth", 0.0))
+	var grid_y: float = float(data.get("y_smooth", 0.0))
+	var w: float = float(data.get("width", 2.0))
+	var h: float = float(data.get("height", 3.0))
 
-	
+	# Same transform convention as entities
+	var center := Vector2(
+		grid_x + w * 0.5,
+		grid_y - h * 0.5 + 1.0
+	)
+
+	var facing_right: bool = bool(data.get("facingRight", true))
+	var x_scale: float = w if facing_right else -w
+
+	var xform := Transform2D(
+		Vector2(x_scale, 0.0),
+		Vector2(0.0, -h),
+		center
+	)
+
+	mm.set_instance_transform_2d(0, xform)
+
+	# Animation frame selection
+	var total_cols: int = max(1, int(mm_node.get_meta("cols", 1)))
+	var total_rows: int = max(1, int(mm_node.get_meta("rows", 1)))
+	var total_frames: int = total_cols * total_rows
+
+	var anim_phase: float = float(data.get("animPhase", 0.0))
+
+	var current_frame: int = int(floor(
+		anim_phase * total_frames
+	)) % total_frames
+
+	var frame_col: float = float(current_frame % total_cols)
+	var frame_row: float = float(
+		floori(float(current_frame) / float(total_cols))
+	)
+
+	mm.set_instance_custom_data(
+		0,
+		Color(
+			frame_col,
+			frame_row,
+			float(total_cols),
+			float(total_rows)
+		)
+	)
+
+
+
+func _init_player_materials() -> void:
+	for anim_state in PLAYER_ANIMATIONS:
+		var anim_data: Dictionary = PLAYER_ANIMATIONS[anim_state]
+		var sprite_name: String = anim_data.get("sprite", "")
+
+		if sprite_name.is_empty():
+			continue
+
+		var tex_path := "res://game/atlas/" + sprite_name
+
+		if not ResourceLoader.exists(tex_path):
+			push_warning("Missing player texture: " + tex_path)
+			continue
+
+		var tex: Texture2D = load(tex_path)
+
+		# Reuse the entity shader
+		var mat := ShaderMaterial.new()
+		mat.shader = enemy_shader
+		mat.set_shader_parameter("enemy_tex", tex)
+
+		player_materials[anim_state] = mat
+
+		# One MultiMeshInstance2D per animation state
+		var mm_node := MultiMeshInstance2D.new()
+		mm_node.name = "PlayerMultiMesh_%s" % anim_state
+		mm_node.scale = MESH_SCALE
+		mm_node.material = mat
+
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_2D
+		mm.use_custom_data = true
+		mm.mesh = QuadMesh.new()
+		mm.instance_count = 0
+
+		mm_node.multimesh = mm
+
+		mm_node.set_meta("cols", max(1, int(anim_data.get("cols", 1))))
+		mm_node.set_meta("rows", max(1, int(anim_data.get("rows", 1))))
+
+		add_child(mm_node)
+
+		player_multimeshes[anim_state] = mm_node
+		
+		
 func _init_entity_materials() -> void:
 	# 1. Fetch base entity registry from C++
 	entity_registry = world.getEntityRegistry()

@@ -16,6 +16,7 @@ signal cursor_moved(local_cell_pos: Vector2)
 signal brush_radius_changed(new_radius: float)
 signal building_placed()
 signal building_cancelled()
+signal player_data_updated(data : Dictionary)
 
 # Global toggle
 var is_input_enabled: bool = true
@@ -66,6 +67,31 @@ func _process(delta: float) -> void:
 	if paint_cooldown > 0.0:
 		paint_cooldown -= delta
 
+func _physics_process(delta: float) -> void:
+	if not world:
+		return
+
+	var input_vector := Vector2.ZERO
+	var jump_pressed := false
+
+	if is_input_enabled and (
+		current_mode == InputMode.FULL_GAMEPLAY
+		or current_mode == InputMode.BUILDING_PLACEMENT
+	):
+		input_vector = Input.get_vector(
+			"ui_left",
+			"ui_right",
+			"ui_up",
+            "ui_down"
+		)
+
+		jump_pressed = Input.is_action_just_pressed("ui_up")
+
+	world.movePlayer(input_vector, jump_pressed, delta)
+
+	var data: Dictionary = world.getPlayerData()
+
+	player_data_updated.emit(data)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_input_enabled or current_mode == InputMode.UI_ONLY:

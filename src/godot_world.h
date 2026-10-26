@@ -45,6 +45,10 @@ public:
     Vector2 resolveCollision(Vector2 current_pos, Vector2 velocity, float width, float height, double delta);
     void updatePlayerPosition(float x, float y);
 
+    void movePlayer(Vector2 input, bool jump_pressed, double deltaTime);
+
+    godot::Dictionary getPlayerData() const;
+
     Dictionary getEntityTransformsForRendering() const;
 
 };

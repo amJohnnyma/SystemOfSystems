@@ -32,6 +32,8 @@ void GodotSimulation::_bind_methods() {
     ADD_SIGNAL(MethodInfo("update_godot_mesh_event"));
 
 ClassDB::bind_method(D_METHOD("updatePlayerPosition", "x", "y"), &GodotSimulation::updatePlayerPosition);
+ClassDB::bind_method(D_METHOD("movePlayer", "input", "jump_pressed", "deltaTime"), &GodotSimulation::movePlayer);
+ClassDB::bind_method(D_METHOD("getPlayerData"), &GodotSimulation::getPlayerData);
     ClassDB::bind_method(D_METHOD("resolveCollision", "current_pos", "velocity", "width", "height", "delta"), &GodotSimulation::resolveCollision);
 ADD_SIGNAL(MethodInfo("update_entities_event", PropertyInfo(Variant::DICTIONARY, "batch_data")));
 
@@ -132,6 +134,51 @@ godot::Dictionary GodotSimulation::getEntityTransformsForRendering() const {
 }
 void GodotSimulation::updatePlayerPosition(float x, float y) {
     world_grid_.updatePlayerPosition(x, y);
+}
+void GodotSimulation::movePlayer(Vector2 input, bool jump_pressed, double deltaTime) 
+{
+    world_grid_.movePlayer(Vec2{input.x, input.y}, jump_pressed, deltaTime);
+}
+godot::Dictionary GodotSimulation::getPlayerData() const
+{
+    godot::Dictionary data;
+
+    const auto& player = world_grid_.getPlayer();
+
+    const Vec2& pos = player.getPosition();
+    const Vec2& vel = player.getVelocity();
+    const Vec2& size = player.getSize();
+
+    // Position
+    data["x_smooth"] = pos.x;
+    data["y_smooth"] = pos.y;
+
+    // Dimensions
+    data["width"] = size.x;
+    data["height"] = size.y;
+
+    // Velocity
+    data["velocity_x"] = vel.x;
+    data["velocity_y"] = vel.y;
+
+    // Physics
+    data["isGrounded"] = player.isGrounded();
+
+    // Health
+    data["currentHealth"] = player.getCurrentHealth();
+    data["maxHealth"] = player.getMaxHealth();
+
+    // Movement
+    data["currentMoveSpeed"] = player.getCurrentMoveSpeed();
+    data["maxMoveSpeed"] = player.getMaxMoveSpeed();
+
+    // Rendering
+    data["sprite"] = player.getSprite().c_str();
+    data["state"] = player.getState().c_str();
+    data["animPhase"] = player.getAnimProgress();
+    data["facingRight"] = player.isFacingRight();
+
+    return data;
 }
 
 Vector2 GodotSimulation::resolveCollision(Vector2 current_pos, Vector2 velocity, float width, float height, double delta) {

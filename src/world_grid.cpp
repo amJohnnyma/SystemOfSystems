@@ -633,6 +633,31 @@ void WorldGrid::fill_cell(int x, int y, uint16_t type_id, bool negativeFill)
     }
 }
 
+
+void WorldGrid::movePlayer(
+        Vec2 input,
+        bool jump_pressed,
+        double deltaTime
+        )
+{
+    WorldEventContext worldCtx {
+        .world_cells = world_cells_,
+        .world_x = world_x_,
+        .world_y = world_y_,
+        .threshold = threshold
+    };
+
+    PlayerTickContext playerCtx {
+        .deltaTime = deltaTime,
+            .gts= gts,
+            .world = worldCtx
+    };
+
+    // Update desired movement from Godot input
+    player.moveTo(input, jump_pressed);
+    player.tick(playerCtx);
+
+}
 uint32_t WorldGrid::tick(double deltaTime)
 {
 
@@ -658,7 +683,7 @@ uint32_t WorldGrid::tick(double deltaTime)
                 .world_x = world_x_,
                 .world_y = world_y_,
                 .threshold = threshold,
-                .playerPos = player_position_,
+                .playerPos = player.getPosition(),
                 .gts = gts
         };
         for (auto& [uID, entity] : entities_) {

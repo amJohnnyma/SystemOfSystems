@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <random>
 #include "entity.h"
+#include "player.h"
 
 
 // what will be updated on each tick if any
@@ -53,8 +54,7 @@ class WorldGrid
         double spawn_interval_ = 1;
 
 
-        Vec2 player_position_;
-        uint32_t player_instance_id_ = 0;
+        Player player;
 
         std::unordered_map<uint32_t, Entity> entities_ = {};
         std::vector<uint32_t> tick_entities_ = {}; // basically all of them
@@ -133,14 +133,16 @@ class WorldGrid
         Vec2 calculateDensityGradient(float x, float y) const;
         float getDensityAt(float x, float y) const;
 
-// Called from Godot every frame or when the player moves
         void updatePlayerPosition(float x, float y) {
-            player_position_ = Vec2(x, y);
+            //player.setPosition(x,y);
         }
         
         const Vec2& getPlayerPosition() const {
-            return player_position_;
+            return player.getPosition();
         }
+
+        void movePlayer(Vec2 input, bool jump_pressed, double deltaTime);
+        const Player& getPlayer() const {return player;}
 
 
 
