@@ -64,6 +64,7 @@ const PLAYER_ANIMATIONS := {
 
 var player_multimeshes: Dictionary = {}
 var player_materials: Dictionary = {}
+var player_debug_multimesh_node: MultiMeshInstance2D
 
 
 
@@ -145,20 +146,6 @@ void fragment() {
 		# Initialize C++ world grid (world_x, world_y, g_size)
 	world.createWorld(world_width, world_height, int(cell_size), threshold)
 		
-	
-	
-	_init_entity_materials()
-	_init_building_materials()
-	_init_player_materials()
-	
-	_on_player_data_updated(world.getPlayerData())
-	
-	
-	#print("Loaded structures into Godot: ", structure_registry)
-	print("Loaded entities into Godot:\n", JSON.stringify(entity_registry, "\t"))
-	
-	
-	
 	debug_multimesh_node = MultiMeshInstance2D.new()
 	debug_multimesh_node.name = "DebugOriginMultiMesh"
 	debug_multimesh_node.scale = MESH_SCALE
@@ -190,6 +177,21 @@ void fragment() {
     """
 	debug_mat.shader = debug_shad
 	debug_multimesh_node.material = debug_mat
+	
+	_init_entity_materials()
+	_init_building_materials()
+	_init_player_materials()
+	_init_player_debug()
+	
+	_on_player_data_updated(world.getPlayerData())
+	
+	
+	#print("Loaded structures into Godot: ", structure_registry)
+	print("Loaded entities into Godot:\n", JSON.stringify(entity_registry, "\t"))
+	
+	
+	
+
 	
 	
 	for type_id: int in BLOCK_ATLAS_COORDS:
@@ -291,9 +293,62 @@ func _on_player_data_updated(data: Dictionary) -> void:
 			float(total_rows)
 		)
 	)
+	_update_player_debug_hitbox(data)
 
+func _update_player_debug_hitbox(data: Dictionary) -> void:
+	if not player_debug_multimesh_node:
+		return
 
+	var mm: MultiMesh = player_debug_multimesh_node.multimesh
 
+	var grid_x: float = float(data.get("x_smooth", 0.0))
+	var grid_y: float = float(data.get("y_smooth", 0.0))
+
+	var w: float = float(data.get("width", 2.0))
+	var h: float = float(data.get("height", 3.0))
+
+	# Same origin convention as the entity renderer
+	var center := Vector2(
+		grid_x + w * 0.5,
+		grid_y - h * 0.5 + 1.0
+	)
+
+	# Full hitbox, independent of facing direction
+	var xform := Transform2D(
+		Vector2(w, 0.0),
+		Vector2(0.0, -h),
+		center
+	)
+
+	mm.set_instance_transform_2d(0, xform)
+
+	# Semi-transparent green hitbox
+	mm.set_instance_custom_data(
+		0,
+		Color(0.0, 1.0, 0.0, 0.3)
+	)
+func _init_player_debug() -> void:
+	player_debug_multimesh_node = MultiMeshInstance2D.new()
+	player_debug_multimesh_node.name = "PlayerHitboxDebug"
+	player_debug_multimesh_node.scale = MESH_SCALE
+	player_debug_multimesh_node.z_index = 20
+
+	# Reuse the existing entity debug material
+	player_debug_multimesh_node.material = debug_multimesh_node.material
+
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_2D
+	mm.use_custom_data = true
+
+	var quad := QuadMesh.new()
+	quad.size = Vector2(1, 1)
+
+	mm.mesh = quad
+	mm.instance_count = 1
+
+	player_debug_multimesh_node.multimesh = mm
+
+	add_child(player_debug_multimesh_node)
 func _init_player_materials() -> void:
 	for anim_state in PLAYER_ANIMATIONS:
 		var anim_data: Dictionary = PLAYER_ANIMATIONS[anim_state]
