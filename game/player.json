@@ -1,5 +1,5 @@
 {
-    "name": "Knight",
+    "name": "EvilWizard",
     "spawnPosition": [320, 10],
 
     "maxHealth": 100,
@@ -9,23 +9,25 @@
     "maxFallSpeed": 100,
 
     "size": [2, 3],
+    "visualPixelsPerCell": 30,
+    "visualPivot": [0.5, 0.0],
 
     "sprites": {
         "idle": {
-            "filename": "Knight_idle.png",
-            "columns": 6,
+            "filename": "EvilWizard_attack1.png",
+            "columns": 8,
             "rows": 1,
             "animationSpeed": 0.5
         },
         "walk": {
-            "filename": "Knight_walk.png",
+            "filename": "EvilWizard_walk.png",
             "columns": 8,
             "rows": 1,
             "animationSpeed": 1.5
         },
         "jump": {
-            "filename": "Knight_jump.png",
-            "columns": 4,
+            "filename": "EvilWizard_fall.png",
+            "columns": 2,
             "rows": 1,
             "animationSpeed": 1.0
         }

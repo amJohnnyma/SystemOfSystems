@@ -49,22 +49,13 @@ var enemy_materials : Dictionary = {}
 var debug_multimesh_node: MultiMeshInstance2D
 var enemy_shader: Shader
 
-const PLAYER_ANIMATIONS := {
-	"idle": {
-		"sprite": "Knight_idle.png",
-		"cols": 14,
-		"rows": 2
-	},
-	"walk": {
-		"sprite": "Knight_walk.png",
-		"cols": 8,
-		"rows": 1
-	}
-}
+var PLAYER_ANIMATIONS := {}
 
 var player_multimeshes: Dictionary = {}
 var player_materials: Dictionary = {}
 var player_debug_multimesh_node: MultiMeshInstance2D
+var player_visual_pixels_per_cell: float = 20.0
+var player_visual_pivot: Vector2 = Vector2(0.5, 0.0)
 
 
 
@@ -188,7 +179,7 @@ void fragment() {
 	
 	
 	#print("Loaded structures into Godot: ", structure_registry)
-	print("Loaded entities into Godot:\n", JSON.stringify(entity_registry, "\t"))
+	#print("Loaded entities into Godot:\n", JSON.stringify(entity_registry, "\t"))
 	
 	
 	
@@ -220,7 +211,8 @@ void fragment() {
 		world.placeEntity(0,7,5)'''
 
 	
-	
+
+
 func _init_create_player() -> void:
 	const PLAYER_JSON_PATH = "res://game/player.json"
 
@@ -240,7 +232,7 @@ func _init_create_player() -> void:
 
 	if error != OK:
 		push_error(
-            "Failed to parse player JSON at line %d: %s"
+			"Failed to parse player JSON at line %d: %s"
 			% [json.get_error_line(), json.get_error_message()]
 		)
 		return
@@ -251,15 +243,36 @@ func _init_create_player() -> void:
 
 	var data: Dictionary = json.data
 
+	# Store the original animation settings for Godot rendering.
+	PLAYER_ANIMATIONS = data.get("sprites", {}).duplicate(true)
+
+	# Visual scaling, independent of physical size.
+	player_visual_pixels_per_cell = float(
+		data.get("visualPixelsPerCell", 30.0)
+	)
+
+	# Normalized pivot, measured from bottom-left.
+	player_visual_pivot = Vector2(0.5, 0.0)
+
+	var pivot_data: Array = data.get("visualPivot", [0.5, 0.0])
+	if pivot_data.size() >= 2:
+		player_visual_pivot = Vector2(
+			float(pivot_data[0]),
+			float(pivot_data[1])
+		)
+	
+	
+
+	# Send the ORIGINAL dictionary to C++.
 	world.createPlayer(data)
+
 func _on_player_data_updated(data: Dictionary) -> void:
 	if data.is_empty() or player_multimeshes.is_empty():
 		return
 
+	# 1. Determine animation state
 	var state: String = str(data.get("state", "idle"))
 
-	# Fall back to idle when the player reports
-	# a state without a configured spritesheet.
 	if not player_multimeshes.has(state):
 		state = "idle" if player_multimeshes.has("idle") else str(player_multimeshes.keys()[0])
 
@@ -276,45 +289,74 @@ func _on_player_data_updated(data: Dictionary) -> void:
 	if mm.instance_count != 1:
 		mm.instance_count = 1
 
-	# Position and size from C++
-	var grid_x: float = float(data.get("x_smooth", 0.0))
-	var grid_y: float = float(data.get("y_smooth", 0.0))
-	var w: float = float(data.get("width", 2.0))
-	var h: float = float(data.get("height", 3.0))
-
-	# Same transform convention as entities
-	var center := Vector2(
-		grid_x + w * 0.5,
-		grid_y - h * 0.5 + 1.0
-	)
-
-	var facing_right: bool = bool(data.get("facingRight", true))
-	var x_scale: float = w if facing_right else -w
-
-	var xform := Transform2D(
-		Vector2(x_scale, 0.0),
-		Vector2(0.0, -h),
-		center
-	)
-
-	mm.set_instance_transform_2d(0, xform)
-
-	# Animation frame selection
+	# 2. Animation frame selection
 	var total_cols: int = max(1, int(mm_node.get_meta("cols", 1)))
 	var total_rows: int = max(1, int(mm_node.get_meta("rows", 1)))
 	var total_frames: int = total_cols * total_rows
 
 	var anim_phase: float = float(data.get("animPhase", 0.0))
 
-	var current_frame: int = int(floor(
-		anim_phase * total_frames
-	)) % total_frames
+	var current_frame: int = int(
+		floor(anim_phase * total_frames)
+	) % total_frames
 
 	var frame_col: float = float(current_frame % total_cols)
-	var frame_row: float = float(
-		floori(float(current_frame) / float(total_cols))
+	var frame_row: float = float(current_frame / total_cols)
+
+	# 3. Calculate visual size from source pixels
+	var frame_width_px: float = float(
+		mm_node.get_meta("frame_width_px", 0.0)
 	)
 
+	var frame_height_px: float = float(
+		mm_node.get_meta("frame_height_px", 0.0)
+	)
+
+	if frame_width_px <= 0.0 or frame_height_px <= 0.0:
+		push_warning("Player frame dimensions not initialized: " + state)
+		return
+
+	var pixels_per_cell: float = max(
+		0.001,
+		player_visual_pixels_per_cell
+	)
+
+	var render_w: float = frame_width_px / pixels_per_cell
+	var render_h: float = frame_height_px / pixels_per_cell
+
+	# 4. Physical position from C++
+	var grid_x: float = float(data.get("x_smooth", 0.0))
+	var grid_y: float = float(data.get("y_smooth", 0.0))
+
+	var body_w: float = float(data.get("width", 2.0))
+	var body_h: float = float(data.get("height", 3.0))
+
+	var facing_right: bool = bool(data.get("facingRight", true))
+	var direction: float = 1.0 if facing_right else -1.0
+
+	# Bottom-center anchor of the physical body
+	var anchor := Vector2(
+		grid_x + body_w * 0.5,
+		grid_y + 1.0
+	)
+
+	# 5. Position sprite relative to its visual pivot
+	var pivot: Vector2 = player_visual_pivot
+
+	var center := Vector2(
+		anchor.x + direction * (0.5 - pivot.x) * render_w,
+		anchor.y + (pivot.y - 0.5) * render_h
+	)
+
+	var xform := Transform2D(
+		Vector2(render_w * direction, 0.0),
+		Vector2(0.0, -render_h),
+		center
+	)
+
+	mm.set_instance_transform_2d(0, xform)
+
+	# 6. Pass animation frame to shader
 	mm.set_instance_custom_data(
 		0,
 		Color(
@@ -324,6 +366,8 @@ func _on_player_data_updated(data: Dictionary) -> void:
 			float(total_rows)
 		)
 	)
+
+	# 7. Debug physical collision box
 	_update_player_debug_hitbox(data)
 
 func _update_player_debug_hitbox(data: Dictionary) -> void:
@@ -383,7 +427,7 @@ func _init_player_debug() -> void:
 func _init_player_materials() -> void:
 	for anim_state in PLAYER_ANIMATIONS:
 		var anim_data: Dictionary = PLAYER_ANIMATIONS[anim_state]
-		var sprite_name: String = anim_data.get("sprite", "")
+		var sprite_name: String = anim_data.get("filename", "")
 
 		if sprite_name.is_empty():
 			continue
@@ -402,6 +446,12 @@ func _init_player_materials() -> void:
 		mat.set_shader_parameter("enemy_tex", tex)
 
 		player_materials[anim_state] = mat
+		
+		var cols: int = max(1, int(anim_data.get("columns", 1)))
+		var rows: int = max(1, int(anim_data.get("rows", 1)))
+
+		var frame_width_px: float = float(tex.get_width()) / cols
+		var frame_height_px: float = float(tex.get_height()) / rows
 
 		# One MultiMeshInstance2D per animation state
 		var mm_node := MultiMeshInstance2D.new()
@@ -417,8 +467,13 @@ func _init_player_materials() -> void:
 
 		mm_node.multimesh = mm
 
-		mm_node.set_meta("cols", max(1, int(anim_data.get("cols", 1))))
+		mm_node.set_meta("cols", max(1, int(anim_data.get("columns", 1))))
 		mm_node.set_meta("rows", max(1, int(anim_data.get("rows", 1))))
+		mm_node.set_meta("cols", cols)
+		mm_node.set_meta("rows", rows)
+
+		mm_node.set_meta("frame_width_px", frame_width_px)
+		mm_node.set_meta("frame_height_px", frame_height_px)
 
 		add_child(mm_node)
 

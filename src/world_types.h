@@ -70,12 +70,36 @@ struct PlayerTickContext
     const WorldEventContext& world;
 };
 
+struct FrameRenderData
+{
+    float renderWidth = 0.0f;
+    float renderHeight = 0.0f;
+
+    float offsetX = 0.0f;
+    float offsetY = 0.0f;
+};
+
+struct AttackHitboxData
+{
+    float offsetX = 0.0f;
+    float offsetY = 0.0f;
+    float width = 1.0f;
+    float height = 1.0f;
+};
 struct PlayerSpriteSettings
 {
     std::string filename;
     int columns = 1;
     int rows = 1;
     double animationSpeed = 1.0;
+    // default render data for the whole animation
+    FrameRenderData defaultRender;
+
+    // optional per-frame overrides
+    std::unordered_map<int, FrameRenderData> frameRenderOverrides;
+
+    // optional per-frame attack hitboxes
+    std::unordered_map<int, std::vector<AttackHitboxData>> frameHitboxes;
 };
 struct PlayerSettings
 {
