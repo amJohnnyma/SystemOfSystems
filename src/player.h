@@ -10,10 +10,7 @@
 class Player
 {
 private:
-    double maxHealth_ = 100.0;
     double currentHealth_ = 100.0;
-
-    double maxMoveSpeed_ = 0.0;
     double currentMoveSpeed_ = 0.0;
 
     Vec2 position_ = {0, 0};
@@ -29,6 +26,8 @@ private:
     bool isGrounded_ = false;
 
     float jumpSpeed_ = 50.0f;
+
+    PlayerSettings ps;
 
 
     // Future:
@@ -59,11 +58,11 @@ public:
     bool isGrounded() const { return isGrounded_; }
 
     // Health
-    double getMaxHealth() const { return maxHealth_; }
+    double getMaxHealth() const { return ps.maxHealth; }
     double getCurrentHealth() const { return currentHealth_; }
 
     // Movement speed
-    double getMaxMoveSpeed() const { return maxMoveSpeed_; }
+    double getMaxMoveSpeed() const { return ps.maxMoveSpeed; }
     double getCurrentMoveSpeed() const { return currentMoveSpeed_; }
 
     // Rendering and animation
@@ -73,14 +72,21 @@ public:
     double getAnimProgress() const { return animationProgress; }
     bool isFacingRight() const { return facingRight; }
 
-    void changeState(const std::string& new_state)
+void changeState(const std::string& new_state)
+{
+    if (state_ == new_state)
+        return;
+
+    state_ = new_state;
+    animationProgress = 0.0;
+
+    auto it = ps.sprites.find(state_);
+
+    if (it != ps.sprites.end())
     {
-        if (state_ != new_state)
-        {
-            state_ = new_state;
-            animationProgress = 0.0;
-        }
+        sprite = it->second.filename;
     }
+}
 };
 
 #endif

@@ -50,6 +50,7 @@ public:
     godot::Dictionary getPlayerData() const;
 
     Dictionary getEntityTransformsForRendering() const;
+    void createPlayer(godot::Dictionary ps);
 
 };
 

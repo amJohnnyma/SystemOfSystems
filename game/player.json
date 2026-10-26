@@ -1,0 +1,33 @@
+{
+    "name": "Knight",
+    "spawnPosition": [320, 10],
+
+    "maxHealth": 100,
+
+    "maxMoveSpeed": 8,
+    "jumpSpeed": 12,
+    "maxFallSpeed": 100,
+
+    "size": [2, 3],
+
+    "sprites": {
+        "idle": {
+            "filename": "Knight_idle.png",
+            "columns": 6,
+            "rows": 1,
+            "animationSpeed": 0.5
+        },
+        "walk": {
+            "filename": "Knight_walk.png",
+            "columns": 8,
+            "rows": 1,
+            "animationSpeed": 1.5
+        },
+        "jump": {
+            "filename": "Knight_jump.png",
+            "columns": 4,
+            "rows": 1,
+            "animationSpeed": 1.0
+        }
+    }
+}

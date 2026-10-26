@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <vector>
 #include <iostream>
+#include <unordered_map>
 
 struct Cell
 {
@@ -38,7 +39,7 @@ struct ChunkMeshData
 
 struct global_tick_settings
 {
-    float gravity = 3.f;
+    float gravity = 9.8f;
     double animationSpeed = 1.25;
     double idleAnimSpeed = 1.0;
 };
@@ -69,13 +70,32 @@ struct PlayerTickContext
     const WorldEventContext& world;
 };
 
+struct PlayerSpriteSettings
+{
+    std::string filename;
+    int columns = 1;
+    int rows = 1;
+    double animationSpeed = 1.0;
+};
 struct PlayerSettings
 {
-    double maxHealth;
-    double speed;
-    std::string sprite;
-    // ...
-    
+    // General
+    std::string name = "Player";
+    Vec2 spawnPosition = {320.0f, 10.0f};
+
+    // Health
+    double maxHealth = 100.0;
+
+    // Movement
+    double maxMoveSpeed = 25.0;
+    double jumpSpeed = 50.0;
+    double maxFallSpeed = 100.0;
+
+    // Physics
+    Vec2 size = {2.0f, 3.0f};
+
+    // Rendering
+    std::unordered_map<std::string, PlayerSpriteSettings> sprites;
 };
 
 

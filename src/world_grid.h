@@ -133,6 +133,11 @@ class WorldGrid
         Vec2 calculateDensityGradient(float x, float y) const;
         float getDensityAt(float x, float y) const;
 
+        void createPlayer(PlayerSettings ps)
+        {
+            player = Player(std::move(ps));
+        }
+
         void updatePlayerPosition(float x, float y) {
             //player.setPosition(x,y);
         }

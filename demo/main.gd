@@ -51,9 +51,9 @@ var enemy_shader: Shader
 
 const PLAYER_ANIMATIONS := {
 	"idle": {
-		"sprite": "Knight_walk.png",
-		"cols": 8,
-		"rows": 1
+		"sprite": "Knight_idle.png",
+		"cols": 14,
+		"rows": 2
 	},
 	"walk": {
 		"sprite": "Knight_walk.png",
@@ -180,6 +180,7 @@ void fragment() {
 	
 	_init_entity_materials()
 	_init_building_materials()
+	_init_create_player()
 	_init_player_materials()
 	_init_player_debug()
 	
@@ -220,7 +221,37 @@ void fragment() {
 
 	
 	
+func _init_create_player() -> void:
+	const PLAYER_JSON_PATH = "res://game/player.json"
 
+	if not FileAccess.file_exists(PLAYER_JSON_PATH):
+		push_error("Player JSON not found: " + PLAYER_JSON_PATH)
+		return
+
+	var file := FileAccess.open(PLAYER_JSON_PATH, FileAccess.READ)
+
+	if file == null:
+		push_error("Failed to open player JSON: " + PLAYER_JSON_PATH)
+		return
+
+	var json := JSON.new()
+	var error := json.parse(file.get_as_text())
+	file.close()
+
+	if error != OK:
+		push_error(
+            "Failed to parse player JSON at line %d: %s"
+			% [json.get_error_line(), json.get_error_message()]
+		)
+		return
+
+	if not json.data is Dictionary:
+		push_error("Player JSON must contain a Dictionary.")
+		return
+
+	var data: Dictionary = json.data
+
+	world.createPlayer(data)
 func _on_player_data_updated(data: Dictionary) -> void:
 	if data.is_empty() or player_multimeshes.is_empty():
 		return

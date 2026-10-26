@@ -169,7 +169,7 @@ void Entity::moveTo(float x, float y, EntityTickContext etx)
                 et_.velocity.x = 0.0f;
                 if(et_.isGrounded)
                 {
-                et_.velocity.y = -2.0f * etx.gts.gravity;
+                et_.velocity.y = -1.5f * etx.gts.gravity;
                 et_.isGrounded = false;
                 }
                 return;
@@ -246,7 +246,7 @@ void Entity::moveTo(float x, float y, EntityTickContext etx)
             if (et_.isGrounded)
             {
 
-            et_.velocity.y = -2.0f * etx.gts.gravity;
+            et_.velocity.y = -1.5f * etx.gts.gravity;
 
             et_.isGrounded = false;
             }

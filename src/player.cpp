@@ -1,26 +1,46 @@
 #include "player.h"
 
-Player::Player()
+Player::Player() : Player(PlayerSettings{})
 {
-    maxHealth_ = 100.0;
-    currentHealth_ = maxHealth_;
-
-    maxMoveSpeed_ = 25.0;
-    currentMoveSpeed_ = maxMoveSpeed_;
-
-    position_ = Vec2{320.0f, 10.0f};
-    velocity_ = Vec2{0.0f, 0.0f};
-
-    size_ = Vec2{2.0f, 3.0f};
-
-    sprite = "Knight_idle.png";
+    //nop
 }
 
-Player::Player(PlayerSettings ps)
-{
-}
 Player::~Player()
 {
+}
+Player::Player(PlayerSettings settings)
+    : ps(std::move(settings))
+{
+    // Health
+    currentHealth_ = ps.maxHealth;
+
+    // Movement
+    currentMoveSpeed_ = ps.maxMoveSpeed;
+    jumpSpeed_ = static_cast<float>(ps.jumpSpeed);
+
+    // Physics
+    position_ = ps.spawnPosition;
+    velocity_ = Vec2{0.0f, 0.0f};
+    size_ = ps.size;
+
+    isGrounded_ = false;
+
+    // Animation
+    state_ = "idle";
+    animationProgress = 0.0;
+    facingRight = true;
+
+    // Initial sprite
+    auto it = ps.sprites.find(state_);
+
+    if (it != ps.sprites.end())
+    {
+        sprite = it->second.filename;
+    }
+    else
+    {
+        sprite = "";
+    }
 }
 void Player::moveTo(
     Vec2 input,
@@ -42,7 +62,7 @@ void Player::moveTo(
 
     if (jump_pressed && isGrounded_)
     {
-        velocity_.y = -50.0f; // Temporary jump strength
+        velocity_.y = -jumpSpeed_; // Temporary jump strength
         isGrounded_ = false;
     }
 }
@@ -216,6 +236,11 @@ void Player::tick(const PlayerTickContext& ctx)
     // Apply gravity
     velocity_.y += ctx.gts.gravity * dt;
 
+    velocity_.y = std::min(
+        velocity_.y,
+        static_cast<float>(ps.maxFallSpeed)
+    );
+
     // Temporary collision processing
     MovementResult result = resolveMovement(
         position_,
@@ -242,21 +267,22 @@ void Player::tick(const PlayerTickContext& ctx)
     {
         changeState("idle");
     }
-
     // Animation progress
-    const double animation_speed =
-        state_ == "idle"
-        ? ctx.gts.idleAnimSpeed
-        : ctx.gts.animationSpeed;
+    auto it = ps.sprites.find(state_);
 
-    animationProgress += dt * animation_speed;
-
-    if (animationProgress >= 1.0)
+    if (it != ps.sprites.end())
     {
-        animationProgress = std::fmod(
-            animationProgress, 1.0
-        );
+        const double animation_speed = it->second.animationSpeed;
+
+        animationProgress += dt * animation_speed;
+
+        if (animationProgress >= 1.0)
+        {
+            animationProgress = std::fmod(animationProgress, 1.0);
+        }
     }
+
+
 }
 
 // These functions could technically be the same but a distinction is nice

@@ -14,23 +14,17 @@
       "idle": {
         "sprite": "Monster_idle.png",
         "cols": 24,
-        "rows": 1,
-        "frame_width": 64,
-        "frame_height": 64
+        "rows": 1
       },
       "walk": {
         "sprite": "Monster_walk.png",
         "cols": 18,
-        "rows": 1,
-        "frame_width": 80,
-        "frame_height": 80
+        "rows": 1
       },
       "attack": {
         "sprite": "Monster_attack.png",
         "cols": 5,
-        "rows": 1,
-        "frame_width": 64,
-        "frame_height": 64
+        "rows": 1
       }
     },
     "attack_patterns": [
@@ -57,23 +51,17 @@
       "idle": {
         "sprite": "Knight_idle.png",
         "cols": 14,
-        "rows": 2,
-        "frame_width": 64,
-        "frame_height": 64
+        "rows": 2
       },
       "walk": {
         "sprite": "Knight_walk.png",
         "cols": 8,
-        "rows": 1,
-        "frame_width": 64,
-        "frame_height": 64
+        "rows": 1
       },
       "attack": {
         "sprite": "Knight_attack.png",
         "cols": 8,
-        "rows": 1,
-        "frame_width": 64,
-        "frame_height": 64
+        "rows": 1
       }
     },
     "attack_patterns": [
@@ -100,23 +88,17 @@
       "idle": {
         "sprite": "Mushroom_idle.png",
         "cols": 7,
-        "rows": 1,
-        "frame_width": 64,
-        "frame_height": 64
+        "rows": 1
       },
       "walk": {
         "sprite": "Mushroom_walk.png",
         "cols": 8,
-        "rows": 1,
-        "frame_width": 64,
-        "frame_height": 64
+        "rows": 1
       },
       "attack": {
         "sprite": "Mushroom_attack.png",
         "cols": 8,
-        "rows": 1,
-        "frame_width": 64,
-        "frame_height": 64
+        "rows": 1
       }
     },
     "attack_patterns": [

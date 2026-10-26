@@ -34,6 +34,7 @@ void GodotSimulation::_bind_methods() {
 ClassDB::bind_method(D_METHOD("updatePlayerPosition", "x", "y"), &GodotSimulation::updatePlayerPosition);
 ClassDB::bind_method(D_METHOD("movePlayer", "input", "jump_pressed", "deltaTime"), &GodotSimulation::movePlayer);
 ClassDB::bind_method(D_METHOD("getPlayerData"), &GodotSimulation::getPlayerData);
+ClassDB::bind_method(D_METHOD("createPlayer", "data"), &GodotSimulation::createPlayer);
     ClassDB::bind_method(D_METHOD("resolveCollision", "current_pos", "velocity", "width", "height", "delta"), &GodotSimulation::resolveCollision);
 ADD_SIGNAL(MethodInfo("update_entities_event", PropertyInfo(Variant::DICTIONARY, "batch_data")));
 
@@ -131,6 +132,192 @@ godot::Dictionary GodotSimulation::getEntityTransformsForRendering() const {
         batch_data[uID] = pos_dict;
     }
     return batch_data;
+}
+
+namespace
+{
+    std::string toStdString(const godot::String& str)
+    {
+        return std::string(str.utf8().get_data());
+    }
+
+    double readNumber(
+        const godot::Variant& value,
+        double fallback
+    )
+    {
+        if (value.get_type() == godot::Variant::INT ||
+            value.get_type() == godot::Variant::FLOAT)
+        {
+            return static_cast<double>(value);
+        }
+
+        return fallback;
+    }
+
+    double readNumber(
+        const godot::Dictionary& dict,
+        const char* key,
+        double fallback
+    )
+    {
+        return readNumber(dict.get(key, fallback), fallback);
+    }
+
+    Vec2 readVec2(
+        const godot::Variant& value,
+        Vec2 fallback
+    )
+    {
+        // Godot Vector2
+        if (value.get_type() == godot::Variant::VECTOR2)
+        {
+            godot::Vector2 v = value;
+            return Vec2{v.x, v.y};
+        }
+
+        // JSON object: {"x": 320, "y": 10}
+        if (value.get_type() == godot::Variant::DICTIONARY)
+        {
+            godot::Dictionary d = value;
+
+            return Vec2{
+                static_cast<float>(
+                    readNumber(d, "x", fallback.x)
+                ),
+                static_cast<float>(
+                    readNumber(d, "y", fallback.y)
+                )
+            };
+        }
+
+        // JSON array: [320, 10]
+        if (value.get_type() == godot::Variant::ARRAY)
+        {
+            godot::Array a = value;
+
+            if (a.size() >= 2)
+            {
+                return Vec2{
+                    static_cast<float>(
+                        readNumber(a[0], fallback.x)
+                    ),
+                    static_cast<float>(
+                        readNumber(a[1], fallback.y)
+                    )
+                };
+            }
+        }
+
+        return fallback;
+    }
+}
+void GodotSimulation::createPlayer(godot::Dictionary data)
+{
+    PlayerSettings settings;
+
+    // General
+    if (data.has("name"))
+    {
+        godot::String name = data["name"];
+        settings.name = toStdString(name);
+    }
+
+    settings.spawnPosition = readVec2(
+        data.get("spawnPosition", godot::Variant()),
+        settings.spawnPosition
+    );
+    // Health
+    settings.maxHealth = readNumber(
+        data, "maxHealth", settings.maxHealth
+    );
+
+    // Movement
+    settings.maxMoveSpeed = readNumber(
+        data, "maxMoveSpeed", settings.maxMoveSpeed
+    );
+
+    settings.jumpSpeed = readNumber(
+        data, "jumpSpeed", settings.jumpSpeed
+    );
+
+    settings.maxFallSpeed = readNumber(
+        data, "maxFallSpeed", settings.maxFallSpeed
+    );
+
+    // Physics
+    settings.size = readVec2(
+        data.get("size", godot::Variant()),
+        settings.size
+    );
+
+
+
+    // Sprite settings
+    godot::Variant sprites_value = data.get(
+        "sprites", godot::Dictionary()
+    );
+
+    if (sprites_value.get_type() == godot::Variant::DICTIONARY)
+    {
+        godot::Dictionary sprites = sprites_value;
+        godot::Array states = sprites.keys();
+
+        for (int i = 0; i < states.size(); ++i)
+        {
+            godot::Variant key = states[i];
+
+            if (key.get_type() != godot::Variant::STRING)
+                continue;
+
+            godot::String state_name = key;
+
+            godot::Variant sprite_value = sprites[key];
+
+            if (sprite_value.get_type() != godot::Variant::DICTIONARY)
+                continue;
+
+            godot::Dictionary sprite_data = sprite_value;
+
+            PlayerSpriteSettings sprite;
+
+            godot::Variant filename_value = sprite_data.get(
+                "filename", godot::String("")
+            );
+
+            if (filename_value.get_type() != godot::Variant::STRING)
+                continue;
+
+            godot::String filename = filename_value;
+            sprite.filename = toStdString(filename);
+
+            sprite.columns = std::max(
+                1,
+                static_cast<int>(
+                    readNumber(sprite_data, "columns", 1)
+                )
+            );
+
+            sprite.rows = std::max(
+                1,
+                static_cast<int>(
+                    readNumber(sprite_data, "rows", 1)
+                )
+            );
+
+            sprite.animationSpeed = readNumber(
+                sprite_data, "animationSpeed", 1.0
+            );
+
+            settings.sprites.emplace(
+                toStdString(state_name),
+                std::move(sprite)
+            );
+        }
+    }
+
+    // Create player
+    world_grid_.createPlayer(std::move(settings));
 }
 void GodotSimulation::updatePlayerPosition(float x, float y) {
     world_grid_.updatePlayerPosition(x, y);
