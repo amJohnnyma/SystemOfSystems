@@ -54,7 +54,9 @@ var PLAYER_ANIMATIONS := {}
 var player_multimeshes: Dictionary = {}
 var player_materials: Dictionary = {}
 var player_debug_multimesh_node: MultiMeshInstance2D
-var player_visual_pixels_per_cell: float = 20.0
+
+
+var player_visual_pixels_per_cell: float = 20.0 # = (Character height in pixels) / (Desired height in world cells)
 var player_visual_pivot: Vector2 = Vector2(0.5, 0.0)
 
 
@@ -200,9 +202,10 @@ void fragment() {
 	
 	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
 	
-	#world.placeEntity(320,10,1)
-	#world.placeEntity(320,30,2)
-	world.placeEntity(330,30,3)
+	world.placeEntity(310,10,1)
+	world.placeEntity(320,10,2)
+	world.placeEntity(330,10,3)
+	world.placeEntity(340,10,4)
 	'''for i in range(200):
 		world.placeEntity(0,2,1)
 		world.placeEntity(0,6,2)
@@ -211,7 +214,37 @@ void fragment() {
 		world.placeEntity(0,7,5)'''
 
 	
+func _calculate_sprite_transform(
+	grid_position: Vector2,
+	body_size: Vector2,
+	frame_size_px: Vector2,
+	pixels_per_cell: float,
+	pivot: Vector2,
+	facing_right: bool
+) -> Transform2D:
 
+	# Convert source pixels into world cells
+	var render_size: Vector2 = frame_size_px / maxf(pixels_per_cell, 0.001)
+
+	var direction: float = 1.0 if facing_right else -1.0
+
+	# Bottom-center of the physical body
+	var anchor := Vector2(
+		grid_position.x + body_size.x * 0.5,
+		grid_position.y + 1.0
+	)
+
+	# Align the visual pivot to the physical anchor
+	var center := Vector2(
+		anchor.x + direction * (0.5 - pivot.x) * render_size.x,
+		anchor.y + (pivot.y - 0.5) * render_size.y
+	)
+
+	return Transform2D(
+		Vector2(render_size.x * direction, 0.0),
+		Vector2(0.0, -render_size.y),
+		center
+	)
 
 func _init_create_player() -> void:
 	const PLAYER_JSON_PATH = "res://game/player.json"
@@ -402,6 +435,7 @@ func _update_player_debug_hitbox(data: Dictionary) -> void:
 		0,
 		Color(0.0, 1.0, 0.0, 0.3)
 	)
+	
 func _init_player_debug() -> void:
 	player_debug_multimesh_node = MultiMeshInstance2D.new()
 	player_debug_multimesh_node.name = "PlayerHitboxDebug"
@@ -469,8 +503,8 @@ func _init_player_materials() -> void:
 
 		mm_node.set_meta("cols", max(1, int(anim_data.get("columns", 1))))
 		mm_node.set_meta("rows", max(1, int(anim_data.get("rows", 1))))
-		mm_node.set_meta("cols", cols)
-		mm_node.set_meta("rows", rows)
+		#mm_node.set_meta("cols", cols)
+		#mm_node.set_meta("rows", rows)
 
 		mm_node.set_meta("frame_width_px", frame_width_px)
 		mm_node.set_meta("frame_height_px", frame_height_px)
@@ -532,6 +566,26 @@ func _init_entity_materials() -> void:
 		
 		var animations: Dictionary = entity_data.get("animations", {})
 		
+			# Visual rendering settings for this entity type
+		var visual_pixels_per_cell: float = maxf(
+			0.001,
+			float(entity_data.get("visualPixelsPerCell", 30.0))
+		)
+
+		var visual_pivot := Vector2(0.5, 0.0)
+
+		var pivot_data: Array = entity_data.get(
+			"visualPivot", [0.5, 0.0]
+		)
+
+		if pivot_data.size() >= 2:
+			visual_pivot = Vector2(
+				float(pivot_data[0]),
+				float(pivot_data[1])
+			)
+		
+
+		
 		# Loop through every defined animation state (idle, walk, attack, etc.)
 		for anim_state in animations:
 			var anim_data: Dictionary = animations[anim_state]
@@ -570,6 +624,14 @@ func _init_entity_materials() -> void:
 				var rows: float = float(anim_data.get("rows", 1))
 				mm_node.set_meta("cols", cols)
 				mm_node.set_meta("rows", rows)
+				
+				var frame_width_px: float = float(tex.get_width()) / cols
+				var frame_height_px: float = float(tex.get_height()) / rows
+
+				mm_node.set_meta("frame_width_px", frame_width_px)
+				mm_node.set_meta("frame_height_px", frame_height_px)
+				mm_node.set_meta("visual_pixels_per_cell", visual_pixels_per_cell)
+				mm_node.set_meta("visual_pivot", visual_pivot)
 
 				add_child(mm_node)
 				
@@ -684,9 +746,25 @@ func _on_required_entity_update(batch_data: Dictionary) -> void:
 		var mm: MultiMesh = mm_node.multimesh
 		var entities: Array = grouped_entities.get(group_key, [])
 		
-		# Retrieve this animation state's sheet dimensions from metadata
-		var total_cols: float = mm_node.get_meta("cols", 1.0)
-		var total_rows: float = mm_node.get_meta("rows", 1.0)
+		# Animation grid
+		var total_cols: float = float(mm_node.get_meta("cols", 1.0))
+		var total_rows: float = float(mm_node.get_meta("rows", 1.0))
+
+		# Sprite frame dimensions in pixels
+		var frame_size_px := Vector2(
+			float(mm_node.get_meta("frame_width_px", 1.0)),
+			float(mm_node.get_meta("frame_height_px", 1.0))
+		)
+
+		# Rendering configuration for this entity type
+		var pixels_per_cell: float = float(
+			mm_node.get_meta("visual_pixels_per_cell", 30.0)
+		)
+
+		var visual_pivot: Vector2 = mm_node.get_meta(
+			"visual_pivot",
+			Vector2(0.5, 0.0)
+		)
 
 		mm.instance_count = entities.size()
 
@@ -695,22 +773,25 @@ func _on_required_entity_update(batch_data: Dictionary) -> void:
 
 			var grid_x: float = float(pos_data["x_smooth"])
 			var grid_y: float = float(pos_data["y_smooth"])
+
+			# Physical dimensions from C++
 			var w: float = float(pos_data.get("width", 2))
 			var h: float = float(pos_data.get("height", 2))
 
-			var center := Vector2(
-				grid_x + w * 0.5,
-				grid_y - h * 0.5 + 1.0
+			var facing_right: bool = bool(
+				pos_data.get("facingRight", true)
 			)
 
-			var facing_right: bool = bool(pos_data.get("facingRight", true))
-			var x_scale: float = w if facing_right else -w
-
-			var xform := Transform2D(
-				Vector2(x_scale, 0.0), # Flips width scale when facing left
-				Vector2(0.0, -h),
-				center
+			# Visual dimensions are independent of physics dimensions
+			var xform := _calculate_sprite_transform(
+				Vector2(grid_x, grid_y),
+				Vector2(w, h),
+				frame_size_px,
+				pixels_per_cell,
+				visual_pivot,
+				facing_right
 			)
+
 			mm.set_instance_transform_2d(idx, xform)
 
 			# -----------------------------------------------------------------

@@ -1,5 +1,5 @@
 [
-  {
+  { ADD PER ANIMATION SPEED + JUMP SPEED + MAX FALL SPEED
     "entityTypeID": 1,
     "name": "Monster",
     "sprite": "Monster.png",
@@ -7,23 +7,25 @@
     "behavior_type": "aggressive",
     "max_health": 80.0,
     "move_speed": 6.0,
-    "width": 4,
-    "height": 9,
+    "width": 2,
+    "height": 3,
     "is_pickupable": false,
+   "visualPixelsPerCell": 13.67,
+    "visualPivot": [0.23, 0.0],
     "animations": {
       "idle": {
         "sprite": "Monster_idle.png",
-        "cols": 24,
+        "cols": 13,
         "rows": 1
       },
       "walk": {
         "sprite": "Monster_walk.png",
-        "cols": 18,
+        "cols": 6,
         "rows": 1
       },
       "attack": {
         "sprite": "Monster_attack.png",
-        "cols": 5,
+        "cols": 6,
         "rows": 1
       }
     },
@@ -47,6 +49,8 @@
     "width": 2,
     "height": 2,
     "is_pickupable": false,
+   "visualPixelsPerCell": 30,
+    "visualPivot": [0.5, 0.0],
     "animations": {
       "idle": {
         "sprite": "Knight_idle.png",
@@ -84,6 +88,8 @@
     "width": 1,
     "height": 1,
     "is_pickupable": false,
+    "visualPixelsPerCell": 64,
+    "visualPivot": [0.5, 0.0],
     "animations": {
       "idle": {
         "sprite": "Mushroom_idle.png",
@@ -97,6 +103,46 @@
       },
       "attack": {
         "sprite": "Mushroom_attack.png",
+        "cols": 8,
+        "rows": 1
+      }
+    },
+    "attack_patterns": [
+      {
+        "name": "Mage Siege"
+      },
+      {
+        "name": "Mage Siege"
+      }
+    ]
+  }
+,
+  {
+    "entityTypeID": 4,
+    "name": "EvilWizard",
+    "sprite": "EvilWizard.png",
+    "entity_class": "enemy",
+    "behavior_type": "ranged",
+    "max_health": 40.0,
+    "move_speed": 3.0,
+    "width": 2,
+    "height": 3,
+    "is_pickupable": false,
+    "visualPixelsPerCell": 30,
+    "visualPivot": [0.5, 0.0],
+    "animations": {
+      "idle": {
+        "sprite": "EvilWizard_idle.png",
+        "cols": 8,
+        "rows": 1
+      },
+      "walk": {
+        "sprite": "EvilWizard_walk.png",
+        "cols": 8,
+        "rows": 1
+      },
+      "attack": {
+        "sprite": "EvilWizard_attack1.png",
         "cols": 8,
         "rows": 1
       }
