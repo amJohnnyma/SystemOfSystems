@@ -1,6 +1,7 @@
 #include "entity.h"
 #include "math_types.h"
 #include "world_types.h"
+#include <random>
 
 void Entity::on_tick(EntityTickContext etx)
 {

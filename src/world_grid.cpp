@@ -11,6 +11,8 @@
 #include <filesystem>
 #include <memory>
 #include <utility>
+#include <fstream>
+#include <iomanip>
 
 Cell WorldGrid::get_cell(int x, int y) const
 {
@@ -690,21 +692,141 @@ uint32_t WorldGrid::tick(double deltaTime)
     time_accumulator_ += deltaTime;
     uint32_t active_flags = TickFlags::NONE;
 
-    if (!entities_.empty()) {
-        EntityTickContext etx
+
+
+if (!tick_entities_.empty())
+{
+    EntityTickContext etx
+    {
+        .deltaTime = deltaTime,
+        .world_cells = world_cells_,
+        .world_x = world_x_,
+        .world_y = world_y_,
+        .threshold = threshold,
+        .playerPos = player.getPosition()
+    };
+
+    constexpr size_t PARALLEL_THRESHOLD = 250;
+    constexpr size_t MIN_BATCH_SIZE = 125;
+
+    const size_t count = tick_entities_.size();
+
+    const size_t num_threads =
+        (count < PARALLEL_THRESHOLD || !pool_)
+        ? 1
+        : std::max(
+            size_t{1},
+            std::min(
+                static_cast<size_t>(pool_->get_num_threads()),
+                (count + MIN_BATCH_SIZE - 1) / MIN_BATCH_SIZE
+            )
+        );
+
+    const size_t batch_size =
+        (count + num_threads - 1) / num_threads;
+
+    // Each worker gets its own list of indices to delete.
+    std::vector<std::vector<size_t>> delete_lists(num_threads);
+
+    std::vector<std::future<void>> futures;
+    futures.reserve(num_threads);
+
+    // Shared processing logic for a batch.
+    auto process_batch = [&](size_t t)
+    {
+        const size_t start_idx = t * batch_size;
+        const size_t end_idx =
+            std::min(start_idx + batch_size, count);
+
+        auto& deletions = delete_lists[t];
+
+        for (size_t i = start_idx; i < end_idx; ++i)
         {
-            .deltaTime = deltaTime,
-                .world_cells = world_cells_,
-                .world_x = world_x_,
-                .world_y = world_y_,
-                .threshold = threshold,
-                .playerPos = player.getPosition()
-        };
-        for (auto& [uID, entity] : entities_) {
-            entity.on_tick(etx); // updates internal smooth positions
+            uint32_t uid = tick_entities_[i];
+
+            auto it = entities_.find(uid);
+
+            if (it == entities_.end())
+            {
+                // Record the index, do not erase yet.
+                deletions.push_back(i);
+                continue;
+            }
+
+            it->second.on_tick(etx);
         }
-        active_flags |= TickFlags::ENTITY_UPDATE;
+    };
+
+    if (num_threads == 1)
+    {
+        process_batch(0);
     }
+    else
+    {
+        for (size_t t = 0; t < num_threads; ++t)
+        {
+            futures.push_back(
+                pool_->enqueue(
+                    [&, t]()
+                    {
+                        process_batch(t);
+                    }
+                )
+            );
+        }
+
+        // Wait until all threads have finished.
+        for (auto& f : futures)
+        {
+            f.get();
+        }
+    }
+
+    // SERIAL CLEANUP
+
+    // Merge the per-worker deletion lists.
+std::vector<size_t> delete_indices;
+
+for (const auto& list : delete_lists)
+{
+    delete_indices.insert(
+        delete_indices.end(),
+        list.begin(),
+        list.end()
+    );
+}
+
+if (!delete_indices.empty())
+{
+    // Worker batches were processed in index order,
+    // so these lists are already sorted internally.
+    std::sort(
+        delete_indices.begin(),
+        delete_indices.end()
+    );
+
+    size_t write = 0;
+    size_t deleted = 0;
+
+    for (size_t read = 0; read < tick_entities_.size(); ++read)
+    {
+        if (deleted < delete_indices.size() &&
+            read == delete_indices[deleted])
+        {
+            ++deleted;
+            continue;
+        }
+
+        tick_entities_[write++] = tick_entities_[read];
+    }
+
+    tick_entities_.resize(write);
+}
+
+    active_flags |= TickFlags::ENTITY_UPDATE;
+}
+
+
     /*
 
        if (time_accumulator_ >= spawn_interval_)
@@ -928,7 +1050,13 @@ void WorldGrid::placeEntity(int bl_x, int bl_y, int entityTypeID)
 
 
     // 5. Register and spawn the entity instance
-    entities_.try_emplace(uID, Entity(et));
+    auto [it, inserted] =
+        entities_.try_emplace(uID, et);
+
+    if (inserted)
+    {
+        tick_entities_.push_back(uID);
+    }
 
     // you can push the uID into cell reference lists here since multiple entities can share a tile.
     for (int dy = 0; dy < h; ++dy)
@@ -955,8 +1083,6 @@ void WorldGrid::placeEntity(int bl_x, int bl_y, int entityTypeID)
 WorldGrid::WorldGrid()
 {
 }
-#include <fstream>
-#include <iomanip>
 
 namespace
 {
@@ -964,54 +1090,54 @@ namespace
         sizeof(void*) * 2;
 
     template<typename T>
-    std::size_t vectorMemory(const std::vector<T>& v)
-    {
-        return sizeof(v) + v.capacity() * sizeof(T);
-    }
+        std::size_t vectorMemory(const std::vector<T>& v)
+        {
+            return sizeof(v) + v.capacity() * sizeof(T);
+        }
 
     template<typename K, typename V>
-    std::size_t mapMemory(
-        const std::unordered_map<K, V>& map)
-    {
-        return sizeof(map)
-            + map.bucket_count() * sizeof(void*)
-            + map.size() *
-              (sizeof(typename std::unordered_map<K, V>::value_type)
-               + MAP_NODE_OVERHEAD);
-    }
+        std::size_t mapMemory(
+                const std::unordered_map<K, V>& map)
+        {
+            return sizeof(map)
+                + map.bucket_count() * sizeof(void*)
+                + map.size() *
+                (sizeof(typename std::unordered_map<K, V>::value_type)
+                 + MAP_NODE_OVERHEAD);
+        }
 
     std::size_t cellVectorMemory(
-        const std::vector<Cell>& cells)
+            const std::vector<Cell>& cells)
     {
         std::size_t bytes = vectorMemory(cells);
 
         for (const Cell& cell : cells)
         {
             bytes += cell.entities_on_cell_uID.capacity()
-                   * sizeof(int);
+                * sizeof(int);
         }
 
         return bytes;
     }
 
     std::size_t meshMemory(
-        const std::vector<ChunkMeshData>& meshes)
+            const std::vector<ChunkMeshData>& meshes)
     {
         std::size_t bytes = vectorMemory(meshes);
 
         for (const auto& chunk : meshes)
         {
             bytes += chunk.terrain_mesh.vertices.capacity()
-                   * sizeof(Vertex);
+                * sizeof(Vertex);
 
             bytes += chunk.terrain_mesh.indices.capacity()
-                   * sizeof(uint32_t);
+                * sizeof(uint32_t);
 
             bytes += chunk.structure_mesh.vertices.capacity()
-                   * sizeof(Vertex);
+                * sizeof(Vertex);
 
             bytes += chunk.structure_mesh.indices.capacity()
-                   * sizeof(uint32_t);
+                * sizeof(uint32_t);
         }
 
         return bytes;
@@ -1020,16 +1146,16 @@ namespace
     double toMiB(std::size_t bytes)
     {
         return static_cast<double>(bytes) /
-               (1024.0 * 1024.0);
+            (1024.0 * 1024.0);
     }
 }
 
 WorldGrid::~WorldGrid()
 {
     std::ofstream file(
-        "world_memory_report.txt",
-        std::ios::trunc
-    );
+            "world_memory_report.txt",
+            std::ios::trunc
+            );
 
     if (!file)
         return;
@@ -1039,7 +1165,7 @@ WorldGrid::~WorldGrid()
     const auto toMiB = [](std::size_t bytes)
     {
         return static_cast<double>(bytes) /
-               (1024.0 * 1024.0);
+            (1024.0 * 1024.0);
     };
 
     std::size_t total = sizeof(*this);
@@ -1047,10 +1173,10 @@ WorldGrid::~WorldGrid()
     auto report = [&](const char* name, std::size_t bytes)
     {
         file << std::left << std::setw(35) << name
-             << std::right << std::setw(14) << bytes
-             << " bytes  "
-             << std::setw(12) << toMiB(bytes)
-             << " MiB\n";
+            << std::right << std::setw(14) << bytes
+            << " bytes  "
+            << std::setw(12) << toMiB(bytes)
+            << " MiB\n";
 
         total += bytes;
     };
@@ -1060,7 +1186,7 @@ WorldGrid::~WorldGrid()
     file << "============================================\n\n";
 
     file << "Inline WorldGrid object: "
-         << sizeof(*this) << " bytes\n\n";
+        << sizeof(*this) << " bytes\n\n";
 
     // ------------------------------------------------
     // Terrain cells
@@ -1098,22 +1224,22 @@ WorldGrid::~WorldGrid()
     // Chunk tracking
     // ------------------------------------------------
     report(
-        "dirty_chunk_indices_ heap",
-        MemoryUsage::vectorHeap(dirty_chunk_indices_)
-    );
+            "dirty_chunk_indices_ heap",
+            MemoryUsage::vectorHeap(dirty_chunk_indices_)
+          );
 
     report(
-        "chunk_is_dirty_ heap",
-        MemoryUsage::vectorHeap(chunk_is_dirty_)
-    );
+            "chunk_is_dirty_ heap",
+            MemoryUsage::vectorHeap(chunk_is_dirty_)
+          );
 
     // ------------------------------------------------
     // Thread pool
     // ------------------------------------------------
     report(
-        "ThreadPool inline object",
-        pool_ ? sizeof(ThreadPool) : 0
-    );
+            "ThreadPool inline object",
+            pool_ ? sizeof(ThreadPool) : 0
+          );
 
     // ------------------------------------------------
     // Structures
@@ -1121,48 +1247,48 @@ WorldGrid::~WorldGrid()
     // Currently counts map allocations and inline
     // Structure objects, but not their nested heaps.
     std::size_t structuresBytes = MemoryUsage::mapHeap(
-        structures_,
-        [](uint32_t, const Structure& structure)
-        {
+            structures_,
+            [](uint32_t, const Structure& structure)
+            {
             return structure.getMemoryUsage()
-                 - sizeof(Structure);
-        }
-    );
+            - sizeof(Structure);
+            }
+            );
 
     std::size_t structureRegistryBytes = MemoryUsage::mapHeap(
-        structure_registry_,
-        [](int, const Structure& structure)
-        {
+            structure_registry_,
+            [](int, const Structure& structure)
+            {
             return structure.getMemoryUsage()
-                 - sizeof(Structure);
-        }
-    );
+            - sizeof(Structure);
+            }
+            );
 
     report("structures_ heap", structuresBytes);
 
     report(
-        "tick_structures_ heap",
-        MemoryUsage::vectorHeap(tick_structures_)
-    );
+            "tick_structures_ heap",
+            MemoryUsage::vectorHeap(tick_structures_)
+          );
 
 
     report(
-        "structure_registry_ heap",
-        structureRegistryBytes
-    );
+            "structure_registry_ heap",
+            structureRegistryBytes
+          );
 
     // ------------------------------------------------
     // Entity registry
     // ------------------------------------------------
     std::size_t entityRegistryBytes =
         MemoryUsage::mapHeap(
-            entity_registry_,
-            [](int, const Entity& entity)
-            {
+                entity_registry_,
+                [](int, const Entity& entity)
+                {
                 return entity.getMemoryUsage()
-                     - sizeof(Entity);
-            }
-        );
+                - sizeof(Entity);
+                }
+                );
 
     report("entity_registry_ heap", entityRegistryBytes);
 
@@ -1170,29 +1296,29 @@ WorldGrid::~WorldGrid()
     // Active entities
     // ------------------------------------------------
     std::size_t entitiesBytes = MemoryUsage::mapHeap(
-        entities_,
-        [](uint32_t, const Entity& entity)
-        {
+            entities_,
+            [](uint32_t, const Entity& entity)
+            {
             return entity.getMemoryUsage()
-                 - sizeof(Entity);
-        }
-    );
+            - sizeof(Entity);
+            }
+            );
 
     report("entities_ heap", entitiesBytes);
 
     report(
-        "tick_entities_ heap",
-        MemoryUsage::vectorHeap(tick_entities_)
-    );
+            "tick_entities_ heap",
+            MemoryUsage::vectorHeap(tick_entities_)
+          );
 
     // ------------------------------------------------
     // Player
     // ------------------------------------------------
     // Player itself is already inside sizeof(WorldGrid).
     report(
-        "player nested heap",
-        player.getMemoryUsage() - sizeof(Player)
-    );
+            "player nested heap",
+            player.getMemoryUsage() - sizeof(Player)
+          );
 
     // ------------------------------------------------
     // Summary
@@ -1200,33 +1326,33 @@ WorldGrid::~WorldGrid()
     file << "\n============================================\n";
 
     file << "ESTIMATED ACCOUNTED MEMORY: "
-         << total << " bytes ("
-         << toMiB(total) << " MiB)\n";
+        << total << " bytes ("
+        << toMiB(total) << " MiB)\n";
 
     file << "============================================\n";
 
     file << "\nCONTAINER COUNTS\n";
 
     file << "World cells: "
-         << world_cells_.size() << '\n';
+        << world_cells_.size() << '\n';
 
     file << "Placed cells: "
-         << placed_cells_.size() << '\n';
+        << placed_cells_.size() << '\n';
 
     file << "Chunks: "
-         << mesh.size() << '\n';
+        << mesh.size() << '\n';
 
     file << "Entities: "
-         << entities_.size() << '\n';
+        << entities_.size() << '\n';
 
     file << "Entity types: "
-         << entity_registry_.size() << '\n';
+        << entity_registry_.size() << '\n';
 
     file << "Structures: "
-         << structures_.size() << '\n';
+        << structures_.size() << '\n';
 
     file << "Structure types: "
-         << structure_registry_.size() << '\n';
+        << structure_registry_.size() << '\n';
 
     file << "\nNOTES\n";
     file << "Includes known owned container allocations.\n";

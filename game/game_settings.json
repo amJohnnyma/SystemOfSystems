@@ -1,0 +1,39 @@
+{
+  "performance": {
+    "entity_parallel_threshold": 250,
+    "entity_min_batch_size": 125,
+    "profiling_enabled": true,
+    "profiling_sample_count": 300,
+    "thread_pool_workers": 0
+  },
+  "world": {
+    "default_width": 6400,
+    "default_height": 1800,
+    "default_chunk_size": 64,
+    "default_density_threshold": 128.0
+  },
+  "terrain_generation": {
+    "surface_noise_frequency": 0.008,
+    "surface_noise_octaves": 4,
+    "surface_noise_amplitude": 1.0,
+    "surface_noise_persistence": 0.5,
+    "base_surface_height_fraction": 0.25,
+    "height_variation_fraction": 0.1,
+    "grass_depth": 8,
+    "surface_material_id": 2,
+    "deep_material_id": 3,
+    "patch_probability": 0.8,
+    "patch_material_id_min": 1,
+    "patch_material_id_max": 256,
+    "patch_min_world_y_fraction": 0.3,
+    "patch_radius_min": 3.0,
+    "patch_radius_max": 10.0,
+    "patch_density_strength": 255.0
+  },
+  "rendering": {
+    "entity_culling_margin": 2.0
+  },
+  "simulation": {
+    "structure_spawn_interval": 1.0
+  }
+}

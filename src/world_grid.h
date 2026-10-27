@@ -51,6 +51,9 @@ class WorldGrid
         std::unordered_map<int, Structure> structure_registry_;
         std::unordered_map<int, Entity> entity_registry_;
 
+        std::unordered_map<uint32_t, Entity> entities_ = {};
+        std::vector<uint32_t> tick_entities_;
+
 
         //Just testing the tick
         double time_accumulator_ = 0.0;
@@ -59,8 +62,6 @@ class WorldGrid
 
         Player player;
 
-        std::unordered_map<uint32_t, Entity> entities_ = {};
-        std::vector<uint32_t> tick_entities_ = {}; // basically all of them
 
         
 

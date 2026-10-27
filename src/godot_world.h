@@ -1,4 +1,5 @@
 
+
 // exposes world to ClassDB bindings to GDScript
 // translate raw cpp into godot resources
 
@@ -19,6 +20,7 @@ class GodotSimulation : public Node {
 
 private:
     WorldGrid world_grid_; // Holds your pure C++ object
+    godot::Dictionary entity_render_configs_;
 
 protected:
     static void _bind_methods();
@@ -51,6 +53,9 @@ public:
 
     Dictionary getEntityTransformsForRendering() const;
     void createPlayer(godot::Dictionary ps);
+    void setEntityRenderConfigs(const godot::Dictionary& configs);
+
+    godot::Dictionary getEntityRenderBuffers() const;
 
 };
 

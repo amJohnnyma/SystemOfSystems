@@ -176,6 +176,7 @@ void fragment() {
 	_init_create_player()
 	_init_player_materials()
 	_init_player_debug()
+	_register_entity_render_configs()
 	
 	_on_player_data_updated(world.getPlayerData())
 	
@@ -202,12 +203,12 @@ void fragment() {
 	
 	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
 	
-	world.placeEntity(310,10,1)
+	#world.placeEntity(310,10,1)
 	#world.placeEntity(320,10,2)
 	#world.placeEntity(330,10,3)
 	#world.placeEntity(340,10,4)
-	#for i in range(10000):
-	#	world.placeEntity(320,10,1)
+	for i in range(10000):
+		world.placeEntity(320,10,1)
 
 	
 func _calculate_sprite_transform(
@@ -717,175 +718,86 @@ func get_structure_sprite_path(structure_data: Dictionary) -> String:
 	# Adjust path according to where your sprites are stored
 	return "res://game/sprite" + sprite_filename
 
-func _on_required_entity_update(batch_data: Dictionary) -> void:
 
-	# 1. Group entity data by composite key: "type_id_state"
-	var grouped_entities: Dictionary = {} # "type_id_state" -> Array of pos_data dicts
-	var all_entities: Array = []
+func _register_entity_render_configs() -> void:
+	var configs: Dictionary = {}
 
-	for uID in batch_data:
-		var pos_data: Dictionary = batch_data[uID]
-		all_entities.append(pos_data)
-		
-		var type_id: int = int(pos_data.get("entityTypeID", 1))
-		var state: String = str(pos_data.get("state", "idle")) # Read state passed from C++
-		
-		
-		var group_key := "%d_%s" % [type_id, state]
+	for group_key in enemy_multimeshes:
+		var mm_node: MultiMeshInstance2D = enemy_multimeshes[group_key]
 
-		if not grouped_entities.has(group_key):
-			grouped_entities[group_key] = []
-		grouped_entities[group_key].append(pos_data)
+		configs[group_key] = {
+			"cols": int(mm_node.get_meta("cols", 1)),
+			"rows": int(mm_node.get_meta("rows", 1)),
+			"frame_width_px": float(
+				mm_node.get_meta("frame_width_px", 1.0)
+			),
+			"frame_height_px": float(
+				mm_node.get_meta("frame_height_px", 1.0)
+			),
+			"visual_pixels_per_cell": float(
+				mm_node.get_meta("visual_pixels_per_cell", 30.0)
+			),
+			"visual_pivot": mm_node.get_meta(
+				"visual_pivot",
+				Vector2(0.5, 0.0)
+			)
+		}
 
-	# 2. Update each MultiMeshInstance2D per state bucket
+		var mm: MultiMesh = mm_node.multimesh
+
+		# Configure these BEFORE populating instances.
+		# If instances already exist, reset instance_count first.
+		mm.instance_count = 0
+		mm.transform_format = MultiMesh.TRANSFORM_2D
+		mm.use_colors = false
+		mm.use_custom_data = true
+
+
+	world.set_entity_render_configs(configs)
+
+
+
+var entity_render_debug_printed := false
+
+
+func _on_required_entity_update(
+	render_buffers: Dictionary
+) -> void:
+
 	for group_key in enemy_multimeshes:
 		var mm_node: MultiMeshInstance2D = enemy_multimeshes[group_key]
 		var mm: MultiMesh = mm_node.multimesh
-		var entities: Array = grouped_entities.get(group_key, [])
-		
-		# Animation grid
-		var total_cols: float = float(mm_node.get_meta("cols", 1.0))
-		var total_rows: float = float(mm_node.get_meta("rows", 1.0))
 
-		# Sprite frame dimensions in pixels
-		var frame_size_px := Vector2(
-			float(mm_node.get_meta("frame_width_px", 1.0)),
-			float(mm_node.get_meta("frame_height_px", 1.0))
-		)
+		if not render_buffers.has(group_key):
+			if mm.instance_count != 0:
+				mm.instance_count = 0
+			continue
 
-		# Rendering configuration for this entity type
-		var pixels_per_cell: float = float(
-			mm_node.get_meta("visual_pixels_per_cell", 30.0)
-		)
+		var group_data: Dictionary = render_buffers[group_key]
 
-		var visual_pivot: Vector2 = mm_node.get_meta(
-			"visual_pivot",
-			Vector2(0.5, 0.0)
-		)
+		var buffer: PackedFloat32Array = group_data["buffer"]
+		var bounds: AABB = group_data["aabb"]
 
-		mm.instance_count = entities.size()
+		var count: int = int(buffer.size() / 12)
 
-		for idx in range(entities.size()):
-			var pos_data: Dictionary = entities[idx]
+		if count == 0:
+			if mm.instance_count != 0:
+				mm.instance_count = 0
+			continue
 
-			var grid_x: float = float(pos_data["x_smooth"])
-			var grid_y: float = float(pos_data["y_smooth"])
+		# Update the actual spatial bounds of this group.
+		if mm.custom_aabb != bounds:
+			mm.custom_aabb = bounds
 
-			# Physical dimensions from C++
-			var w: float = float(pos_data.get("width", 2))
-			var h: float = float(pos_data.get("height", 2))
+		if mm.instance_count != count:
+			mm.instance_count = count
 
-			var facing_right: bool = bool(
-				pos_data.get("facingRight", true)
-			)
+		mm.visible_instance_count = -1
 
-			# Visual dimensions are independent of physics dimensions
-			var xform := _calculate_sprite_transform(
-				Vector2(grid_x, grid_y),
-				Vector2(w, h),
-				frame_size_px,
-				pixels_per_cell,
-				visual_pivot,
-				facing_right
-			)
+		# Upload every entity transform in one operation.
+		mm.buffer = buffer
 
-			mm.set_instance_transform_2d(idx, xform)
 
-			# -----------------------------------------------------------------
-			# TEMPORARY / DYNAMIC: Map animPhase (0.0 to 1.0) to frame index
-			# -----------------------------------------------------------------
-			var anim_phase: float = float(pos_data.get("animPhase", 0.0))
-			#print(anim_phase)
-			var total_frames: int = int(total_cols * total_rows)
-			
-			# Snap phase to a discrete frame index
-			var current_frame: int = int(floor(anim_phase * total_frames)) % max(1, total_frames)
-			
-			# Convert linear frame index back into 2D grid column and row coordinates
-			var frame_col: float = float(current_frame % int(total_cols))
-			var frame_row: float = float(current_frame / int(total_cols))
-
-			mm.set_instance_custom_data(
-				idx, 
-				Color(frame_col, frame_row, total_cols, total_rows)
-			)
-
-	# 3. Update Debug Origin MultiMesh
-
-	var debug_mm = debug_multimesh_node.multimesh if debug_multimesh_node else null
-	if debug_mm:
-		debug_mm.instance_count = all_entities.size() * 2
-
-		for idx in range(all_entities.size()):
-			var pos_data: Dictionary = all_entities[idx]
-
-			var origin_x: int = int(pos_data.get(
-				"x_origin",
-				floor(float(pos_data["x_smooth"]))
-			))
-
-			var origin_y: float = float(pos_data["y_smooth"])
-
-			var w: float = float(pos_data.get("width", 2))
-			var h: float = float(pos_data.get("height", 2))
-
-			# --------------------------------------------------
-			# 1. MAGENTA: Entity hitbox
-			# --------------------------------------------------
-			var center := Vector2(
-				origin_x + w * 0.5,
-				origin_y - h * 0.5 + 1.0
-			)
-
-			var facing_right: bool = bool(
-				pos_data.get("facingRight", true)
-			)
-
-			var x_scale: float = w if facing_right else -w
-
-			var hitbox_xform := Transform2D(
-				Vector2(x_scale, 0.0),
-				Vector2(0.0, -h),
-				center
-			)
-
-			var hitbox_idx: int = idx * 2
-
-			debug_mm.set_instance_transform_2d(
-				hitbox_idx, hitbox_xform
-			)
-
-			debug_mm.set_instance_custom_data(
-				hitbox_idx, Color(1, 0, 1, 0.3)
-			)
-
-			# --------------------------------------------------
-			# 2. RED: 1x1 origin cell
-			# --------------------------------------------------
-			# Same origin as the magenta hitbox.
-			# Center of bottom-left occupied cell.
-			var origin_center := Vector2(
-				origin_x + 0.5,
-				origin_y + 0.5
-			)
-
-			var origin_xform := Transform2D(
-				Vector2(1.0, 0.0),
-				Vector2(0.0, -1.0),
-				origin_center
-			)
-
-			var origin_idx: int = idx * 2 + 1
-
-			debug_mm.set_instance_transform_2d(
-				origin_idx, origin_xform
-			)
-
-			debug_mm.set_instance_custom_data(
-				origin_idx, Color(1, 0, 0, 0.8)
-			)
-
-	
 
 		
 func _on_slot_action_requested(slot_number: int) -> void:
@@ -1111,7 +1023,6 @@ func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 		if terrain_mesh.get_surface_count() > 0
 		else null
 	)
-
 
 	# --------------------------------------------------
 	# Structures and blocks
