@@ -193,6 +193,26 @@ GodotSimulation::getEntityRenderBuffers() const
     godot::Dictionary result;
 
     const auto& entities = world_grid_.getEntities();
+
+const bool debug_enabled = static_cast<bool>(
+    entity_render_configs_.get("__debug_enabled", false)
+);
+
+
+godot::PackedFloat32Array debug_buffer;
+float* debug_dst = nullptr;
+size_t debug_index = 0;
+
+float debug_min_x = std::numeric_limits<float>::max();
+float debug_min_y = std::numeric_limits<float>::max();
+float debug_max_x = std::numeric_limits<float>::lowest();
+float debug_max_y = std::numeric_limits<float>::lowest();
+
+if (debug_enabled && !entities.empty())
+{
+    debug_buffer.resize(entities.size() * 12);
+    debug_dst = debug_buffer.ptrw();
+}
     const float MARGIN =
         GameSettings::Instance().rendering.entity_culling_margin;
 
@@ -211,6 +231,38 @@ GodotSimulation::getEntityRenderBuffers() const
             "_" + entity.getState();
 
         groups[key].push_back(&entity);
+if (debug_dst)
+{
+    const float x = et.x_smooth;
+    const float y = et.y_smooth;
+    const float w = static_cast<float>(et.width);
+    const float h = static_cast<float>(et.height);
+
+    float* dst = debug_dst + debug_index * 12;
+    ++debug_index;
+
+    // Physical hitbox transform (centered 1x1 quad)
+    dst[0] = w;
+    dst[1] = 0.0f;
+    dst[2] = 0.0f;
+    dst[3] = x + w * 0.5f;
+
+    dst[4] = 0.0f;
+    dst[5] = -h;
+    dst[6] = 0.0f;
+    dst[7] = y + 1.0f - h * 0.5f;
+
+    // Red, semi-transparent hitbox
+    dst[8]  = 1.0f;
+    dst[9]  = 0.0f;
+    dst[10] = 0.0f;
+    dst[11] = 0.25f;
+
+    debug_min_x = std::min(debug_min_x, x);
+    debug_min_y = std::min(debug_min_y, y + 1.0f - h);
+    debug_max_x = std::max(debug_max_x, x + w);
+    debug_max_y = std::max(debug_max_y, y + 1.0f);
+}
     }
 
     for (const auto& [key, group] : groups)
@@ -290,6 +342,29 @@ GodotSimulation::getEntityRenderBuffers() const
         result[godot_key] = group_data;
     }
 
+if (debug_dst)
+{
+    constexpr float MARGIN = 2.0f;
+
+    godot::Dictionary debug_data;
+
+    debug_data["buffer"] = debug_buffer;
+
+    debug_data["aabb"] = godot::AABB(
+        godot::Vector3(
+            debug_min_x - MARGIN,
+            debug_min_y - MARGIN,
+            -1.0f
+        ),
+        godot::Vector3(
+            debug_max_x - debug_min_x + 2.0f * MARGIN,
+            debug_max_y - debug_min_y + 2.0f * MARGIN,
+            2.0f
+        )
+    );
+
+    result["__debug"] = debug_data;
+}
     return result;
 }
 #include <chrono>

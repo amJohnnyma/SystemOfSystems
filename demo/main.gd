@@ -44,6 +44,7 @@ var block_atlas_material: ShaderMaterial
 var terrain_blend_shader: Shader
 var terrain_blend_material: ShaderMaterial
 
+const SHOW_ENTITY_HITBOXES := true
 var enemy_multimeshes : Dictionary = {}
 var enemy_materials : Dictionary = {}
 var debug_multimesh_node: MultiMeshInstance2D
@@ -191,10 +192,6 @@ void fragment() {
 	#print("Loaded entities into Godot:\n", JSON.stringify(entity_registry, "\t"))
 	
 	
-	
-
-	
-	
 	for type_id: int in BLOCK_ATLAS_COORDS:
 		var atlas_coords: Vector2i = BLOCK_ATLAS_COORDS[type_id]
 
@@ -202,6 +199,8 @@ void fragment() {
 		var y: int = atlas_coords.y
 
 		world.placeStructure(x, y, type_id)
+		
+		
 	# Populate all chunk nodes initially
 	_setup_full_mesh_display()
 	update_mesh_display()
@@ -213,8 +212,8 @@ void fragment() {
 	#world.placeEntity(320,10,2)
 	#world.placeEntity(330,10,3)
 	#world.placeEntity(340,10,4)
-	for i in range(1):
-		world.placeEntity(320,10,1)
+	for i in range(1000):
+		world.placeEntity(randi_range(1, 320),10,1)
 
 	
 func _calculate_sprite_transform(
@@ -758,7 +757,8 @@ func _register_entity_render_configs() -> void:
 		mm.use_colors = false
 		mm.use_custom_data = true
 
-
+	configs["__debug_enabled"] = SHOW_ENTITY_HITBOXES
+	debug_multimesh_node.visible = SHOW_ENTITY_HITBOXES
 	world.set_entity_render_configs(configs)
 
 
@@ -802,6 +802,32 @@ func _on_required_entity_update(
 
 		# Upload every entity transform in one operation.
 		mm.buffer = buffer
+		# Debug hitbox rendering
+	if not SHOW_ENTITY_HITBOXES:
+		return
+
+	var debug_mm: MultiMesh = debug_multimesh_node.multimesh
+
+	var debug_data: Dictionary = render_buffers.get("__debug", {})
+
+	if debug_data.is_empty():
+		debug_mm.instance_count = 0
+		return
+
+	var debug_buffer: PackedFloat32Array = debug_data["buffer"]
+	var debug_count: int = debug_buffer.size() / 12
+
+	if debug_count == 0:
+		debug_mm.instance_count = 0
+		return
+
+	debug_mm.custom_aabb = debug_data["aabb"]
+
+	if debug_mm.instance_count != debug_count:
+		debug_mm.instance_count = debug_count
+
+	debug_mm.visible_instance_count = -1
+	debug_mm.buffer = debug_buffer
 
 
 

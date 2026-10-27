@@ -12,6 +12,7 @@
     "default_chunk_size": 64,
     "default_density_threshold": 128.0
   },
+
   "terrain_generation": {
     "seed": 1337,
     "material_patch_cells": 6,
@@ -37,15 +38,15 @@
         "soil_depth": 8,
         "top_ids": [
           1,
-          16
+          1
         ],
         "soil_ids": [
-          17,
-          48
+          3,
+          3
         ],
         "rock_ids": [
-          49,
-          96
+          17,
+          20
         ]
       },
       {
@@ -54,16 +55,16 @@
         "hill_multiplier": 1.0,
         "soil_depth": 4,
         "top_ids": [
-          97,
-          112
+          49,
+          49
         ],
         "soil_ids": [
-          113,
-          144
+          73,
+          73
         ],
         "rock_ids": [
-          145,
-          176
+          104,
+          104
         ]
       },
       {
@@ -72,16 +73,16 @@
         "hill_multiplier": 1.4,
         "soil_depth": 5,
         "top_ids": [
-          177,
-          192
+          69,
+          69
         ],
         "soil_ids": [
-          193,
-          216
+          55,
+          55
         ],
         "rock_ids": [
-          217,
-          240
+          17,
+          20
         ]
       },
       {
@@ -90,16 +91,16 @@
         "hill_multiplier": 0.85,
         "soil_depth": 11,
         "top_ids": [
-          241,
-          256
+          194,
+          195
         ],
         "soil_ids": [
-          1,
-          64
+          104,
+          104
         ],
         "rock_ids": [
-          65,
-          160
+          114,
+          115
         ]
       }
     ],
@@ -109,22 +110,22 @@
       {
         "name": "stone",
         "material_ids": [
-          49,
-          112
+          17,
+          20
         ]
       },
       {
         "name": "crystal",
         "material_ids": [
-          113,
-          192
+          51,
+          52
         ]
       },
       {
         "name": "ancient",
         "material_ids": [
-          193,
-          256
+          241,
+          250
         ]
       }
     ],
@@ -159,12 +160,16 @@
       "min_radius": 3,
       "max_radius": 10,
       "material_ids": [
-        1,
-        256
+        33,
+        34
       ]
     },
     "structure_rules": []
-  },
+  }
+
+
+
+  ,
   "rendering": {
     "entity_culling_margin": 2.0
   },
