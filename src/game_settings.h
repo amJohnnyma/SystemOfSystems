@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <cstddef>
 #include <iostream>
+#include <cstdint>
+#include <limits>
+#include <type_traits>
 #include <string>
 #include <thread>
 
@@ -32,10 +35,13 @@ struct GameSettings {
         float surface_noise_persistence = 0.5f;
         float base_surface_height_fraction = 0.25f;
         float height_variation_fraction = 0.1f;
+        float surface_density_multiplier = 128.0f;
+        float surface_density_offset = 64.0f;
         int grass_depth = 8;
         int surface_material_id = 2;
         int deep_material_id = 3;
         float patch_probability = 0.8f;
+        std::uint32_t patch_seed = 0; // 0 = random seed per world initialization
         int patch_material_id_min = 1;
         int patch_material_id_max = 256;
         float patch_min_world_y_fraction = 0.3f;
@@ -57,7 +63,7 @@ struct GameSettings {
         return result;
     }
 
-private:
+    private:
     static GameSettings Load() {
         GameSettings s;
         const nlohmann::json& root = JsonLoader::Instance().Get("game/game_settings.json");
@@ -74,11 +80,41 @@ private:
         const auto t = section("terrain_generation");
         const auto r = section("rendering");
         const auto sim = section("simulation");
+        // JSON lookup without try/catch: compatible with -fno-exceptions.
+        // Reject mismatched types and out-of-range integer values.
         auto read = [](const nlohmann::json& j, const char* key, auto fallback) {
             using T = decltype(fallback);
-            if (!j.contains(key)) return fallback;
-            try { return j.at(key).get<T>(); }
-            catch (const nlohmann::json::exception&) { return fallback; }
+            auto it = j.find(key);
+            if (it == j.end()) return fallback;
+
+            if constexpr (std::is_same_v<T, bool>) {
+                return it->is_boolean() ? it->get<bool>() : fallback;
+            } else if constexpr (std::is_integral_v<T>) {
+                if (!it->is_number_integer()) return fallback;
+
+                if (it->is_number_unsigned()) {
+                    const auto value = it->get<std::uint64_t>();
+                    if (value > static_cast<std::uint64_t>(std::numeric_limits<T>::max()))
+                        return fallback;
+                    return static_cast<T>(value);
+                }
+
+                const auto value = it->get<std::int64_t>();
+                if constexpr (std::is_unsigned_v<T>) {
+                    if (value < 0 ||
+                            static_cast<std::uint64_t>(value) >
+                            static_cast<std::uint64_t>(std::numeric_limits<T>::max()))
+                        return fallback;
+                } else {
+                    if (value < static_cast<std::int64_t>(std::numeric_limits<T>::lowest()) ||
+                            value > static_cast<std::int64_t>(std::numeric_limits<T>::max()))
+                        return fallback;
+                }
+                return static_cast<T>(value);
+            } else if constexpr (std::is_floating_point_v<T>) {
+                return it->is_number() ? it->get<T>() : fallback;
+            }
+            return fallback;
         };
         s.performance.entity_parallel_threshold = std::max<std::size_t>(1, read(p, "entity_parallel_threshold", s.performance.entity_parallel_threshold));
         s.performance.entity_min_batch_size = std::max<std::size_t>(1, read(p, "entity_min_batch_size", s.performance.entity_min_batch_size));
@@ -90,21 +126,25 @@ private:
         s.world.default_chunk_size = std::max(1, read(w, "default_chunk_size", s.world.default_chunk_size));
         s.world.default_density_threshold = std::clamp(read(w, "default_density_threshold", s.world.default_density_threshold), 0.0f, 255.0f);
         s.terrain.surface_noise_frequency = std::max(0.0f, read(t, "surface_noise_frequency", s.terrain.surface_noise_frequency));
-        s.terrain.surface_noise_octaves = std::max(1, read(t, "surface_noise_octaves", s.terrain.surface_noise_octaves));
-        s.terrain.surface_noise_amplitude = read(t, "surface_noise_amplitude", s.terrain.surface_noise_amplitude);
-        s.terrain.surface_noise_persistence = read(t, "surface_noise_persistence", s.terrain.surface_noise_persistence);
-        s.terrain.base_surface_height_fraction = read(t, "base_surface_height_fraction", s.terrain.base_surface_height_fraction);
-        s.terrain.height_variation_fraction = read(t, "height_variation_fraction", s.terrain.height_variation_fraction);
+        s.terrain.surface_noise_octaves = std::clamp(read(t, "surface_noise_octaves", s.terrain.surface_noise_octaves), 1, 16);
+        // Noise output height multiplier (not fBm's frequency parameter).
+        s.terrain.surface_noise_amplitude = std::max(0.0f, read(t, "surface_noise_amplitude", s.terrain.surface_noise_amplitude));
+        s.terrain.surface_noise_persistence = std::clamp(read(t, "surface_noise_persistence", s.terrain.surface_noise_persistence), 0.0f, 1.0f);
+        s.terrain.base_surface_height_fraction = std::clamp(read(t, "base_surface_height_fraction", s.terrain.base_surface_height_fraction), 0.0f, 1.0f);
+        s.terrain.height_variation_fraction = std::clamp(read(t, "height_variation_fraction", s.terrain.height_variation_fraction), 0.0f, 1.0f);
+        s.terrain.surface_density_multiplier = std::clamp(read(t, "surface_density_multiplier", s.terrain.surface_density_multiplier), 0.0f, 255.0f);
+        s.terrain.surface_density_offset = std::clamp(read(t, "surface_density_offset", s.terrain.surface_density_offset), 0.0f, 255.0f);
         s.terrain.grass_depth = std::max(0, read(t, "grass_depth", s.terrain.grass_depth));
-        s.terrain.surface_material_id = std::clamp(read(t, "surface_material_id", s.terrain.surface_material_id), 0, 65535);
-        s.terrain.deep_material_id = std::clamp(read(t, "deep_material_id", s.terrain.deep_material_id), 0, 65535);
+        s.terrain.surface_material_id = std::clamp(read(t, "surface_material_id", s.terrain.surface_material_id), 1, 65535);
+        s.terrain.deep_material_id = std::clamp(read(t, "deep_material_id", s.terrain.deep_material_id), 1, 65535);
         s.terrain.patch_probability = std::clamp(read(t, "patch_probability", s.terrain.patch_probability), 0.0f, 1.0f);
-        s.terrain.patch_material_id_min = std::clamp(read(t, "patch_material_id_min", s.terrain.patch_material_id_min), 0, 65535);
+        s.terrain.patch_seed = read(t, "patch_seed", s.terrain.patch_seed);
+        s.terrain.patch_material_id_min = std::clamp(read(t, "patch_material_id_min", s.terrain.patch_material_id_min), 1, 65535);
         s.terrain.patch_material_id_max = std::clamp(read(t, "patch_material_id_max", s.terrain.patch_material_id_max), s.terrain.patch_material_id_min, 65535);
         s.terrain.patch_min_world_y_fraction = std::clamp(read(t, "patch_min_world_y_fraction", s.terrain.patch_min_world_y_fraction), 0.0f, 1.0f);
         s.terrain.patch_radius_min = std::max(0.001f, read(t, "patch_radius_min", s.terrain.patch_radius_min));
         s.terrain.patch_radius_max = std::max(s.terrain.patch_radius_min, read(t, "patch_radius_max", s.terrain.patch_radius_max));
-        s.terrain.patch_density_strength = read(t, "patch_density_strength", s.terrain.patch_density_strength);
+        s.terrain.patch_density_strength = std::clamp(read(t, "patch_density_strength", s.terrain.patch_density_strength), 0.0f, 255.0f);
         s.rendering.entity_culling_margin = std::max(0.0f, read(r, "entity_culling_margin", s.rendering.entity_culling_margin));
         s.simulation.structure_spawn_interval = std::max(0.0, read(sim, "structure_spawn_interval", s.simulation.structure_spawn_interval));
         return s;

@@ -11,22 +11,6 @@ inline float GetInterpolationT(float d1, float d2, float threshold)
     if (std::abs(d2 - d1) < 0.00001f) return 0.5f;
     return (threshold - d1) / (d2 -d1);
 }
-uint16_t MarchingSquares::ResolvePrecedence(uint16_t t1, float d1, uint16_t t2, float d2)
-{
-    if(t1 == t2) return t1;
-    if (t1 == 0 && t2 == 0) return 0;
-    if (t1 == 0 && t2 != 0) return t2;
-    if (t2 == 0 && t1 != 0) return t1;
-    uint8_t p1 = GetPriority(t1);
-    uint8_t p2 = GetPriority(t2);
-
-    // 1. Higher priority takes complete precedence
-    if (p1 > p2) return t1;
-    if (p2 > p1) return t2;
-
-    // 2. Equal priority: Fallback to highest density (proportional sharing)
-    return (d1 >= d2) ? t1 : t2;
-}
 // Edge cuts: pick type_id of whichever corner along this edge has higher density
 Vertex MarchingSquares::GetEdgeVertex(int edge, float x, float y, 
         float d1, float d2, uint16_t t1, uint16_t t2, float threshold)
@@ -83,7 +67,6 @@ Vertex MarchingSquares::GetCellVertex(int id, float x, float y,
 //convert edges into actual 2D coords
 MarchingSquares::MarchingSquares()
 {
-    PrecacheMaterials();
 
 }
 //Helpers for threads

@@ -136,6 +136,12 @@ void fragment() {
 	# Call the C++ method that triggers the emission
 	world.trigger_test_signal("MEOW")
 	
+	var defaults: Dictionary = world.getWorldDefaults()
+
+	world_width = int(defaults["width"])
+	world_height = int(defaults["height"])
+	cell_size = float(defaults["chunk_size"])
+	threshold = float(defaults["density_threshold"])
 		# Initialize C++ world grid (world_x, world_y, g_size)
 	world.createWorld(world_width, world_height, int(cell_size), threshold)
 		

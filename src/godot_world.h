@@ -57,6 +57,8 @@ public:
 
     godot::Dictionary getEntityRenderBuffers() const;
 
+    godot::Dictionary getWorldDefaults() const;
+
 };
 
 } // namespace godot

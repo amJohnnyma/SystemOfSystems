@@ -13,6 +13,7 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/packed_vector2_array.hpp>
 #include <godot_cpp/variant/packed_int32_array.hpp>
+#include "game_settings.h"
 
 using namespace godot;
 
@@ -42,9 +43,13 @@ void GodotSimulation::_bind_methods() {
     ClassDB::bind_method(D_METHOD("getPlayerData"), &GodotSimulation::getPlayerData);
     ClassDB::bind_method(D_METHOD("createPlayer", "data"), &GodotSimulation::createPlayer);
     ADD_SIGNAL(MethodInfo("update_entities_event", PropertyInfo(Variant::DICTIONARY, "batch_data")));
-godot::ClassDB::bind_method(
-    godot::D_METHOD("set_entity_render_configs", "configs"),
-    &GodotSimulation::setEntityRenderConfigs
+    godot::ClassDB::bind_method(
+            godot::D_METHOD("set_entity_render_configs", "configs"),
+            &GodotSimulation::setEntityRenderConfigs
+            );
+ClassDB::bind_method(
+    D_METHOD("getWorldDefaults"),
+    &GodotSimulation::getWorldDefaults
 );
 
 }
@@ -57,35 +62,26 @@ void GodotSimulation::trigger_test_signal(const godot::String &msg)
     emit_signal("test_signal_event", msg);
 }
 
+godot::Dictionary GodotSimulation::getWorldDefaults() const
+{
+    const auto& cfg = GameSettings::Instance().world;
+
+    godot::Dictionary result;
+    result["width"] = cfg.default_width;
+    result["height"] = cfg.default_height;
+    result["chunk_size"] = cfg.default_chunk_size;
+    result["density_threshold"] = cfg.default_density_threshold;
+
+    return result;
+}
+
 void GodotSimulation::update_godot_mesh_signal()
 {
     emit_signal("update_godot_mesh_event");
 }
-/*
-   void GodotSimulation::_process(double delta)
-   {
-   uint32_t flags =  world_grid_.tick(delta);
-   if (flags & TickFlags::MESH_UPDATE)
-   {
-   update_godot_mesh_signal();
-   }
-
-   if (flags & TickFlags::UI_UPDATE)
-   {
-// emit_signal("update_ui_event");
-}
-
-
-if (flags & TickFlags::ENTITY_UPDATE)
-{
-
-emit_signal("update_entities_event", getEntityTransformsForRendering());
-}
-}
-*/
 
 void GodotSimulation::setEntityRenderConfigs(
-    const godot::Dictionary& configs)
+        const godot::Dictionary& configs)
 {
     entity_render_configs_ = configs.duplicate(true);
 }
@@ -98,9 +94,9 @@ void GodotSimulation::setEntityRenderConfigs(
 // use_colors = false
 // use_custom_data = true
 static void writeEntityInstance(
-    float* dst,
-    const Entity& entity,
-    const godot::Dictionary& config)
+        float* dst,
+        const Entity& entity,
+        const godot::Dictionary& config)
 {
     const auto& et = entity.getTemplate();
 
@@ -111,22 +107,22 @@ static void writeEntityInstance(
         static_cast<float>(config.get("frame_height_px", 1.0));
 
     const float pixels_per_cell = std::max(
-        0.0001f,
-        static_cast<float>(
-            config.get("visual_pixels_per_cell", 30.0)
-        )
-    );
+            0.0001f,
+            static_cast<float>(
+                config.get("visual_pixels_per_cell", 30.0)
+                )
+            );
 
     const godot::Vector2 pivot =
         config.get("visual_pivot", godot::Vector2(0.5f, 0.0f));
 
     const int cols = std::max(
-        1, static_cast<int>(config.get("cols", 1))
-    );
+            1, static_cast<int>(config.get("cols", 1))
+            );
 
     const int rows = std::max(
-        1, static_cast<int>(config.get("rows", 1))
-    );
+            1, static_cast<int>(config.get("rows", 1))
+            );
 
     // Sprite dimensions in world cells.
     const float visual_w = frame_w / pixels_per_cell;
@@ -174,8 +170,8 @@ static void writeEntityInstance(
         static_cast<float>(entity.getAnimProgress());
 
     int frame = static_cast<int>(
-        std::floor(phase * total_frames)
-    );
+            std::floor(phase * total_frames)
+            );
 
     frame = ((frame % total_frames) + total_frames)
         % total_frames;
@@ -197,11 +193,13 @@ GodotSimulation::getEntityRenderBuffers() const
     godot::Dictionary result;
 
     const auto& entities = world_grid_.getEntities();
+    const float MARGIN =
+        GameSettings::Instance().rendering.entity_culling_margin;
 
     std::unordered_map<
         std::string,
         std::vector<const Entity*>
-    > groups;
+            > groups;
 
     // Group entities by type and animation state.
     for (const auto& [uid, entity] : entities)
@@ -243,10 +241,10 @@ GodotSimulation::getEntityRenderBuffers() const
             float* instance = dst + i * 12;
 
             writeEntityInstance(
-                instance,
-                *group[i],
-                config
-            );
+                    instance,
+                    *group[i],
+                    config
+                    );
 
             // Packed Transform2D:
             // [0] = scale X
@@ -271,21 +269,19 @@ GodotSimulation::getEntityRenderBuffers() const
             max_y = std::max(max_y, y + half_h);
         }
 
-        // Small visibility margin in local coordinates.
-        constexpr float MARGIN = 2.0f;
 
         godot::AABB bounds(
-            godot::Vector3(
-                min_x - MARGIN,
-                min_y - MARGIN,
-                -1.0f
-            ),
-            godot::Vector3(
-                max_x - min_x + MARGIN * 2.0f,
-                max_y - min_y + MARGIN * 2.0f,
-                2.0f
-            )
-        );
+                godot::Vector3(
+                    min_x - MARGIN,
+                    min_y - MARGIN,
+                    -1.0f
+                    ),
+                godot::Vector3(
+                    max_x - min_x + MARGIN * 2.0f,
+                    max_y - min_y + MARGIN * 2.0f,
+                    2.0f
+                    )
+                );
 
         godot::Dictionary group_data;
         group_data["buffer"] = buffer;
@@ -302,111 +298,86 @@ GodotSimulation::getEntityRenderBuffers() const
 void GodotSimulation::_process(double delta)
 {
     using Clock = std::chrono::steady_clock;
+    const auto& perf = GameSettings::Instance().performance;
+    const bool profiling_enabled = perf.profiling_enabled;
 
     static double simulation_total = 0.0;
     static double dictionary_total = 0.0;
     static double signal_total = 0.0;
     static int samples = 0;
 
-    auto t0 = Clock::now();
+    const auto t0 = profiling_enabled
+        ? Clock::now() : Clock::time_point{};
 
     uint32_t flags = world_grid_.tick(delta);
 
-    auto t1 = Clock::now();
+
+    const auto t1 = profiling_enabled
+        ? Clock::now() : Clock::time_point{};
 
     if (flags & TickFlags::MESH_UPDATE)
     {
         update_godot_mesh_signal();
     }
 
-    auto t2 = Clock::now();
+
+    const auto t2 = profiling_enabled
+        ? Clock::now() : Clock::time_point{};
 
     if (flags & TickFlags::ENTITY_UPDATE)
     {
         godot::Dictionary data =
             getEntityRenderBuffers();
 
-        auto t3 = Clock::now();
+
+        const auto t3 = profiling_enabled
+            ? Clock::now() : Clock::time_point{};
 
         emit_signal("update_entities_event", data);
-
-        auto t4 = Clock::now();
-
-        auto ms = [](auto a, auto b)
+        if(profiling_enabled)
         {
-            return std::chrono::duration<double, std::milli>(
-                    b - a
-                    ).count();
-        };
 
-        simulation_total += ms(t0, t1);
-        dictionary_total += ms(t2, t3);
-        signal_total += ms(t3, t4);
+            const auto t4 = profiling_enabled
+                ? Clock::now() : Clock::time_point{};
 
-        ++samples;
+            auto ms = [](auto a, auto b)
+            {
+                return std::chrono::duration<double, std::milli>(
+                        b - a
+                        ).count();
+            };
 
-        if (samples >= 300)
-        {
-        emit_signal(
-            "test_signal_event",
-            godot::vformat(
-                "--- Entity Performance ---\n"
-                "WorldGrid tick: %.3f ms\n"
-                "Render buffer creation: %.3f ms\n"
-                "Signal + GDScript: %.3f ms",
-                simulation_total / samples,
-                dictionary_total / samples,
-                signal_total / samples
-            )
-        );
+            simulation_total += ms(t0, t1);
+            dictionary_total += ms(t2, t3);
+            signal_total += ms(t3, t4);
 
-            simulation_total = 0.0;
-            dictionary_total = 0.0;
-            signal_total = 0.0;
-            samples = 0;
+            ++samples;
+
+            if (samples >= perf.profiling_sample_count)
+            {
+                emit_signal(
+                        "test_signal_event",
+                        godot::vformat(
+                            "--- Entity Performance ---\n"
+                            "WorldGrid tick: %.3f ms\n"
+                            "Render buffer creation: %.3f ms\n"
+                            "Signal + GDScript: %.3f ms",
+                            simulation_total / samples,
+                            dictionary_total / samples,
+                            signal_total / samples
+                            )
+                        );
+
+                simulation_total = 0.0;
+                dictionary_total = 0.0;
+                signal_total = 0.0;
+                samples = 0;
+            }
         }
+
+
     }
 }
-/*
-   godot::Dictionary GodotSimulation::getEntityTransformsForRendering() const {
-   godot::Dictionary batch_data;
-   auto const& entities = world_grid_.getEntities(); 
-
-// 1. Copy into a vector so we can sort by uID for stable indices
-std::vector<std::pair<uint32_t, const Entity*>> sorted_entities;
-sorted_entities.reserve(entities.size());
-for (auto const& [uID, entity] : entities) {
-sorted_entities.push_back({uID, &entity});
-}
-
-// 2. Sort deterministically by instance ID (uID)
-std::sort(sorted_entities.begin(), sorted_entities.end(), [](auto const& a, auto const& b) {
-return a.first < b.first;
-});
-
-// 3. Populate dictionary in stable order
-for (auto const& [uID, entity_ptr] : sorted_entities) {
-auto const& et = entity_ptr->getTemplate();
-
-godot::Dictionary pos_dict;
-pos_dict["x_smooth"] = et.x_smooth;
-pos_dict["y_smooth"] = et.y_smooth;
-pos_dict["x_origin"] = et.x_origin;
-pos_dict["y_origin"] = et.y_origin;
-pos_dict["entityTypeID"] = et.entityTypeID;
-pos_dict["width"] = et.width;
-pos_dict["height"] = et.height;
-
-pos_dict["state"] = entity_ptr->getState().c_str();             // Current state string (matches keys in entity.json animations)
-pos_dict["animPhase"] = entity_ptr->getAnimProgress();            // Progress from 0.0 to 1.0 across the animation frames
-pos_dict["facingRight"] = entity_ptr->isFacingRight();
-
-batch_data[uID] = pos_dict;
-}
-return batch_data;
-}
-
-*/
 godot::Dictionary
 GodotSimulation::getEntityTransformsForRendering() const
 {

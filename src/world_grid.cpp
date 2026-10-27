@@ -13,6 +13,7 @@
 #include <utility>
 #include <fstream>
 #include <iomanip>
+#include "game_settings.h"
 
 Cell WorldGrid::get_cell(int x, int y) const
 {
@@ -246,6 +247,12 @@ namespace NativeNoise {
 
 void WorldGrid::init(int x_size, int y_size, int g_size, float t)
 {
+    const auto& settings = GameSettings::Instance();
+    const auto terrain = settings.terrain;
+
+    pool_ = std::make_unique<ThreadPool>(
+            settings.performance.thread_pool_workers
+            );
     world_x_ = x_size + 1;
     world_y_ = y_size + 1;
     chunk_size_ = g_size;
@@ -254,12 +261,7 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
     num_chunk_y = std::max(1,(world_y_ + chunk_size_ - 1) / chunk_size_);
     world_cells_.resize(world_x_ * world_y_);
     placed_cells_.resize(world_x_ * world_y_);
-    float base_height = world_y_ * 1.f;       // Surface line 
-                                              //
-    float height_amplitude = world_y_ * 0.f; // Hill variance height
-                                             // PARALLEL TIME !!!
 
-    pool_ = std::make_unique<ThreadPool>();
 
     int numChunks = num_chunk_x * num_chunk_y;
     mesh.resize(numChunks);
@@ -387,6 +389,20 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
         }
     }
 
+    const float base_surface_y =
+        static_cast<float>(world_y_) *
+        terrain.base_surface_height_fraction;
+
+    const float surface_height_amplitude =
+        static_cast<float>(world_y_) *
+        terrain.height_variation_fraction *
+        terrain.surface_noise_amplitude;
+
+    const uint16_t surface_material =
+        static_cast<uint16_t>(terrain.surface_material_id);
+
+    const uint16_t deep_material =
+        static_cast<uint16_t>(terrain.deep_material_id);
     unsigned int num_threads = pool_->get_num_threads();
     size_t x_cells_per_thread = ((world_x_) + num_threads - 1) / num_threads;
 
@@ -400,14 +416,25 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
 
         if (start_idx >= world_x_) break;
 
-        futures.push_back(pool_->enqueue([this, start_idx, end_idx]()
+        futures.push_back(pool_->enqueue(
+                    [this, start_idx, end_idx, terrain,
+                    base_surface_y, surface_height_amplitude,
+                    surface_material, deep_material]()
                     {
                     for (size_t i = start_idx; i < end_idx; i++)
                     {
-                    float noise_val = NativeNoise::fBm(static_cast<float>(i) * 0.008f, 0.0f, 4, 1.0f, 0.5f);
-                    float base_surface_y = static_cast<float>(world_y_) * 0.25f;
-                    float amplitude = static_cast<float>(world_y_) * 0.1f;
-                    float surface_y = base_surface_y + (noise_val * amplitude);
+                    const float noise_val = NativeNoise::fBm(
+                            static_cast<float>(i) *
+                            terrain.surface_noise_frequency,
+                            0.0f,
+                            terrain.surface_noise_octaves,
+                            1.0f,
+                            terrain.surface_noise_persistence
+                            );
+
+                    const float surface_y =
+                    base_surface_y +
+                    noise_val * surface_height_amplitude;
 
                     // Find the exact integer row containing the surface line
                     int surf_row = static_cast<int>(std::floor(surface_y));
@@ -415,39 +442,48 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
 
                     for (size_t j = 0; j < world_y_; j++)
                     {
-                    size_t index = j * world_x_ + i;
-                    int int_y = static_cast<int>(j);
+                        size_t index = j * world_x_ + i;
+                        int int_y = static_cast<int>(j);
 
-                    uint16_t type_id = 0;
-                    float density = 0.0f;
+                        uint16_t type_id = 0;
+                        float density = 0.0f;
 
-                    if (int_y < surf_row) {
-                        // Above surface -> Air
-                        type_id = 0;
-                        density = 0.0f;
-                    }
-                    else if (int_y == surf_row) {
-                        // Exactly one surface cell gets a partial density based on fractional height
-                        // Adjust the multiplier if you want steeper or flatter slope generation
-                        density = std::clamp((1.0f - frac) * 128.0f + 64.0f, 1.0f, 254.0f);
-                        type_id = 2; // Grass / Surface material
-                    }
-                    else {
-                        // Below surface -> Full solid blocks
-                        density = 255.0f;
+                        if (int_y < surf_row) {
+                            // Above surface -> Air
+                            type_id = 0;
+                            density = 0.0f;
+                        }
+                        else if (int_y == surf_row) {
+                            // Exactly one surface cell gets a partial density based on fractional height
+                            // Adjust the multiplier if you want steeper or flatter slope generation
+                            density = std::clamp(
+                                    (1.0f - frac) *
+                                    terrain.surface_density_multiplier +
+                                    terrain.surface_density_offset,
+                                    1.0f, 254.0f
+                                    );
 
-                        int depth = int_y - surf_row;
-                        if (depth < 8) {
-                            type_id = 2; // Dirt layer
-                        } else {
-                            type_id = 3; // Stone layer
+                            type_id = surface_material;
+                        }
+                        else {
+                            // Below surface -> Full solid blocks
+                            density = 255.0f;
+
+                            int depth = int_y - surf_row;
+                            if (depth < terrain.grass_depth)
+                            {
+                                type_id = surface_material;
+                            }
+                            else
+                            {
+                                type_id = deep_material;
+                            }
+
                         }
 
-                    }
-
-                    world_cells_[index].type_id = type_id;
-                    world_cells_[index].density = density;
-                    world_cells_[index].state_flags = 0;
+                        world_cells_[index].type_id = type_id;
+                        world_cells_[index].density = density;
+                        world_cells_[index].state_flags = 0;
                     }
                     }
                     }));
@@ -501,44 +537,67 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
             }
         }
     }
-
     std::random_device rd;
-    std::mt19937 rng(rd());
-    for (int i = 0; i < num_chunk_x; i ++)
+
+    std::mt19937 rng(
+            terrain.patch_seed == 0
+            ? rd()
+            : terrain.patch_seed
+            );
+
+    std::uniform_real_distribution<float>
+        chance_dist(0.0f, 1.0f);
+
+    std::uniform_int_distribution<uint16_t>
+        type_dist(
+                terrain.patch_material_id_min,
+                terrain.patch_material_id_max
+                );
+
+    std::uniform_int_distribution<int>
+        x_dist(0, world_x_ - 1);
+
+    const int patch_min_y = std::clamp(
+            static_cast<int>(
+                world_y_ *
+                terrain.patch_min_world_y_fraction
+                ),
+            0,
+            world_y_ - 1
+            );
+
+    std::uniform_int_distribution<int>
+        y_dist(patch_min_y, world_y_ - 1);
+
+    std::uniform_real_distribution<float>
+        radius_dist(
+                terrain.patch_radius_min,
+                terrain.patch_radius_max
+                );
+    for (int i = 0; i < num_chunk_x; ++i)
     {
-        for (int j = 0; j < num_chunk_y; j ++)
+        for (int j = 0; j < num_chunk_y; ++j)
         {
+            if (chance_dist(rng) >=
+                    terrain.patch_probability)
+                continue;
 
-            // random patches :)
-            std::uniform_real_distribution<float> chance_dist(0.0f, 1.0f);
+            const int patch_x = x_dist(rng);
+            const int patch_y = y_dist(rng);
 
-            if (chance_dist(rng) < 0.8f) {
-                // Random block ID from 1 to 256
-                std::uniform_int_distribution<uint16_t> type_dist(1, 256);
+            const float radius = radius_dist(rng);
+            const uint16_t random_type = type_dist(rng);
 
-                // Random patch position within this chunk
-                std::uniform_int_distribution<int> x_dist(0, world_x_- 1);
-                std::uniform_int_distribution<int> y_dist((int)(world_y_ * 0.3), world_y_ - 1);
-
-                // Random patch size
-                std::uniform_real_distribution<float> radius_dist(3.0f, 10.0f);
-
-                int patch_x = x_dist(rng);
-                int patch_y = y_dist(rng);
-
-                float radius = radius_dist(rng);
-                uint16_t random_type = type_dist(rng);
-
-                set_density(
-                        patch_x,
-                        patch_y,
-                        radius,
-                        255.0f,
-                        random_type
-                        );
-            }
+            set_density(
+                    patch_x,
+                    patch_y,
+                    radius,
+                    terrain.patch_density_strength,
+                    random_type
+                    );
         }
     }
+
 
     chunk_is_dirty_.assign(numChunks, 1);
 
@@ -694,137 +753,142 @@ uint32_t WorldGrid::tick(double deltaTime)
 
 
 
-if (!tick_entities_.empty())
-{
-    EntityTickContext etx
+    if (!tick_entities_.empty())
     {
-        .deltaTime = deltaTime,
-        .world_cells = world_cells_,
-        .world_x = world_x_,
-        .world_y = world_y_,
-        .threshold = threshold,
-        .playerPos = player.getPosition()
-    };
-
-    constexpr size_t PARALLEL_THRESHOLD = 250;
-    constexpr size_t MIN_BATCH_SIZE = 125;
-
-    const size_t count = tick_entities_.size();
-
-    const size_t num_threads =
-        (count < PARALLEL_THRESHOLD || !pool_)
-        ? 1
-        : std::max(
-            size_t{1},
-            std::min(
-                static_cast<size_t>(pool_->get_num_threads()),
-                (count + MIN_BATCH_SIZE - 1) / MIN_BATCH_SIZE
-            )
-        );
-
-    const size_t batch_size =
-        (count + num_threads - 1) / num_threads;
-
-    // Each worker gets its own list of indices to delete.
-    std::vector<std::vector<size_t>> delete_lists(num_threads);
-
-    std::vector<std::future<void>> futures;
-    futures.reserve(num_threads);
-
-    // Shared processing logic for a batch.
-    auto process_batch = [&](size_t t)
-    {
-        const size_t start_idx = t * batch_size;
-        const size_t end_idx =
-            std::min(start_idx + batch_size, count);
-
-        auto& deletions = delete_lists[t];
-
-        for (size_t i = start_idx; i < end_idx; ++i)
+        EntityTickContext etx
         {
-            uint32_t uid = tick_entities_[i];
+            .deltaTime = deltaTime,
+                .world_cells = world_cells_,
+                .world_x = world_x_,
+                .world_y = world_y_,
+                .threshold = threshold,
+                .playerPos = player.getPosition()
+        };
 
-            auto it = entities_.find(uid);
+        const auto& perf = GameSettings::Instance().performance;
 
-            if (it == entities_.end())
+        const size_t PARALLEL_THRESHOLD =
+            perf.entity_parallel_threshold;
+
+        const size_t MIN_BATCH_SIZE =
+            perf.entity_min_batch_size;
+
+        const size_t count = tick_entities_.size();
+
+        const size_t num_threads =
+            (count < PARALLEL_THRESHOLD || !pool_)
+            ? 1
+            : std::max(
+                    size_t{1},
+                    std::min(
+                        static_cast<size_t>(pool_->get_num_threads()),
+                        (count + MIN_BATCH_SIZE - 1) / MIN_BATCH_SIZE
+                        )
+                    );
+
+        const size_t batch_size =
+            (count + num_threads - 1) / num_threads;
+
+        // Each worker gets its own list of indices to delete.
+        std::vector<std::vector<size_t>> delete_lists(num_threads);
+
+        std::vector<std::future<void>> futures;
+        futures.reserve(num_threads);
+
+        // Shared processing logic for a batch.
+        auto process_batch = [&](size_t t)
+        {
+            const size_t start_idx = t * batch_size;
+            const size_t end_idx =
+                std::min(start_idx + batch_size, count);
+
+            auto& deletions = delete_lists[t];
+
+            for (size_t i = start_idx; i < end_idx; ++i)
             {
-                // Record the index, do not erase yet.
-                deletions.push_back(i);
-                continue;
+                uint32_t uid = tick_entities_[i];
+
+                auto it = entities_.find(uid);
+
+                if (it == entities_.end())
+                {
+                    // Record the index, do not erase yet.
+                    deletions.push_back(i);
+                    continue;
+                }
+
+                it->second.on_tick(etx);
+            }
+        };
+
+        if (num_threads == 1)
+        {
+            process_batch(0);
+        }
+        else
+        {
+            for (size_t t = 0; t < num_threads; ++t)
+            {
+                futures.push_back(
+                        pool_->enqueue(
+                            [&, t]()
+                            {
+                            process_batch(t);
+                            }
+                            )
+                        );
             }
 
-            it->second.on_tick(etx);
+            // Wait until all threads have finished.
+            for (auto& f : futures)
+            {
+                f.get();
+            }
         }
-    };
 
-    if (num_threads == 1)
-    {
-        process_batch(0);
-    }
-    else
-    {
-        for (size_t t = 0; t < num_threads; ++t)
+        // SERIAL CLEANUP
+
+        // Merge the per-worker deletion lists.
+        std::vector<size_t> delete_indices;
+
+        for (const auto& list : delete_lists)
         {
-            futures.push_back(
-                pool_->enqueue(
-                    [&, t]()
-                    {
-                        process_batch(t);
-                    }
-                )
-            );
+            delete_indices.insert(
+                    delete_indices.end(),
+                    list.begin(),
+                    list.end()
+                    );
         }
 
-        // Wait until all threads have finished.
-        for (auto& f : futures)
+        if (!delete_indices.empty())
         {
-            f.get();
-        }
-    }
+            // Worker batches were processed in index order,
+            // so these lists are already sorted internally.
+            std::sort(
+                    delete_indices.begin(),
+                    delete_indices.end()
+                    );
 
-    // SERIAL CLEANUP
+            size_t write = 0;
+            size_t deleted = 0;
 
-    // Merge the per-worker deletion lists.
-std::vector<size_t> delete_indices;
+            for (size_t read = 0; read < tick_entities_.size(); ++read)
+            {
+                if (deleted < delete_indices.size() &&
+                        read == delete_indices[deleted])
+                {
+                    ++deleted;
+                    continue;
+                }
 
-for (const auto& list : delete_lists)
-{
-    delete_indices.insert(
-        delete_indices.end(),
-        list.begin(),
-        list.end()
-    );
-}
+                tick_entities_[write++] = tick_entities_[read];
+            }
 
-if (!delete_indices.empty())
-{
-    // Worker batches were processed in index order,
-    // so these lists are already sorted internally.
-    std::sort(
-        delete_indices.begin(),
-        delete_indices.end()
-    );
-
-    size_t write = 0;
-    size_t deleted = 0;
-
-    for (size_t read = 0; read < tick_entities_.size(); ++read)
-    {
-        if (deleted < delete_indices.size() &&
-            read == delete_indices[deleted])
-        {
-            ++deleted;
-            continue;
+            tick_entities_.resize(write);
         }
 
-        tick_entities_[write++] = tick_entities_[read];
+        active_flags |= TickFlags::ENTITY_UPDATE;
     }
-
-    tick_entities_.resize(write);
-}
-
-    active_flags |= TickFlags::ENTITY_UPDATE;
-}
 
 
     /*

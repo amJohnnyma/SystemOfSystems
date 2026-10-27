@@ -98,7 +98,12 @@ class WorldGrid
 
         
     public:
-        void init(int x_size = 6400, int y_size = 1800, int g_size = 64, float threshold = 128.f);
+        void init(
+            int x_size,
+            int y_size,
+            int g_size,
+            float threshold
+        );
         WorldGrid();
         ~WorldGrid();
 
