@@ -127,11 +127,6 @@ class WorldGrid
         const std::unordered_map<int, Entity>& getEntityRegistry() const {return entity_registry_;}
         const std::unordered_map<uint32_t, Entity>& getEntities() const {return entities_;}
 
-        bool isCellSolid(float x, float y) const;
-        Vec2 resolveCollision(Vec2 current_pos, Vec2& velocity, float width, float height, double deltaTime);
-        bool checkAABBCollision(const Vec2& pos, float width, float height) const;
-        Vec2 calculateDensityGradient(float x, float y) const;
-        float getDensityAt(float x, float y) const;
 
         void createPlayer(PlayerSettings ps)
         {

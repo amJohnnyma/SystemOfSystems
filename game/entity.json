@@ -1,5 +1,5 @@
 [
-  { ADD PER ANIMATION SPEED + JUMP SPEED + MAX FALL SPEED
+  { "Comment" : "ADD PER ANIMATION SPEED + JUMP SPEED + MAX FALL SPEED",
     "entityTypeID": 1,
     "name": "Monster",
     "sprite": "Monster.png",

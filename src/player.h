@@ -6,6 +6,7 @@
 
 #include <string>
 #include <algorithm>
+#include "entity_movement_manager.h"
 
 class Player
 {

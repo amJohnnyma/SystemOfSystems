@@ -122,6 +122,35 @@ struct PlayerSettings
     std::unordered_map<std::string, PlayerSpriteSettings> sprites;
 };
 
+// Position is in CELL units, with x at the LEFT of the hitbox and y at
+// the BOTTOM OCCUPIED CELL ORIGIN (same convention as the existing Player).
+// AABB: [x, x + size.x) x [y - size.y + 1, y + 1).
+struct MovementState
+{
+    Vec2 position = {0.0f, 0.0f};
+    Vec2 velocity = {0.0f, 0.0f};
+    Vec2 size = {1.0f, 1.0f};
+    bool isGrounded = false;
+};
+
+// Non-owning, read-only view of the world. Callers must keep cells alive
+// throughout the call; no copy of the world or its individual Cells is made.
+struct MovementWorld
+{
+    const std::vector<Cell>& cells;
+    int width;
+    int height;
+    float solidThreshold;
+};
+
+struct MovementResult
+{
+    MovementState state;
+    bool hitWall = false;
+    bool hitCeiling = false;
+    bool landed = false; // Collided while moving downward this frame.
+};
+
 
 
 

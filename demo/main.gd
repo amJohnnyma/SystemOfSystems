@@ -203,9 +203,9 @@ void fragment() {
 	camera.global_position = Vector2(world_width * MESH_SCALE.x, world_height * MESH_SCALE.y) / 2.0
 	
 	world.placeEntity(310,10,1)
-	world.placeEntity(320,10,2)
-	world.placeEntity(330,10,3)
-	world.placeEntity(340,10,4)
+	#world.placeEntity(320,10,2)
+	#world.placeEntity(330,10,3)
+	#world.placeEntity(340,10,4)
 	'''for i in range(200):
 		world.placeEntity(0,2,1)
 		world.placeEntity(0,6,2)
@@ -722,6 +722,7 @@ func get_structure_sprite_path(structure_data: Dictionary) -> String:
 	return "res://game/sprite" + sprite_filename
 
 func _on_required_entity_update(batch_data: Dictionary) -> void:
+
 	# 1. Group entity data by composite key: "type_id_state"
 	var grouped_entities: Dictionary = {} # "type_id_state" -> Array of pos_data dicts
 	var all_entities: Array = []
@@ -815,34 +816,80 @@ func _on_required_entity_update(batch_data: Dictionary) -> void:
 
 	# 3. Update Debug Origin MultiMesh
 
-	
 	var debug_mm = debug_multimesh_node.multimesh if debug_multimesh_node else null
-	if debug_mm:		
-		debug_mm.instance_count = all_entities.size()
+	if debug_mm:
+		debug_mm.instance_count = all_entities.size() * 2
+
 		for idx in range(all_entities.size()):
 			var pos_data: Dictionary = all_entities[idx]
-			var origin_x: int = int(pos_data.get("x_origin", floor(float(pos_data["x_smooth"]))))
-			var origin_y: int = int(pos_data.get("y_origin", floor(float(pos_data["y_smooth"]))))
+
+			var origin_x: int = int(pos_data.get(
+				"x_origin",
+				floor(float(pos_data["x_smooth"]))
+			))
+
+			var origin_y: float = float(pos_data["y_smooth"])
+
 			var w: float = float(pos_data.get("width", 2))
 			var h: float = float(pos_data.get("height", 2))
-			
+
+			# --------------------------------------------------
+			# 1. MAGENTA: Entity hitbox
+			# --------------------------------------------------
 			var center := Vector2(
 				origin_x + w * 0.5,
 				origin_y - h * 0.5 + 1.0
 			)
 
-			var facing_right: bool = bool(pos_data.get("facingRight", true))
+			var facing_right: bool = bool(
+				pos_data.get("facingRight", true)
+			)
+
 			var x_scale: float = w if facing_right else -w
 
-			var xform := Transform2D(
-				Vector2(x_scale, 0.0), # Flips width scale when facing left
+			var hitbox_xform := Transform2D(
+				Vector2(x_scale, 0.0),
 				Vector2(0.0, -h),
 				center
 			)
 
+			var hitbox_idx: int = idx * 2
 
-			debug_mm.set_instance_transform_2d(idx, xform)
-			debug_mm.set_instance_custom_data(idx, Color(1, 0, 1, 0.3)) # Magenta debug marker
+			debug_mm.set_instance_transform_2d(
+				hitbox_idx, hitbox_xform
+			)
+
+			debug_mm.set_instance_custom_data(
+				hitbox_idx, Color(1, 0, 1, 0.3)
+			)
+
+			# --------------------------------------------------
+			# 2. RED: 1x1 origin cell
+			# --------------------------------------------------
+			# Same origin as the magenta hitbox.
+			# Center of bottom-left occupied cell.
+			var origin_center := Vector2(
+				origin_x + 0.5,
+				origin_y + 0.5
+			)
+
+			var origin_xform := Transform2D(
+				Vector2(1.0, 0.0),
+				Vector2(0.0, -1.0),
+				origin_center
+			)
+
+			var origin_idx: int = idx * 2 + 1
+
+			debug_mm.set_instance_transform_2d(
+				origin_idx, origin_xform
+			)
+
+			debug_mm.set_instance_custom_data(
+				origin_idx, Color(1, 0, 0, 0.8)
+			)
+
+	
 
 		
 func _on_slot_action_requested(slot_number: int) -> void:

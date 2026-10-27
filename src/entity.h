@@ -10,6 +10,7 @@
 #include <algorithm>
 #include "attack_type.h"
 #include "world_types.h"
+#include "entity_movement_manager.h"
 
 
 
@@ -87,9 +88,7 @@ class Entity
         void on_tick(EntityTickContext etx);
         void do_attack(); // cycles attack patterns, changes which attack pattern to follow
         const entity_template& getTemplate() const {return et_;}
-        void applyGravity(EntityTickContext etx);
         void alignPosition();
-        void moveTo(float x, float y, EntityTickContext etx);
         std::string getState() const {return state;}
         double getAnimProgress() const {return animationProgress;}
         bool isFacingRight() const {return facingRight;}

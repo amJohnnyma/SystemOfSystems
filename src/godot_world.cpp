@@ -35,7 +35,6 @@ ClassDB::bind_method(D_METHOD("updatePlayerPosition", "x", "y"), &GodotSimulatio
 ClassDB::bind_method(D_METHOD("movePlayer", "input", "jump_pressed", "deltaTime"), &GodotSimulation::movePlayer);
 ClassDB::bind_method(D_METHOD("getPlayerData"), &GodotSimulation::getPlayerData);
 ClassDB::bind_method(D_METHOD("createPlayer", "data"), &GodotSimulation::createPlayer);
-    ClassDB::bind_method(D_METHOD("resolveCollision", "current_pos", "velocity", "width", "height", "delta"), &GodotSimulation::resolveCollision);
 ADD_SIGNAL(MethodInfo("update_entities_event", PropertyInfo(Variant::DICTIONARY, "batch_data")));
 
 }
@@ -67,9 +66,9 @@ void GodotSimulation::_process(double delta)
     }
 
 
+        emit_signal("update_entities_event", getEntityTransformsForRendering());
     if (flags & TickFlags::ENTITY_UPDATE)
     {
-        emit_signal("update_entities_event", getEntityTransformsForRendering());
     }
 }
 /*
@@ -368,14 +367,6 @@ godot::Dictionary GodotSimulation::getPlayerData() const
     return data;
 }
 
-Vector2 GodotSimulation::resolveCollision(Vector2 current_pos, Vector2 velocity, float width, float height, double delta) {
-    Vec2 cp = Vec2(current_pos.x, current_pos.y);
-    Vec2 v = Vec2(velocity.x,velocity.y);
-    Vec2 r = world_grid_.resolveCollision(cp,v, width, height, delta);
-    Vector2 rr = Vector2(r.x, r.y);
- 
-    return rr; 
-}
 
 void GodotSimulation::createWorld(int world_x, int world_y, int g_size, float threshold)
 {
