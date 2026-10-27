@@ -206,12 +206,8 @@ void fragment() {
 	#world.placeEntity(320,10,2)
 	#world.placeEntity(330,10,3)
 	#world.placeEntity(340,10,4)
-	'''for i in range(200):
-		world.placeEntity(0,2,1)
-		world.placeEntity(0,6,2)
-		world.placeEntity(2,2,3)
-		world.placeEntity(2,5,4)
-		world.placeEntity(0,7,5)'''
+	#for i in range(10000):
+	#	world.placeEntity(320,10,1)
 
 	
 func _calculate_sprite_transform(

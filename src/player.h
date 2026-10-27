@@ -7,6 +7,7 @@
 #include <string>
 #include <algorithm>
 #include "entity_movement_manager.h"
+#include "memory_usage.h"
 
 class Player
 {
@@ -40,6 +41,8 @@ public:
     Player();
     Player(PlayerSettings ps);
     ~Player();
+
+std::size_t getMemoryUsage() const;
 
     void moveTo(
         Vec2 input,

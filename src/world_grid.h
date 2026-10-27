@@ -11,6 +11,10 @@
 #include <random>
 #include "entity.h"
 #include "player.h"
+#include "memory_usage.h"
+#include <fstream>
+#include <iomanip>
+#include <cstddef>
 
 
 // what will be updated on each tick if any

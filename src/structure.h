@@ -45,6 +45,7 @@ class Structure
         ~Structure() = default;
         void on_tick(double deltaTime) {} // might want to return something
         const struct_template& getTemplate() const {return struct_;}
+        std::size_t getMemoryUsage() const;
 };
 
 

@@ -1,0 +1,39 @@
+============================================
+        WORLD GRID MEMORY REPORT
+============================================
+
+Inline WorldGrid object: 736 bytes
+
+world_cells_ heap                       368902432 bytes       351.813 MiB
+placed_cells_ heap                      369295648 bytes       352.188 MiB
+mesh heap                              1175402072 bytes      1120.951 MiB
+dirty_chunk_indices_ heap                   11716 bytes         0.011 MiB
+chunk_is_dirty_ heap                         2929 bytes         0.003 MiB
+ThreadPool inline object                      208 bytes         0.000 MiB
+structures_ heap                                8 bytes         0.000 MiB
+tick_structures_ heap                           0 bytes         0.000 MiB
+structure_registry_ heap                    41504 bytes         0.040 MiB
+entity_registry_ heap                        4584 bytes         0.004 MiB
+entities_ heap                           11592184 bytes        11.055 MiB
+tick_entities_ heap                             0 bytes         0.000 MiB
+player nested heap                            918 bytes         0.001 MiB
+
+============================================
+ESTIMATED ACCOUNTED MEMORY: 1925254939 bytes (1836.066 MiB)
+============================================
+
+CONTAINER COUNTS
+World cells: 11528201
+Placed cells: 11528201
+Chunks: 2929
+Entities: 10000
+Entity types: 4
+Structures: 0
+Structure types: 258
+
+NOTES
+Includes known owned container allocations.
+Does not yet include nested Structure heaps,
+ThreadPool dynamic allocations or thread stacks,
+allocator bookkeeping, or external resources.
+Map allocation sizes are estimates.

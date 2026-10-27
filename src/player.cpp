@@ -152,3 +152,16 @@ void Player::takeDamage(double damage)
 void Player::takeHealing(double damage)
 {
 }
+std::size_t Player::getMemoryUsage() const
+{
+    std::size_t bytes = sizeof(*this);
+
+    // Player configuration
+    bytes += MemoryUsage::dynamic(ps);
+
+    // Current sprite and animation state
+    bytes += MemoryUsage::heap(sprite);
+    bytes += MemoryUsage::heap(state_);
+
+    return bytes;
+}

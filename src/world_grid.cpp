@@ -955,6 +955,283 @@ void WorldGrid::placeEntity(int bl_x, int bl_y, int entityTypeID)
 WorldGrid::WorldGrid()
 {
 }
+#include <fstream>
+#include <iomanip>
+
+namespace
+{
+    constexpr std::size_t MAP_NODE_OVERHEAD =
+        sizeof(void*) * 2;
+
+    template<typename T>
+    std::size_t vectorMemory(const std::vector<T>& v)
+    {
+        return sizeof(v) + v.capacity() * sizeof(T);
+    }
+
+    template<typename K, typename V>
+    std::size_t mapMemory(
+        const std::unordered_map<K, V>& map)
+    {
+        return sizeof(map)
+            + map.bucket_count() * sizeof(void*)
+            + map.size() *
+              (sizeof(typename std::unordered_map<K, V>::value_type)
+               + MAP_NODE_OVERHEAD);
+    }
+
+    std::size_t cellVectorMemory(
+        const std::vector<Cell>& cells)
+    {
+        std::size_t bytes = vectorMemory(cells);
+
+        for (const Cell& cell : cells)
+        {
+            bytes += cell.entities_on_cell_uID.capacity()
+                   * sizeof(int);
+        }
+
+        return bytes;
+    }
+
+    std::size_t meshMemory(
+        const std::vector<ChunkMeshData>& meshes)
+    {
+        std::size_t bytes = vectorMemory(meshes);
+
+        for (const auto& chunk : meshes)
+        {
+            bytes += chunk.terrain_mesh.vertices.capacity()
+                   * sizeof(Vertex);
+
+            bytes += chunk.terrain_mesh.indices.capacity()
+                   * sizeof(uint32_t);
+
+            bytes += chunk.structure_mesh.vertices.capacity()
+                   * sizeof(Vertex);
+
+            bytes += chunk.structure_mesh.indices.capacity()
+                   * sizeof(uint32_t);
+        }
+
+        return bytes;
+    }
+
+    double toMiB(std::size_t bytes)
+    {
+        return static_cast<double>(bytes) /
+               (1024.0 * 1024.0);
+    }
+}
+
 WorldGrid::~WorldGrid()
 {
+    std::ofstream file(
+        "world_memory_report.txt",
+        std::ios::trunc
+    );
+
+    if (!file)
+        return;
+
+    file << std::fixed << std::setprecision(3);
+
+    const auto toMiB = [](std::size_t bytes)
+    {
+        return static_cast<double>(bytes) /
+               (1024.0 * 1024.0);
+    };
+
+    std::size_t total = sizeof(*this);
+
+    auto report = [&](const char* name, std::size_t bytes)
+    {
+        file << std::left << std::setw(35) << name
+             << std::right << std::setw(14) << bytes
+             << " bytes  "
+             << std::setw(12) << toMiB(bytes)
+             << " MiB\n";
+
+        total += bytes;
+    };
+
+    file << "============================================\n";
+    file << "        WORLD GRID MEMORY REPORT\n";
+    file << "============================================\n\n";
+
+    file << "Inline WorldGrid object: "
+         << sizeof(*this) << " bytes\n\n";
+
+    // ------------------------------------------------
+    // Terrain cells
+    // ------------------------------------------------
+    std::size_t worldCellsBytes =
+        MemoryUsage::vectorHeap(world_cells_);
+
+    for (const Cell& cell : world_cells_)
+        worldCellsBytes += MemoryUsage::dynamic(cell);
+
+    report("world_cells_ heap", worldCellsBytes);
+
+    // ------------------------------------------------
+    // Placed cells
+    // ------------------------------------------------
+    std::size_t placedCellsBytes =
+        MemoryUsage::vectorHeap(placed_cells_);
+
+    for (const Cell& cell : placed_cells_)
+        placedCellsBytes += MemoryUsage::dynamic(cell);
+
+    report("placed_cells_ heap", placedCellsBytes);
+
+    // ------------------------------------------------
+    // Meshes
+    // ------------------------------------------------
+    std::size_t meshBytes = MemoryUsage::vectorHeap(mesh);
+
+    for (const ChunkMeshData& chunk : mesh)
+        meshBytes += MemoryUsage::dynamic(chunk);
+
+    report("mesh heap", meshBytes);
+
+    // ------------------------------------------------
+    // Chunk tracking
+    // ------------------------------------------------
+    report(
+        "dirty_chunk_indices_ heap",
+        MemoryUsage::vectorHeap(dirty_chunk_indices_)
+    );
+
+    report(
+        "chunk_is_dirty_ heap",
+        MemoryUsage::vectorHeap(chunk_is_dirty_)
+    );
+
+    // ------------------------------------------------
+    // Thread pool
+    // ------------------------------------------------
+    report(
+        "ThreadPool inline object",
+        pool_ ? sizeof(ThreadPool) : 0
+    );
+
+    // ------------------------------------------------
+    // Structures
+    // ------------------------------------------------
+    // Currently counts map allocations and inline
+    // Structure objects, but not their nested heaps.
+    std::size_t structuresBytes = MemoryUsage::mapHeap(
+        structures_,
+        [](uint32_t, const Structure& structure)
+        {
+            return structure.getMemoryUsage()
+                 - sizeof(Structure);
+        }
+    );
+
+    std::size_t structureRegistryBytes = MemoryUsage::mapHeap(
+        structure_registry_,
+        [](int, const Structure& structure)
+        {
+            return structure.getMemoryUsage()
+                 - sizeof(Structure);
+        }
+    );
+
+    report("structures_ heap", structuresBytes);
+
+    report(
+        "tick_structures_ heap",
+        MemoryUsage::vectorHeap(tick_structures_)
+    );
+
+
+    report(
+        "structure_registry_ heap",
+        structureRegistryBytes
+    );
+
+    // ------------------------------------------------
+    // Entity registry
+    // ------------------------------------------------
+    std::size_t entityRegistryBytes =
+        MemoryUsage::mapHeap(
+            entity_registry_,
+            [](int, const Entity& entity)
+            {
+                return entity.getMemoryUsage()
+                     - sizeof(Entity);
+            }
+        );
+
+    report("entity_registry_ heap", entityRegistryBytes);
+
+    // ------------------------------------------------
+    // Active entities
+    // ------------------------------------------------
+    std::size_t entitiesBytes = MemoryUsage::mapHeap(
+        entities_,
+        [](uint32_t, const Entity& entity)
+        {
+            return entity.getMemoryUsage()
+                 - sizeof(Entity);
+        }
+    );
+
+    report("entities_ heap", entitiesBytes);
+
+    report(
+        "tick_entities_ heap",
+        MemoryUsage::vectorHeap(tick_entities_)
+    );
+
+    // ------------------------------------------------
+    // Player
+    // ------------------------------------------------
+    // Player itself is already inside sizeof(WorldGrid).
+    report(
+        "player nested heap",
+        player.getMemoryUsage() - sizeof(Player)
+    );
+
+    // ------------------------------------------------
+    // Summary
+    // ------------------------------------------------
+    file << "\n============================================\n";
+
+    file << "ESTIMATED ACCOUNTED MEMORY: "
+         << total << " bytes ("
+         << toMiB(total) << " MiB)\n";
+
+    file << "============================================\n";
+
+    file << "\nCONTAINER COUNTS\n";
+
+    file << "World cells: "
+         << world_cells_.size() << '\n';
+
+    file << "Placed cells: "
+         << placed_cells_.size() << '\n';
+
+    file << "Chunks: "
+         << mesh.size() << '\n';
+
+    file << "Entities: "
+         << entities_.size() << '\n';
+
+    file << "Entity types: "
+         << entity_registry_.size() << '\n';
+
+    file << "Structures: "
+         << structures_.size() << '\n';
+
+    file << "Structure types: "
+         << structure_registry_.size() << '\n';
+
+    file << "\nNOTES\n";
+    file << "Includes known owned container allocations.\n";
+    file << "Does not yet include nested Structure heaps,\n";
+    file << "ThreadPool dynamic allocations or thread stacks,\n";
+    file << "allocator bookkeeping, or external resources.\n";
+    file << "Map allocation sizes are estimates.\n";
 }

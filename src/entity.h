@@ -10,6 +10,7 @@
 #include <algorithm>
 #include "world_types.h"
 #include "entity_movement_manager.h"
+#include "memory_usage.h"
 
 
 
@@ -48,6 +49,7 @@ class Entity
         double getAnimProgress() const {return animationProgress;}
         bool isFacingRight() const {return facingRight;}
         void changeState(std::string state); 
+        std::size_t getMemoryUsage() const;
 
 
 };

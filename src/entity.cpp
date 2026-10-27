@@ -146,3 +146,16 @@ void Entity::alignPosition()
 void Entity::do_attack()
 {
 }
+
+std::size_t Entity::getMemoryUsage() const
+{
+    std::size_t bytes = sizeof(*this);
+
+    // Memory owned by entity_template
+    bytes += MemoryUsage::dynamic(et_);
+
+    // Entity-specific animation state string
+    bytes += MemoryUsage::heap(state);
+
+    return bytes;
+}
