@@ -250,6 +250,10 @@ void GodotSimulation::createPlayer(godot::Dictionary data)
         settings.size
     );
 
+    settings.gravity = readNumber(
+        data, "gravity", settings.gravity
+    );
+
 
 
     // Sprite settings

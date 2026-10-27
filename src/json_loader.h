@@ -27,7 +27,7 @@ uint8_t priority = JsonLoader::Instance().GetEntry<uint8_t>("materials.json", "m
 #include <type_traits>
 #include <unordered_map>
 #include "json.hpp"
-#include "attack_type.h"
+#include "world_types.h"
 
 
 struct jResourceRequirement {
@@ -105,6 +105,23 @@ struct jEntityAttackPatternRef {
     std::string name{""};
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(jEntityAttackPatternRef, name)
 };
+struct jEntityAnimation
+{
+    std::string sprite = "";
+    int cols = 1;
+    int rows = 1;
+    double animationSpeed = 1.0;
+};
+
+inline void from_json(
+    const nlohmann::json& j,
+    jEntityAnimation& anim)
+{
+    anim.sprite = j.value("sprite", "");
+    anim.cols = j.value("cols", 1);
+    anim.rows = j.value("rows", 1);
+    anim.animationSpeed = j.value("animationSpeed", 1.0);
+}
 
 struct jEntityTemplate {
     uint32_t entityTypeID{0};
@@ -112,11 +129,15 @@ struct jEntityTemplate {
     std::string sprite{""};
     std::string entity_class{"enemy"};
     std::string behavior_type{"idle"};
+    std::unordered_map<std::string, jEntityAnimation> animations;
     float max_health{100.0f};
     float move_speed{5.0f};
     int width{2};
     int height{2};
+    float gravity{9.8f};
+    float maxFallSpeed{100.f};
     bool is_pickupable{false};
+    float jumpStrength{20.f};
     std::vector<jEntityAttackPatternRef> attack_patterns;
 };
 
@@ -131,7 +152,14 @@ inline void from_json(const nlohmann::json& j, jEntityTemplate& et) {
     et.is_pickupable = j.value("is_pickupable", false);
     et.width= j.value("width",2);
     et.height= j.value("height",2);
+    et.gravity= j.value("gravity",9);
+    et.maxFallSpeed= j.value("maxFallSpeed",100);
+    et.jumpStrength= j.value("jumpStrength",20);
     et.attack_patterns = j.value("attack_patterns", std::vector<jEntityAttackPatternRef>{});
+et.animations = j.value(
+    "animations",
+    std::unordered_map<std::string, jEntityAnimation>{}
+);
 }
 
 class JsonLoader {

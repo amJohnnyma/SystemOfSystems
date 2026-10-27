@@ -87,7 +87,7 @@ void Player::tick(const PlayerTickContext& ctx)
     // 2. Apply gravity
     EntityMovementManager::applyGravity(
         motion,
-        ctx.gts.gravity,
+        ps.gravity,
         static_cast<float>(ps.maxFallSpeed),
         dt
     );

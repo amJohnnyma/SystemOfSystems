@@ -7,6 +7,7 @@
 #include <iostream>
 #include <unordered_map>
 
+
 struct Cell
 {
     uint16_t type_id = 0; // material type
@@ -37,13 +38,6 @@ struct ChunkMeshData
     MeshData structure_mesh;
 };
 
-struct global_tick_settings
-{
-    float gravity = 9.8f;
-    double animationSpeed = 1.25;
-    double idleAnimSpeed = 1.0;
-};
-
 struct EntityTickContext
 {
     double deltaTime;
@@ -52,7 +46,6 @@ struct EntityTickContext
     int world_y;
     float threshold;
     Vec2 playerPos; // will also need the size but for now this is good
-    global_tick_settings gts;
 
 
 };
@@ -66,7 +59,6 @@ struct WorldEventContext
 struct PlayerTickContext
 {
     double deltaTime;
-    global_tick_settings gts;
     const WorldEventContext& world;
 };
 
@@ -114,6 +106,7 @@ struct PlayerSettings
     double maxMoveSpeed = 25.0;
     double jumpSpeed = 50.0;
     double maxFallSpeed = 100.0;
+    float gravity = 10.f;
 
     // Physics
     Vec2 size = {2.0f, 3.0f};
@@ -149,6 +142,78 @@ struct MovementResult
     bool hitWall = false;
     bool hitCeiling = false;
     bool landed = false; // Collided while moving downward this frame.
+};
+
+enum attack_type
+{
+    DIRECT, // straight on player
+    ARC,
+    LINE,
+    AEO,
+    HEAL
+};
+
+
+struct attack
+{
+    std::string name = "";
+    float damage = 0;
+    float range = 0;
+    attack_type at = DIRECT;
+    float cooldownBeforeNextAttack = 0; // cooldown before any other attack
+};
+
+struct attack_pattern
+{
+    std::string name = "";
+    std::vector<attack> attacks;
+    
+};
+
+struct EntityAnimation
+{
+    std::string sprite = "";
+    int cols = 1;
+    int rows = 1;
+    double animationSpeed = 1.0;
+};
+struct entity_template
+{
+    uint32_t entityTypeID = 0;
+    uint32_t instanceID = 0;
+    
+    std::string name = "";
+    std::string sprite = "";
+    std::string entity_class = "enemy"; // "player", "enemy", "item", "particle"
+    std::string behavior_type = "idle";
+ std::unordered_map<std::string, EntityAnimation> animations;
+
+    
+    float max_health = 100.0f;
+    float move_speed = 5.0f;
+    int width = 2;
+    int height = 2;
+
+    int x_origin = 0;
+    int y_origin = 0;
+
+    float x_smooth = 0;
+    float y_smooth = 0;
+
+    bool isGrounded = true;
+
+    Vec2 velocity = Vec2{0,0};
+
+    float gravity = 0;
+    float maxFallSpeed = 0;
+    float jumpStrength = 0;
+    
+    
+    // Optional item/particle fields
+    bool is_pickupable = false;
+
+    std::vector<attack_pattern> attack_patterns; // The various attack patterns for different phases, enemy tactic, etc.
+
 };
 
 

@@ -9,6 +9,9 @@
     "move_speed": 6.0,
     "width": 2,
     "height": 3,
+"gravity" : 40,
+"maxFallSpeed" : 1000,
+"jumpStrength" : 30,
     "is_pickupable": false,
    "visualPixelsPerCell": 13.67,
     "visualPivot": [0.23, 0.0],
@@ -16,17 +19,20 @@
       "idle": {
         "sprite": "Monster_idle.png",
         "cols": 13,
-        "rows": 1
+        "rows": 1,
+            "animationSpeed": 1
       },
       "walk": {
         "sprite": "Monster_walk.png",
         "cols": 6,
-        "rows": 1
+        "rows": 1,
+            "animationSpeed": 1
       },
       "attack": {
         "sprite": "Monster_attack.png",
         "cols": 6,
-        "rows": 1
+        "rows": 1,
+            "animationSpeed": 0.5
       }
     },
     "attack_patterns": [
@@ -48,6 +54,9 @@
     "move_speed": 7.0,
     "width": 2,
     "height": 2,
+"gravity" : 9.8,
+"maxFallSpeed" : 100,
+"jumpStrength" : 20,
     "is_pickupable": false,
    "visualPixelsPerCell": 30,
     "visualPivot": [0.5, 0.0],
@@ -55,17 +64,20 @@
       "idle": {
         "sprite": "Knight_idle.png",
         "cols": 14,
-        "rows": 2
+        "rows": 2,
+            "animationSpeed": 0.5
       },
       "walk": {
         "sprite": "Knight_walk.png",
         "cols": 8,
-        "rows": 1
+        "rows": 1,
+            "animationSpeed": 0.5
       },
       "attack": {
         "sprite": "Knight_attack.png",
         "cols": 8,
-        "rows": 1
+        "rows": 1,
+            "animationSpeed": 0.5
       }
     },
     "attack_patterns": [
@@ -87,6 +99,9 @@
     "move_speed": 3.0,
     "width": 1,
     "height": 1,
+"gravity" : 9.8,
+"maxFallSpeed" : 100,
+"jumpStrength" : 20,
     "is_pickupable": false,
     "visualPixelsPerCell": 64,
     "visualPivot": [0.5, 0.0],
@@ -94,17 +109,20 @@
       "idle": {
         "sprite": "Mushroom_idle.png",
         "cols": 7,
-        "rows": 1
+        "rows": 1,
+            "animationSpeed": 0.5
       },
       "walk": {
         "sprite": "Mushroom_walk.png",
         "cols": 8,
-        "rows": 1
+        "rows": 1,
+            "animationSpeed": 0.5
       },
       "attack": {
         "sprite": "Mushroom_attack.png",
         "cols": 8,
-        "rows": 1
+        "rows": 1,
+            "animationSpeed": 0.5
       }
     },
     "attack_patterns": [
@@ -127,6 +145,9 @@
     "move_speed": 3.0,
     "width": 2,
     "height": 3,
+"gravity" : 9.8,
+"maxFallSpeed" : 100,
+"jumpStrength" : 20,
     "is_pickupable": false,
     "visualPixelsPerCell": 30,
     "visualPivot": [0.5, 0.0],
@@ -134,17 +155,20 @@
       "idle": {
         "sprite": "EvilWizard_idle.png",
         "cols": 8,
-        "rows": 1
+        "rows": 1,
+            "animationSpeed": 0.5
       },
       "walk": {
         "sprite": "EvilWizard_walk.png",
         "cols": 8,
-        "rows": 1
+        "rows": 1,
+            "animationSpeed": 0.5
       },
       "attack": {
         "sprite": "EvilWizard_attack1.png",
         "cols": 8,
-        "rows": 1
+        "rows": 1,
+            "animationSpeed": 0.5
       }
     },
     "attack_patterns": [

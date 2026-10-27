@@ -39,9 +39,9 @@ void Entity::on_tick(EntityTickContext etx)
 
     // 3. Apply gravity
     EntityMovementManager::applyGravity(
-        motion,
-        etx.gts.gravity,
-        100.0f, // Temporary max fall speed
+        motion,        
+        gravity,
+        maxFallSpeed, // Temporary max fall speed
         dt
     );
 
@@ -75,7 +75,7 @@ void Entity::on_tick(EntityTickContext etx)
     // Preserve your previous automatic wall-jump behavior.
     if (result.hitWall && et_.isGrounded)
     {
-        et_.velocity.y = -1.5f * etx.gts.gravity;
+        et_.velocity.y = -jumpStrength;
         et_.isGrounded = false;
     }
 
@@ -100,28 +100,21 @@ void Entity::on_tick(EntityTickContext etx)
     }
 
     // 10. Animation progression
-    double prog = 0.0;
+    auto it = et_.animations.find(state);
 
-    if (state == "idle")
+    if (it != et_.animations.end())
     {
-        prog = etx.deltaTime *
-               etx.gts.idleAnimSpeed;
-    }
-    else
-    {
-        prog = etx.deltaTime *
-               etx.gts.animationSpeed;
-    }
+        const double animation_speed =
+            it->second.animationSpeed;
 
-    animationProgress = std::clamp(
-        animationProgress + prog,
-        0.0,
-        1.0
-    );
+        animationProgress +=
+            etx.deltaTime * animation_speed;
 
-    if (animationProgress >= 1.0)
-    {
-        animationProgress = 0.0;
+        if (animationProgress >= 1.0)
+        {
+            animationProgress =
+                std::fmod(animationProgress, 1.0);
+        }
     }
 }
 

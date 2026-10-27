@@ -5,8 +5,9 @@
     "maxHealth": 100,
 
     "maxMoveSpeed": 8,
-    "jumpSpeed": 12,
-    "maxFallSpeed": 100,
+    "jumpSpeed": 30,
+    "maxFallSpeed": 1000,
+"gravity" : 40,
 
     "size": [2, 3],
     "visualPixelsPerCell": 30,

@@ -356,6 +356,22 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
             et.is_pickupable = jet.is_pickupable;
             et.width = jet.width;
             et.height= jet.height;
+            et.gravity = jet.gravity;
+            et.maxFallSpeed = jet.maxFallSpeed;
+            et.jumpStrength = jet.jumpStrength;
+
+            // Load animations
+            for (const auto& [state, janim] : jet.animations)
+            {
+                EntityAnimation anim;
+
+                anim.sprite = janim.sprite;
+                anim.cols = janim.cols;
+                anim.rows = janim.rows;
+                anim.animationSpeed = janim.animationSpeed;
+
+                et.animations.emplace(state, std::move(anim));
+            }
 
             // Resolve attack patterns from memory using the names provided in entity.json
             for (const auto& patRef : jet.attack_patterns) {
@@ -649,7 +665,6 @@ void WorldGrid::movePlayer(
 
     PlayerTickContext playerCtx {
         .deltaTime = deltaTime,
-            .gts= gts,
             .world = worldCtx
     };
 
@@ -683,8 +698,7 @@ uint32_t WorldGrid::tick(double deltaTime)
                 .world_x = world_x_,
                 .world_y = world_y_,
                 .threshold = threshold,
-                .playerPos = player.getPosition(),
-                .gts = gts
+                .playerPos = player.getPosition()
         };
         for (auto& [uID, entity] : entities_) {
             entity.on_tick(etx); // updates internal smooth positions
