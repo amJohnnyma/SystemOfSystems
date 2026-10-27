@@ -15,6 +15,7 @@
 #include <fstream>
 #include <iomanip>
 #include <cstddef>
+#include "terrain_generator.h"
 
 
 // what will be updated on each tick if any
@@ -40,6 +41,7 @@ class WorldGrid
         std::vector<int> dirty_chunk_indices_;
         std::vector<uint8_t> chunk_is_dirty_;
         std::unique_ptr<ThreadPool> pool_;
+        TerrainGenerationResult generation_data_; // surface heights, biome IDs, proposals
 
         MarchingSquares marchingSquares = MarchingSquares();
 
@@ -114,6 +116,7 @@ class WorldGrid
         void fill_cell(int x, int y, uint16_t type_id, bool negativeFill = false);
 
         int get_num_chunk_x() const {return num_chunk_x; }
+        const TerrainGenerationResult& getGenerationData() const { return generation_data_; }
 
         // Enable move assignment if re-assigning world_grid_ = WorldGrid();
         WorldGrid(WorldGrid&&) noexcept = default;

@@ -213,7 +213,7 @@ void fragment() {
 	#world.placeEntity(320,10,2)
 	#world.placeEntity(330,10,3)
 	#world.placeEntity(340,10,4)
-	for i in range(10000):
+	for i in range(1):
 		world.placeEntity(320,10,1)
 
 	

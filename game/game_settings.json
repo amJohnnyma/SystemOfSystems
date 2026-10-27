@@ -2,8 +2,8 @@
   "performance": {
     "entity_parallel_threshold": 250,
     "entity_min_batch_size": 125,
-    "profiling_enabled": false,
-    "profiling_sample_count": 600,
+    "profiling_enabled": true,
+    "profiling_sample_count": 300,
     "thread_pool_workers": 0
   },
   "world": {
@@ -13,25 +13,157 @@
     "default_density_threshold": 128.0
   },
   "terrain_generation": {
-    "surface_noise_frequency": 0.008,
-    "surface_noise_octaves": 4,
-    "surface_noise_amplitude": 1.0,
-    "surface_noise_persistence": 0.5,
-    "base_surface_height_fraction": 0.25,
-    "height_variation_fraction": 0.1,
-    "surface_density_multiplier": 128.0,
-    "surface_density_offset": 64.0,
-    "grass_depth": 8,
-    "surface_material_id": 2,
-    "deep_material_id": 3,
-    "patch_probability": 0.8,
-    "patch_seed": 0,
-    "patch_material_id_min": 1,
-    "patch_material_id_max": 256,
-    "patch_min_world_y_fraction": 0.3,
-    "patch_radius_min": 3.0,
-    "patch_radius_max": 10.0,
-    "patch_density_strength": 255.0
+    "seed": 1337,
+    "material_patch_cells": 6,
+    "surface": {
+      "base_height_fraction": 0.38,
+      "noise_scale": 0.0065,
+      "octaves": 4,
+      "persistence": 0.52,
+      "height_variation_fraction": 0.1,
+      "biome_scale": 0.0014,
+      "mountain_region_scale": 0.0018,
+      "mountain_detail_scale": 0.017,
+      "mountain_amplitude_fraction": 0.2,
+      "mountain_activation": 0.53,
+      "surface_density_multiplier": 128.0,
+      "surface_density_offset": 64.0
+    },
+    "surface_biomes": [
+      {
+        "name": "plains",
+        "height_offset": 0.0,
+        "hill_multiplier": 0.65,
+        "soil_depth": 8,
+        "top_ids": [
+          1,
+          16
+        ],
+        "soil_ids": [
+          17,
+          48
+        ],
+        "rock_ids": [
+          49,
+          96
+        ]
+      },
+      {
+        "name": "badlands",
+        "height_offset": 0.035,
+        "hill_multiplier": 1.0,
+        "soil_depth": 4,
+        "top_ids": [
+          97,
+          112
+        ],
+        "soil_ids": [
+          113,
+          144
+        ],
+        "rock_ids": [
+          145,
+          176
+        ]
+      },
+      {
+        "name": "highlands",
+        "height_offset": -0.035,
+        "hill_multiplier": 1.4,
+        "soil_depth": 5,
+        "top_ids": [
+          177,
+          192
+        ],
+        "soil_ids": [
+          193,
+          216
+        ],
+        "rock_ids": [
+          217,
+          240
+        ]
+      },
+      {
+        "name": "strange",
+        "height_offset": 0.0,
+        "hill_multiplier": 0.85,
+        "soil_depth": 11,
+        "top_ids": [
+          241,
+          256
+        ],
+        "soil_ids": [
+          1,
+          64
+        ],
+        "rock_ids": [
+          65,
+          160
+        ]
+      }
+    ],
+    "underground_start_depth": 27,
+    "underground_biome_scale": 0.006,
+    "underground_biomes": [
+      {
+        "name": "stone",
+        "material_ids": [
+          49,
+          112
+        ]
+      },
+      {
+        "name": "crystal",
+        "material_ids": [
+          113,
+          192
+        ]
+      },
+      {
+        "name": "ancient",
+        "material_ids": [
+          193,
+          256
+        ]
+      }
+    ],
+    "caves": {
+      "enabled": true,
+      "noise_scale": 0.031,
+      "octaves": 3,
+      "threshold": 0.62,
+      "edge_softness": 0.09,
+      "minimum_depth": 8,
+      "full_depth": 34,
+      "large_cave_scale": 0.008,
+      "large_cave_threshold": 0.78,
+      "surface_entrances_per_1000_width": 6,
+      "tunnel_min_length": 14,
+      "tunnel_max_length": 42,
+      "tunnel_radius": 2.5
+    },
+    "islands": {
+      "enabled": true,
+      "islands_per_1000_width": 5.0,
+      "min_y_fraction": 0.06,
+      "max_y_fraction": 0.25,
+      "min_radius": 9,
+      "max_radius": 28,
+      "thickness": 0.42
+    },
+    "patches": {
+      "enabled": true,
+      "attempts_per_chunk": 2.0,
+      "probability": 0.76,
+      "min_radius": 3,
+      "max_radius": 10,
+      "material_ids": [
+        1,
+        256
+      ]
+    },
+    "structure_rules": []
   },
   "rendering": {
     "entity_culling_margin": 2.0

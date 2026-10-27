@@ -242,7 +242,7 @@ int MarchingSquares::getBlockSlopeType(const std::array<float, 9>& nb, float thr
     if (left && right) return 11; 
 
 
-    return 12;
+    return 0;
 
 }
 void AppendShapeGeometry(int shape_id, int ix, int iy, uint16_t material_id, MeshData& mesh)

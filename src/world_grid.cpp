@@ -14,6 +14,7 @@
 #include <fstream>
 #include <iomanip>
 #include "game_settings.h"
+#include "terrain_generator.h"
 
 Cell WorldGrid::get_cell(int x, int y) const
 {
@@ -186,73 +187,10 @@ void WorldGrid::flag_dirty_chunk(int cx, int cy)
     }
 }
 
-namespace NativeNoise {
-    static const int p[512] = {
-        151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,
-        8,99,37,240,21,10,23,190,6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,
-        35,11,32,57,177,33,88,237,149,56,87,174,20,125,136,171,168,68,175,74,165,71,
-        134,139,48,27,166,77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,
-        55,46,245,40,244,102,143,54,65,25,63,161,1,216,80,73,209,76,132,187,208,89,
-        18,169,200,196,135,130,116,188,159,86,164,100,109,198,173,186,3,64,52,217,226,
-        250,124,123,5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,
-        189,28,42,223,183,170,213,119,248,152,2,44,145,31,179,228,167,218,204,124,34,
-        254,19,84,236,98,138,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,
-        156,180,151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,140,36,103,30,
-        69,142,8,99,37,240,21,10,23,190,6,148,247,120,234,75,0,26,197,62,94,252,219,
-        203,117,35,11,32,57,177,33,88,237,149,56,87,174,20,125,136,171,168,68,175,74,
-        165,71,134,139,48,27,166,77,146,158,231,83,111,229,122,60,211,133,230,220,105,
-        92,41,55,46,245,40,244,102,143,54,65,25,63,161,1,216,80,73,209,76,132,187,208,
-        89,18,169,200,196,135,130,116,188,159,86,164,100,109,198,173,186,3,64,52,217,
-        226,250,124,123,5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,
-        182,189,28,42,223,183,170,213,119,248,152,2,44,145,31,179,228,167,218,204,124,
-        34,254,19,84,236,98,138,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,
-        61,156,180
-    };
 
-    inline float fade(float t) { return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f); }
-    inline float lerp(float t, float a, float b) { return a + t * (b - a); }
-    inline float grad(int hash, float x, float y) {
-        int h = hash & 7;
-        float u = h < 4 ? x : y;
-        float v = h < 4 ? y : x;
-        return ((h & 1) ? -u : u) + ((h & 2) ? -2.0f * v : 2.0f * v);
-    }
-
-    inline float eval(float x, float y) {
-        int X = static_cast<int>(std::floor(x)) & 255;
-        int Y = static_cast<int>(std::floor(y)) & 255;
-        x -= std::floor(x);
-        y -= std::floor(y);
-        float u = fade(x);
-        float v = fade(y);
-        int A = p[X] + Y, B = p[X + 1] + Y;
-        return lerp(v, lerp(u, grad(p[A], x, y), grad(p[B], x - 1, y)),
-                lerp(u, grad(p[A + 1], x, y - 1), grad(p[B + 1], x - 1, y - 1)));
-    }
-
-    // Octave/Fractal Noise
-    inline float fBm(float x, float y, int octaves, float frequency, float persistence) {
-        float total = 0.0f;
-        float max_val = 0.0f;
-        float amp = 1.0f;
-        for (int i = 0; i < octaves; ++i) {
-            total += eval(x * frequency, y * frequency) * amp;
-            max_val += amp;
-            amp *= persistence;
-            frequency *= 2.0f;
-        }
-        return total / max_val;
-    }
-}
 
 void WorldGrid::init(int x_size, int y_size, int g_size, float t)
 {
-    const auto& settings = GameSettings::Instance();
-    const auto terrain = settings.terrain;
-
-    pool_ = std::make_unique<ThreadPool>(
-            settings.performance.thread_pool_workers
-            );
     world_x_ = x_size + 1;
     world_y_ = y_size + 1;
     chunk_size_ = g_size;
@@ -261,7 +199,12 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
     num_chunk_y = std::max(1,(world_y_ + chunk_size_ - 1) / chunk_size_);
     world_cells_.resize(world_x_ * world_y_);
     placed_cells_.resize(world_x_ * world_y_);
-
+    // The settings file is read once and cached by GameSettings.
+    const auto& settings = GameSettings::Instance();
+    // Copy a small, immutable settings struct once before launching workers.
+    pool_ = std::make_unique<ThreadPool>(
+        settings.performance.thread_pool_workers
+    );
 
     int numChunks = num_chunk_x * num_chunk_y;
     mesh.resize(numChunks);
@@ -389,215 +332,26 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
         }
     }
 
-    const float base_surface_y =
-        static_cast<float>(world_y_) *
-        terrain.base_surface_height_fraction;
+    // Configuration values for surface generation are immutable for this run.
+    // Generation is now a standalone, deterministic pipeline.
+    // No terrain JSON lookups or rendering operations occur inside workers.
+    TerrainGenerator generator(settings.terrain);
+    generation_data_ = generator.generate(
+        world_cells_, world_x_, world_y_, chunk_size_, pool_.get());
 
-    const float surface_height_amplitude =
-        static_cast<float>(world_y_) *
-        terrain.height_variation_fraction *
-        terrain.surface_noise_amplitude;
-
-    const uint16_t surface_material =
-        static_cast<uint16_t>(terrain.surface_material_id);
-
-    const uint16_t deep_material =
-        static_cast<uint16_t>(terrain.deep_material_id);
-    unsigned int num_threads = pool_->get_num_threads();
-    size_t x_cells_per_thread = ((world_x_) + num_threads - 1) / num_threads;
-
-    std::vector<std::future<void>> futures;
-    futures.reserve(num_threads);
-
-    for (unsigned int t = 0; t < num_threads; t++)
+    // Structures are optional and proposed only AFTER terrain is complete.
+    // The existing WorldGrid placement API owns structure creation/registration.
+    for (const GeneratedStructure& placement : generation_data_.proposed_structures)
     {
-        size_t start_idx = t * x_cells_per_thread;
-        size_t end_idx = std::min(start_idx + x_cells_per_thread, static_cast<size_t>(world_x_));
-
-        if (start_idx >= world_x_) break;
-
-        futures.push_back(pool_->enqueue(
-                    [this, start_idx, end_idx, terrain,
-                    base_surface_y, surface_height_amplitude,
-                    surface_material, deep_material]()
-                    {
-                    for (size_t i = start_idx; i < end_idx; i++)
-                    {
-                    const float noise_val = NativeNoise::fBm(
-                            static_cast<float>(i) *
-                            terrain.surface_noise_frequency,
-                            0.0f,
-                            terrain.surface_noise_octaves,
-                            1.0f,
-                            terrain.surface_noise_persistence
-                            );
-
-                    const float surface_y =
-                    base_surface_y +
-                    noise_val * surface_height_amplitude;
-
-                    // Find the exact integer row containing the surface line
-                    int surf_row = static_cast<int>(std::floor(surface_y));
-                    float frac = surface_y - static_cast<float>(surf_row);
-
-                    for (size_t j = 0; j < world_y_; j++)
-                    {
-                        size_t index = j * world_x_ + i;
-                        int int_y = static_cast<int>(j);
-
-                        uint16_t type_id = 0;
-                        float density = 0.0f;
-
-                        if (int_y < surf_row) {
-                            // Above surface -> Air
-                            type_id = 0;
-                            density = 0.0f;
-                        }
-                        else if (int_y == surf_row) {
-                            // Exactly one surface cell gets a partial density based on fractional height
-                            // Adjust the multiplier if you want steeper or flatter slope generation
-                            density = std::clamp(
-                                    (1.0f - frac) *
-                                    terrain.surface_density_multiplier +
-                                    terrain.surface_density_offset,
-                                    1.0f, 254.0f
-                                    );
-
-                            type_id = surface_material;
-                        }
-                        else {
-                            // Below surface -> Full solid blocks
-                            density = 255.0f;
-
-                            int depth = int_y - surf_row;
-                            if (depth < terrain.grass_depth)
-                            {
-                                type_id = surface_material;
-                            }
-                            else
-                            {
-                                type_id = deep_material;
-                            }
-
-                        }
-
-                        world_cells_[index].type_id = type_id;
-                        world_cells_[index].density = density;
-                        world_cells_[index].state_flags = 0;
-                    }
-                    }
-                    }));
+        const auto it = structure_registry_.find(static_cast<int>(placement.structure_id));
+        if (it == structure_registry_.end()) continue;
+        const auto& st = it->second.getTemplate();
+        // A proposal is only valid if its configured footprint matches the registry.
+        if (st.x_width != placement.footprint_width ||
+            st.y_width != placement.footprint_height) continue;
+        placeStructure(placement.x, placement.y,
+                       static_cast<int>(placement.structure_id));
     }
-
-
-    for (auto& f:futures)
-    {
-        f.get();
-    }
-    // 2. Fast O(W log H) Binary-Search Surface Crawler
-    MarchingSquares cleanup_ms;
-    for (int ix = 0; ix < world_x_; ix++)
-    {
-        // Interval halving (Binary search) to find the first non-air block from the top
-        int low = 0;
-        int high = world_y_ - 1;
-        int surface_iy = -1;
-
-        while (low <= high)
-        {
-            int mid = low + (high - low) / 2;
-            size_t index = static_cast<size_t>(mid) * world_x_ + ix;
-
-            if (world_cells_[index].type_id == 0)
-            {
-                // It's air -> surface is further down (+50% / +25% direction)
-                low = mid + 1;
-            }
-            else
-            {
-                // It's solid -> record it and check higher up (-12.5% direction)
-                surface_iy = mid;
-                high = mid - 1;
-            }
-        }
-
-        // 3. Inspect the located surface block for shape 12 artifacts
-        if (surface_iy != -1 && surface_iy < world_y_)
-        {
-            size_t index = static_cast<size_t>(surface_iy) * world_x_ + ix;
-
-            std::array<float, 9> nb = cleanup_ms.getNeighbourhood(world_cells_, world_x_, world_y_, ix, surface_iy);
-            int shape_id = cleanup_ms.getBlockSlopeType(nb, threshold);
-
-            if (shape_id == 12)
-            {
-                // Erase the awkward half-block fallback to air
-                world_cells_[index].type_id = 0;
-                world_cells_[index].density = 0.0f;
-            }
-        }
-    }
-    std::random_device rd;
-
-    std::mt19937 rng(
-            terrain.patch_seed == 0
-            ? rd()
-            : terrain.patch_seed
-            );
-
-    std::uniform_real_distribution<float>
-        chance_dist(0.0f, 1.0f);
-
-    std::uniform_int_distribution<uint16_t>
-        type_dist(
-                terrain.patch_material_id_min,
-                terrain.patch_material_id_max
-                );
-
-    std::uniform_int_distribution<int>
-        x_dist(0, world_x_ - 1);
-
-    const int patch_min_y = std::clamp(
-            static_cast<int>(
-                world_y_ *
-                terrain.patch_min_world_y_fraction
-                ),
-            0,
-            world_y_ - 1
-            );
-
-    std::uniform_int_distribution<int>
-        y_dist(patch_min_y, world_y_ - 1);
-
-    std::uniform_real_distribution<float>
-        radius_dist(
-                terrain.patch_radius_min,
-                terrain.patch_radius_max
-                );
-    for (int i = 0; i < num_chunk_x; ++i)
-    {
-        for (int j = 0; j < num_chunk_y; ++j)
-        {
-            if (chance_dist(rng) >=
-                    terrain.patch_probability)
-                continue;
-
-            const int patch_x = x_dist(rng);
-            const int patch_y = y_dist(rng);
-
-            const float radius = radius_dist(rng);
-            const uint16_t random_type = type_dist(rng);
-
-            set_density(
-                    patch_x,
-                    patch_y,
-                    radius,
-                    terrain.patch_density_strength,
-                    random_type
-                    );
-        }
-    }
-
 
     chunk_is_dirty_.assign(numChunks, 1);
 

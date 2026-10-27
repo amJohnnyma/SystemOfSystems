@@ -1,5 +1,5 @@
 [
-  { "Comment" : "ADD PER ANIMATION SPEED + JUMP SPEED + MAX FALL SPEED",
+  { 
     "entityTypeID": 1,
     "name": "Monster",
     "sprite": "Monster.png",
@@ -26,7 +26,7 @@
         "sprite": "Monster_walk.png",
         "cols": 6,
         "rows": 1,
-            "animationSpeed": 1
+            "animationSpeed": 3
       },
       "attack": {
         "sprite": "Monster_attack.png",
