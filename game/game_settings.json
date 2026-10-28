@@ -2,7 +2,7 @@
   "performance": {
     "entity_parallel_threshold": 250,
     "entity_min_batch_size": 125,
-    "profiling_enabled": true,
+    "profiling_enabled": false,
     "profiling_sample_count": 300,
     "thread_pool_workers": 0
   },

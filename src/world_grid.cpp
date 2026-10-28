@@ -15,6 +15,7 @@
 #include <iomanip>
 #include "game_settings.h"
 #include "terrain_generator.h"
+#include "item_registry_loader.h"
 
 Cell WorldGrid::get_cell(int x, int y) const
 {
@@ -252,6 +253,19 @@ void WorldGrid::init(int x_size, int y_size, int g_size, float t)
             structure_registry_.insert({js.structureID, structure});
         }
     }
+    // Build the shared item registry once. Structures were loaded above.
+    // Their placeable item definitions copy world_size but reference all
+    // other structure properties by structure_id.
+    item_registry_.clear();
+    const auto& items_json = JsonLoader::Instance().Get("game/items.json");
+    const size_t custom_item_count =
+        ItemRegistryLoader::loadCustomItems(item_registry_, items_json);
+    const auto& block_atlases_json =
+        JsonLoader::Instance().Get("game/structure_atlases.json");
+    const size_t structure_item_count =
+        ItemRegistryLoader::registerStructureItems(
+            item_registry_, structure_registry_, block_atlases_json);
+
     // Step 1: Load attack.json into a lookup map
     std::unordered_map<std::string, attack> attacks_memory;
     nlohmann::json& attack_data = JsonLoader::Instance().Get("game/attack.json");

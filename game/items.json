@@ -1,0 +1,277 @@
+{
+  "sprite_sheets": {
+    "items": {
+      "path": "res://game/atlas/items.png",
+      "frame_size": [
+        32,
+        32
+      ]
+    }
+  },
+  "items": [
+    {
+      "iID": 1,
+      "name": "Iron Pickaxe",
+      "description": "Basic pickaxe; mines terrain and can deal melee damage.",
+      "category": "Tool",
+      "max_stack": 1,
+      "can_go_hotbar": true,
+      "max_durability": 250,
+      "weight": 0.0,
+      "icon": "",
+      "world_sprite": "",
+      "world_size": [
+        1.0,
+        1.0
+      ],
+      "animations": {
+        "swing": {
+          "start_frame": 0,
+          "end_frame": 0,
+          "duration": 0.3,
+          "loop": false,
+          "hand_offset": [
+            0.3,
+            -0.3
+          ]
+        },
+        "mine": {
+          "start_frame": 0,
+          "end_frame": 0,
+          "duration": 0.32,
+          "loop": false,
+          "hand_offset": [
+            0.3,
+            -0.3
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "ModifyTerrain",
+          "range": 4.0,
+          "cooldown": 0.35,
+          "animation": "mine",
+          "density_change": -32.0,
+          "radius": 1.5,
+          "durability_cost": 1,
+          "events": [
+            {
+              "type": "ApplyAction",
+              "normalized_time": 0.5
+            },
+            {
+              "type": "SpawnEffect",
+              "normalized_time": 0.5,
+              "resource_id": "pickaxe_sparks"
+            }
+          ]
+        },
+        {
+          "type": "Attack",
+          "range": 2.5,
+          "cooldown": 0.5,
+          "animation": "swing",
+          "damage": 8.0,
+          "knockback": 2.0,
+          "durability_cost": 1,
+          "events": [
+            {
+              "type": "ApplyAction",
+              "normalized_time": 0.5
+            }
+          ]
+        }
+      ],
+      "sprite_sheet": "items",
+      "icon_frame": 0
+    },
+    {
+      "iID": 2,
+      "name": "Iron Sword",
+      "description": "Reliable short-range weapon.",
+      "category": "Weapon",
+      "max_stack": 1,
+      "can_go_hotbar": true,
+      "max_durability": 350,
+      "icon": "",
+      "world_sprite": "",
+      "world_size": [
+        0.7,
+        2.0
+      ],
+      "animations": {
+        "slash": {
+          "start_frame": 1,
+          "end_frame": 1,
+          "duration": 0.35,
+          "loop": false,
+          "hand_offset": [
+            0.25,
+            -0.1
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "Attack",
+          "range": 3.0,
+          "cooldown": 0.4,
+          "animation": "slash",
+          "damage": 16.0,
+          "knockback": 3.0,
+          "durability_cost": 1,
+          "events": [
+            {
+              "type": "ApplyAction",
+              "normalized_time": 0.45
+            },
+            {
+              "type": "PlaySound",
+              "normalized_time": 0.45,
+              "resource_id": "sword_hit"
+            }
+          ]
+        }
+      ],
+      "sprite_sheet": "items",
+      "icon_frame": 1
+    },
+    {
+      "iID": 3,
+      "name": "Health Potion",
+      "description": "Restores health when consumed (effect implemented later).",
+      "category": "Consumable",
+      "max_stack": 20,
+      "can_go_hotbar": true,
+      "icon": "",
+      "world_sprite": "",
+      "world_size": [
+        0.8,
+        0.8
+      ],
+      "actions": [
+        {
+          "type": "Consume",
+          "range": 0.0,
+          "cooldown": 1.0,
+          "consume_count": 1,
+          "events": [
+            {
+              "type": "ApplyAction",
+              "normalized_time": 0.8
+            }
+          ],
+          "animation": "drink"
+        }
+      ],
+      "sprite_sheet": "items",
+      "icon_frame": 2,
+      "animations": {
+        "drink": {
+          "start_frame": 2,
+          "end_frame": 2,
+          "duration": 0.4,
+          "loop": false,
+          "hand_offset": [
+            0.0,
+            0.0
+          ]
+        }
+      }
+    },
+    {
+      "iID": 4,
+      "name": "Wooden Bow",
+      "description": "Fires a test arrow projectile (not yet executed).",
+      "category": "Weapon",
+      "max_stack": 1,
+      "can_go_hotbar": true,
+      "max_durability": 150,
+      "icon": "",
+      "world_sprite": "",
+      "world_size": [
+        1.0,
+        1.8
+      ],
+      "animations": {
+        "shoot": {
+          "start_frame": 3,
+          "end_frame": 3,
+          "duration": 0.4,
+          "loop": false,
+          "hand_offset": [
+            0.15,
+            -0.2
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "SpawnProjectile",
+          "range": 20.0,
+          "cooldown": 0.6,
+          "animation": "shoot",
+          "projectile_type_id": 1,
+          "durability_cost": 1,
+          "events": [
+            {
+              "type": "ApplyAction",
+              "normalized_time": 0.65
+            }
+          ]
+        }
+      ],
+      "sprite_sheet": "items",
+      "icon_frame": 3
+    },
+    {
+      "iID": 5,
+      "name": "Mining Bomb",
+      "description": "Thrown explosive for breaking terrain (future effect).",
+      "category": "Consumable",
+      "max_stack": 25,
+      "can_go_hotbar": true,
+      "icon": "",
+      "world_sprite": "",
+      "world_size": [
+        0.8,
+        0.8
+      ],
+      "actions": [
+        {
+          "type": "ThrowItem",
+          "range": 10.0,
+          "cooldown": 1.2,
+          "consume_count": 1,
+          "events": [
+            {
+              "type": "ApplyAction",
+              "normalized_time": 0.5
+            },
+            {
+              "type": "SpawnEffect",
+              "normalized_time": 0.8,
+              "resource_id": "mining_explosion"
+            }
+          ],
+          "animation": "throw"
+        }
+      ],
+      "sprite_sheet": "items",
+      "icon_frame": 4,
+      "animations": {
+        "throw": {
+          "start_frame": 4,
+          "end_frame": 4,
+          "duration": 0.3,
+          "loop": false,
+          "hand_offset": [
+            0.0,
+            0.0
+          ]
+        }
+      }
+    }
+  ]
+}

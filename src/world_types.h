@@ -220,6 +220,8 @@ struct entity_template
 
 
 
+
+
 struct LineSegment {Vertex p1; Vertex p2;};
 
 #endif

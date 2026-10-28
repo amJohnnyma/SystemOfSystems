@@ -1,0 +1,26 @@
+{
+  "block_atlases": [
+    {
+      "name": "terrain",
+      "first_block_type": 1,
+      "last_block_type": 206,
+      "path": "res://game/atlas/terrain.png",
+      "frame_size": [
+        16,
+        16
+      ],
+      "first_frame": 0
+    },
+    {
+      "name": "terrain",
+      "first_block_type": 207,
+      "last_block_type": 256,
+      "path": "res://game/atlas/master-tileset.png",
+      "frame_size": [
+        62,
+        62
+      ],
+      "first_frame": 0
+    }
+  ]
+}

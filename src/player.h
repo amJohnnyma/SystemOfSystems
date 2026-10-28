@@ -8,6 +8,7 @@
 #include <algorithm>
 #include "entity_movement_manager.h"
 #include "memory_usage.h"
+#include "inventory.h"
 
 class Player
 {
@@ -30,6 +31,7 @@ private:
     float jumpSpeed_ = 50.0f;
 
     PlayerSettings ps;
+    Inventory inventory_;
 
 
     // Future:

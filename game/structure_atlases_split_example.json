@@ -1,0 +1,48 @@
+{
+  "block_atlases": [
+    {
+      "name": "terrain_01",
+      "first_block_type": 1,
+      "last_block_type": 64,
+      "path": "res://game/atlas/terrain_01.png",
+      "frame_size": [
+        66,
+        64
+      ],
+      "first_frame": 0
+    },
+    {
+      "name": "terrain_02",
+      "first_block_type": 65,
+      "last_block_type": 128,
+      "path": "res://game/atlas/terrain_02.png",
+      "frame_size": [
+        66,
+        64
+      ],
+      "first_frame": 0
+    },
+    {
+      "name": "terrain_03",
+      "first_block_type": 129,
+      "last_block_type": 192,
+      "path": "res://game/atlas/terrain_03.png",
+      "frame_size": [
+        66,
+        64
+      ],
+      "first_frame": 0
+    },
+    {
+      "name": "terrain_04",
+      "first_block_type": 193,
+      "last_block_type": 256,
+      "path": "res://game/atlas/terrain_04.png",
+      "frame_size": [
+        66,
+        64
+      ],
+      "first_frame": 0
+    }
+  ]
+}

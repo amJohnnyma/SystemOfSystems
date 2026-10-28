@@ -55,7 +55,11 @@ text = "X"
 [node name="HSeparator" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=930593418]
 layout_mode = 2
 
-[node name="ItemGrid" type="GridContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1358444543]
+[node name="ItemScroll" type="ScrollContainer" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=2000127224]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ItemGrid" type="GridContainer" parent="PanelContainer/MarginContainer/VBoxContainer/ItemScroll" unique_id=1358444543]
 unique_name_in_owner = true
 layout_mode = 2
 columns = 10

@@ -25,6 +25,7 @@ void GodotSimulation::_bind_methods() {
     ClassDB::bind_method(D_METHOD("fillCell", "x", "y", "type_id", "negativeFill"), &GodotSimulation::fillCell);
     ClassDB::bind_method(D_METHOD("getStructureRegistry"), &GodotSimulation::getStructureRegistry);
     ClassDB::bind_method(D_METHOD("getEntityRegistry"), &GodotSimulation::getEntityRegistry);
+    ClassDB::bind_method(D_METHOD("getItemRegistry"), &GodotSimulation::getItemRegistry);
     ClassDB::bind_method(D_METHOD("placeStructure", "x", "y", "structureID"), &GodotSimulation::placeStructure);
     ClassDB::bind_method(D_METHOD("placeEntity", "x", "y", "entityID"), &GodotSimulation::placeEntity);
     ClassDB::bind_method(D_METHOD("selectStructure", "x", "y"), &GodotSimulation::selectStructure);
@@ -72,6 +73,115 @@ godot::Dictionary GodotSimulation::getWorldDefaults() const
     result["chunk_size"] = cfg.default_chunk_size;
     result["density_threshold"] = cfg.default_density_threshold;
 
+    return result;
+}
+namespace {
+const char* itemCategoryName(ItemCategory c) {
+    switch (c) {
+        case ItemCategory::Material: return "Material";
+        case ItemCategory::Tool: return "Tool";
+        case ItemCategory::Weapon: return "Weapon";
+        case ItemCategory::Consumable: return "Consumable";
+        case ItemCategory::Building: return "Building";
+        case ItemCategory::Ammunition: return "Ammunition";
+        default: return "Miscellaneous";
+    }
+}
+const char* itemActionName(ItemActionType t) {
+    switch (t) {
+        case ItemActionType::Attack: return "Attack";
+        case ItemActionType::ModifyTerrain: return "ModifyTerrain";
+        case ItemActionType::PlaceBlock: return "PlaceBlock";
+        case ItemActionType::PlaceStructure: return "PlaceStructure";
+        case ItemActionType::Consume: return "Consume";
+        case ItemActionType::SpawnProjectile: return "SpawnProjectile";
+        case ItemActionType::ThrowItem: return "ThrowItem";
+        default: return "Unknown";
+    }
+}
+const char* itemEventName(ItemEventType t) {
+    switch (t) {
+        case ItemEventType::ApplyAction: return "ApplyAction";
+        case ItemEventType::SpawnEffect: return "SpawnEffect";
+        case ItemEventType::PlaySound: return "PlaySound";
+        default: return "Unknown";
+    }
+}
+} // namespace
+
+godot::Dictionary GodotSimulation::getItemRegistry() const {
+    godot::Dictionary result;
+    const auto& registry = world_grid_.getItemRegistry();
+
+    for (const auto& [id, item] : registry) {
+        godot::Dictionary data;
+        data["iID"] = static_cast<int64_t>(item.iID);
+        data["name"] = godot::String(item.name.c_str());
+        data["description"] = godot::String(item.description.c_str());
+        data["category"] = godot::String(itemCategoryName(item.category));
+        data["max_stack"] = static_cast<int64_t>(item.max_stack);
+        data["can_go_hotbar"] = item.can_go_hotbar;
+        data["weight"] = item.weight;
+        data["max_durability"] = static_cast<int64_t>(item.max_durability);
+        data["icon"] = godot::String(item.icon.c_str());
+        godot::Dictionary sheet;
+        sheet["path"] = godot::String(item.sprite_sheet.path.c_str());
+        sheet["frame_width"] = static_cast<int64_t>(item.sprite_sheet.frame_width_px);
+        sheet["frame_height"] = static_cast<int64_t>(item.sprite_sheet.frame_height_px);
+        sheet["icon_frame"] = static_cast<int64_t>(item.sprite_sheet.icon_frame);
+        data["sprite_sheet"] = sheet;
+        data["world_sprite"] = godot::String(item.world_sprite.c_str());
+        data["world_size"] = godot::Vector2(item.world_size.x, item.world_size.y);
+        data["structure_id"] = static_cast<int64_t>(item.structure_id);
+        data["generated_from_structure"] = item.structure_id != 0;
+
+        godot::Dictionary animations;
+        for (const auto& [name, a] : item.animations) {
+            godot::Dictionary anim;
+            anim["name"] = godot::String(a.name.c_str());
+            anim["start_frame"] = static_cast<int64_t>(a.start_frame);
+            anim["end_frame"] = static_cast<int64_t>(a.end_frame);
+            godot::Array frame_sequence;
+            for (uint32_t frame : a.frame_sequence)
+                frame_sequence.append(static_cast<int64_t>(frame));
+            anim["frame_sequence"] = frame_sequence;
+            anim["duration"] = a.duration;
+            anim["loop"] = a.loop;
+            anim["hand_offset"] = godot::Vector2(a.hand_offset.x, a.hand_offset.y);
+            animations[godot::String(name.c_str())] = anim;
+        }
+        data["animations"] = animations;
+
+        godot::Array actions;
+        for (const auto& a : item.actions) {
+            godot::Dictionary act;
+            act["type"] = godot::String(itemActionName(a.type));
+            act["range"] = a.range;
+            act["cooldown"] = a.cooldown;
+            act["animation"] = godot::String(a.animation.c_str());
+            act["damage"] = a.damage;
+            act["knockback"] = a.knockback;
+            act["density_change"] = a.density_change;
+            act["radius"] = a.radius;
+            act["terrain_material_id"] = a.terrain_material_id;
+            act["place_type_id"] = static_cast<int64_t>(a.place_type_id);
+            act["projectile_type_id"] = static_cast<int64_t>(a.projectile_type_id);
+            act["consume_count"] = static_cast<int64_t>(a.consume_count);
+            act["durability_cost"] = static_cast<int64_t>(a.durability_cost);
+            godot::Array events;
+            for (const auto& e : a.events) {
+                godot::Dictionary ev;
+                ev["type"] = godot::String(itemEventName(e.type));
+                ev["normalized_time"] = e.normalized_time;
+                ev["resource_id"] = godot::String(e.resource_id.c_str());
+                events.append(ev);
+            }
+            act["events"] = events;
+            actions.append(act);
+        }
+        data["actions"] = actions;
+        result[static_cast<int64_t>(id)] = data;
+    }
     return result;
 }
 

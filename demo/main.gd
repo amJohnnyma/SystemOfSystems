@@ -4,6 +4,7 @@ extends Node2D
 @onready var input_manager: InputManager = $InputManager
 @onready var ui_root_scene = preload("res://demo/ui_root.tscn")
 
+
 var chunk_nodes: Dictionary = {
 	"terrain":MeshInstance2D,
 	"structures":{"type_id" : MeshInstance2D}
@@ -24,6 +25,7 @@ var threshold: float = 128.0
 
 var structure_registry: Dictionary = {}
 var entity_registry: Dictionary = {}
+var item_registry: Dictionary = {}
 var selected_structure: Dictionary = {}
 var textured_shader: Shader
 var building_materials = {}
@@ -174,7 +176,7 @@ void fragment() {
         void fragment() {
             COLOR = inst_color;
         }
-    """
+	"""
 	debug_mat.shader = debug_shad
 	debug_multimesh_node.material = debug_mat
 	
@@ -184,6 +186,7 @@ void fragment() {
 	_init_player_materials()
 	_init_player_debug()
 	_register_entity_render_configs()
+	_print_item_registry_preview()
 	
 	_on_player_data_updated(world.getPlayerData())
 	
@@ -212,7 +215,7 @@ void fragment() {
 	#world.placeEntity(320,10,2)
 	#world.placeEntity(330,10,3)
 	#world.placeEntity(340,10,4)
-	for i in range(1000):
+	for i in range(10):
 		world.placeEntity(randi_range(1, 320),10,1)
 
 	
@@ -247,6 +250,26 @@ func _calculate_sprite_transform(
 		Vector2(0.0, -render_size.y),
 		center
 	)
+
+func _print_item_registry_preview():
+	item_registry = world.getItemRegistry()
+	'''
+	var custom_ids : Array[int] = []
+	var structure_ids : Array[int] = []
+	for id in item_registry.keys():
+		var item: Dictionary = item_registry[id]
+		if bool(item.get("generated_from_structure", false)):
+			structure_ids.append(int(id))
+		else:
+			custom_ids.append(int(id))
+	custom_ids.sort()
+	structure_ids.sort()
+	print("Item registry: ", item_registry.size(), " definitions (", custom_ids.size(), " custom, ", structure_ids.size(), " structures)")
+	for id in custom_ids.slice(0, 5):
+		print("[Custom item ", id, "] ", item_registry[id])
+	for id in structure_ids.slice(0, 5):
+		print("[Structure item ", id, "] ", item_registry[id])
+		'''
 
 func _init_create_player() -> void:
 	const PLAYER_JSON_PATH = "res://game/player.json"
@@ -362,6 +385,7 @@ func _on_player_data_updated(data: Dictionary) -> void:
 	# 4. Physical position from C++
 	var grid_x: float = float(data.get("x_smooth", 0.0))
 	var grid_y: float = float(data.get("y_smooth", 0.0))
+	camera.global_position = Vector2(grid_x * MESH_SCALE.x, grid_y * MESH_SCALE.y)
 
 	var body_w: float = float(data.get("width", 2.0))
 	var body_h: float = float(data.get("height", 3.0))
@@ -559,7 +583,7 @@ func _init_entity_materials() -> void:
         void fragment() {
             COLOR = texture(enemy_tex, UV);
         }
-        """
+		"""
 
 	# 4. Initialize materials and MultiMeshInstance2D nodes per state for each enemy type
 	for type_id_key in entity_registry:
@@ -901,7 +925,15 @@ func _cancel_building():
 func _draw() -> void:
 	var grid_color := Color(1, 1, 1, 0.15)
 	var line_width := 0.5
+		# Mouse Radius Circle
+	var circle_center := input_manager.current_mouse_local * MESH_SCALE
+	var pixel_radius := input_manager.brush_radius_cells * MESH_SCALE.x
+	draw_arc(circle_center, pixel_radius, 0, TAU, 32, Color(1, 1, 0, 0.8), 0.5)
+	
+	if not selected_structure.is_empty():
+		_draw_building_overlay()
 
+'''
 	# Vertical grid lines
 	for x in range(world_width):
 		var start := Vector2(x, 0) * MESH_SCALE
@@ -913,14 +945,8 @@ func _draw() -> void:
 		var start := Vector2(0, y) * MESH_SCALE
 		var end := Vector2(world_width, y) * MESH_SCALE
 		draw_line(start, end, grid_color, line_width)
+'''
 
-	# Mouse Radius Circle
-	var circle_center := input_manager.current_mouse_local * MESH_SCALE
-	var pixel_radius := input_manager.brush_radius_cells * MESH_SCALE.x
-	draw_arc(circle_center, pixel_radius, 0, TAU, 32, Color(1, 1, 0, 0.8), 0.5)
-	
-	if not selected_structure.is_empty():
-		_draw_building_overlay()
 
 # Full rebuild (called once at start)
 func _setup_full_mesh_display() -> void:

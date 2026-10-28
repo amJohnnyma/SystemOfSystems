@@ -16,7 +16,7 @@
 #include <iomanip>
 #include <cstddef>
 #include "terrain_generator.h"
-
+#include "item.h"
 
 // what will be updated on each tick if any
 namespace TickFlags {
@@ -63,6 +63,8 @@ class WorldGrid
 
 
         Player player;
+        
+        ItemRegistry item_registry_;
 
 
         
@@ -72,13 +74,10 @@ class WorldGrid
     private: // technically all helper functions
 
         // default access in vector: index = (y * world_x) + x
-        //
-        //
         Cell get_cell(int x, int y) const;
         // bool = happened : error
         bool set_cell(int x, int y, uint16_t type_id, uint8_t density, uint8_t state_flags);
 
-        // Would i need a specific addDensity, removeDensity, etc.
         
 
         void flag_dirty_chunk(int cx, int cy);
@@ -138,6 +137,7 @@ class WorldGrid
         const std::unordered_map<int, Structure>& getStructureRegistry() const {return structure_registry_;}
         const std::unordered_map<int, Entity>& getEntityRegistry() const {return entity_registry_;}
         const std::unordered_map<uint32_t, Entity>& getEntities() const {return entities_;}
+        const ItemRegistry& getItemRegistry() const { return item_registry_; }
 
 
         void createPlayer(PlayerSettings ps)

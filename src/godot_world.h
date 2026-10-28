@@ -59,6 +59,8 @@ public:
 
     godot::Dictionary getWorldDefaults() const;
 
+    godot::Dictionary getItemRegistry() const;
+
 };
 
 } // namespace godot
