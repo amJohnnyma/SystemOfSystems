@@ -67,11 +67,13 @@ func _render_registry() -> void:
 	for raw_id in ids:
 		var item_id: int = int(raw_id)
 		var item: Dictionary = _registry_preview[raw_id]
+		'''
 		if item_id == 100001:
 			print("BLOCK ITEM DATA: ", item)
 			print("SPRITE SHEET: ", item.get("sprite_sheet", {}))
 			print("TERRAIN EXISTS: ",
 				ResourceLoader.exists("res://game/atlas/terrain.png"))
+		'''
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(slot_pixel_size, slot_pixel_size)
 		button.name = "Item_%d" % item_id
