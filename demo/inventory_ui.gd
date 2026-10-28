@@ -120,18 +120,6 @@ func _make_item_icon(item: Dictionary) -> Texture2D:
 	# AtlasTexture is a static inventory icon, not an animated sprite.
 	var sheet: Dictionary = item.get("sprite_sheet", {})
 
-	# Fallback for automatically generated structure items.
-	# Block IDs 1-256 correspond to the 256 terrain atlas tiles.
-	if str(sheet.get("path", "")).is_empty():
-		var structure_id: int = int(item.get("structure_id", 0))
-
-		if structure_id >= 1 and structure_id <= 256:
-			sheet = {
-				"path": "res://game/atlas/terrain.png",
-				"frame_width": 16,
-				"frame_height": 16,
-				"icon_frame": structure_id - 1
-			}
 
 	var path: String = str(sheet.get("path", ""))
 	if path.is_empty():

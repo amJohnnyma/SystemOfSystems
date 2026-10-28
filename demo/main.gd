@@ -5,10 +5,10 @@ extends Node2D
 @onready var ui_root_scene = preload("res://demo/ui_root.tscn")
 
 
-var chunk_nodes: Dictionary = {
-	"terrain":MeshInstance2D,
-	"structures":{"type_id" : MeshInstance2D}
-}
+
+# Chunk coordinate -> { "terrain": {atlas_path: MeshInstance2D},
+#                       "structures": {structure_id: MeshInstance2D} }
+var chunk_nodes: Dictionary = {}
 var camera: Camera2D
 #var shader_mat: ShaderMaterial
 
@@ -32,19 +32,14 @@ var building_materials = {}
 
 var selected_hotbar_slot = -1
 
-const BLOCK_ATLAS_PATH := "res://game/atlas/terrain.png"
-const BLOCK_TILE_SIZE := Vector2i(16, 16)
-
-var BLOCK_ATLAS_COORDS: Dictionary[int, Vector2i] = \
-	AtlasUtils.generate_atlas_coords(
-		Vector2i(256, 256),
-		BLOCK_TILE_SIZE
-	)
-	
-var block_atlas: Texture2D
-var block_atlas_material: ShaderMaterial
+# One shared source of truth for item icons and world block rendering:
+# res://game/structure_atlases.json
+const BlockAtlasCatalog = preload("res://demo/bin/block_atlas_catalog.gd")
+var block_atlases = BlockAtlasCatalog.new()
 var terrain_blend_shader: Shader
-var terrain_blend_material: ShaderMaterial
+
+# Avoid logging the same unmapped type hundreds of times across chunks.
+var _warned_unmapped_types: Dictionary = {}
 
 const SHOW_ENTITY_HITBOXES := true
 var enemy_multimeshes : Dictionary = {}
@@ -88,27 +83,20 @@ func _ready() -> void:
 		
 	terrain_blend_shader = Shader.new()
 	terrain_blend_shader.code = """
-shader_type canvas_item;
-render_mode unshaded;
+	shader_type canvas_item;
+	render_mode unshaded;
 
-uniform sampler2D terrain_atlas : source_color, filter_nearest;
+	uniform sampler2D terrain_atlas : source_color, filter_nearest;
 
-void fragment() {
-    COLOR = texture(terrain_atlas, UV);
-}
+	void fragment() {
+	    COLOR = texture(terrain_atlas, UV);
+	}
 
-	"""
+		"""
 
-	terrain_blend_material = ShaderMaterial.new()
-	terrain_blend_material.shader = terrain_blend_shader
-	terrain_blend_material.set_shader_parameter(
-		"terrain_atlas", load(BLOCK_ATLAS_PATH)
-	)
-	
-
-
-
-
+		# One ShaderMaterial per atlas is created and cached by the catalog.
+	if not block_atlases.load_config(terrain_blend_shader, textured_shader):
+		push_error("Block atlases failed to load; world blocks may be invisible")
 
 	
 	# Connect to InputManager signals
@@ -195,13 +183,13 @@ void fragment() {
 	#print("Loaded entities into Godot:\n", JSON.stringify(entity_registry, "\t"))
 	
 	
-	for type_id: int in BLOCK_ATLAS_COORDS:
-		var atlas_coords: Vector2i = BLOCK_ATLAS_COORDS[type_id]
-
-		var x: int = atlas_coords.x
-		var y: int = atlas_coords.y
-
-		world.placeStructure(x, y, type_id)
+	# Temporary visual test: place every registered block on a 16-column grid.
+	var test_block_types: Array = block_atlases.get_block_types()
+	for i in range(test_block_types.size()):
+		var block_type: int = int(test_block_types[i])
+		if not structure_registry.has(block_type):
+			continue
+		world.placeStructure(i % 16, int(i / 16), block_type)
 		
 		
 	# Populate all chunk nodes initially
@@ -385,7 +373,7 @@ func _on_player_data_updated(data: Dictionary) -> void:
 	# 4. Physical position from C++
 	var grid_x: float = float(data.get("x_smooth", 0.0))
 	var grid_y: float = float(data.get("y_smooth", 0.0))
-	camera.global_position = Vector2(grid_x * MESH_SCALE.x, grid_y * MESH_SCALE.y)
+	#camera.global_position = Vector2(grid_x * MESH_SCALE.x, grid_y * MESH_SCALE.y)
 
 	var body_w: float = float(data.get("width", 2.0))
 	var body_h: float = float(data.get("height", 3.0))
@@ -666,66 +654,7 @@ func _init_entity_materials() -> void:
 			else:
 				push_warning("Missing enemy texture path: " + tex_path)
 
-func _init_building_materials() -> void:
-	structure_registry = world.getStructureRegistry()
-	
-		
-		
-	# Shared atlas material for ordinary blocks.
-	if ResourceLoader.exists(BLOCK_ATLAS_PATH):
-		block_atlas = load(BLOCK_ATLAS_PATH)
 
-		block_atlas_material = ShaderMaterial.new()
-		block_atlas_material.shader = textured_shader
-		block_atlas_material.set_shader_parameter(
-			"building_tex", block_atlas
-		)
-	else:
-		push_error("Block atlas not found: " + BLOCK_ATLAS_PATH)
-	#print("Atlas loaded: ", block_atlas != null)
-	if block_atlas != null:
-		#print("Atlas size: ", block_atlas.get_size())
-		#print("Atlas resource path: ", block_atlas.resource_path)
-		pass
-	# Individual textures for buildings.
-	for id in structure_registry:
-		var st: Dictionary = structure_registry[id]
-
-		if not st.get("isBuilding", false):
-			continue
-
-		var sprite_filename: String = st.get("sprite", "")
-		if sprite_filename.is_empty():
-			continue
-
-		var tex_path := "res://game/sprite/" + sprite_filename
-
-		if ResourceLoader.exists(tex_path):
-			var tex: Texture2D = load(tex_path)
-			var mat := ShaderMaterial.new()
-			mat.shader = textured_shader
-			mat.set_shader_parameter("building_tex", tex)
-			building_materials[id] = mat
-			#print("Loaded building texture: ", tex_path)
-
-		else:
-			push_warning("Missing building texture: " + tex_path)
-
-
-func get_block_atlas_uv(type_id: int, uv: Vector2) -> Vector2:
-	if block_atlas == null:
-		return uv
-
-	if not BLOCK_ATLAS_COORDS.has(type_id):
-		return uv
-
-	var tile_coord: Vector2i = BLOCK_ATLAS_COORDS[type_id]
-	var atlas_size := Vector2(block_atlas.get_size())
-	var tile_size := Vector2(BLOCK_TILE_SIZE)
-
-	return (
-		Vector2(tile_coord) * tile_size + uv * tile_size
-	) / atlas_size
 
 
 func get_selected_hotbar_slot():
@@ -738,6 +667,33 @@ func _on_required_mesh_update():
 	# We need a mesh update
 	update_mesh_display()
 
+func _init_building_materials() -> void:
+	structure_registry = world.getStructureRegistry()
+
+	# Standalone building sprites stay separate from block atlases.
+	for id in structure_registry:
+		var st: Dictionary = structure_registry[id]
+		if not st.get("isBuilding", false):
+			continue
+
+		var sprite_filename: String = st.get("sprite", "")
+		if sprite_filename.is_empty():
+			continue
+
+		var tex_path := "res://game/sprite/" + sprite_filename
+		if ResourceLoader.exists(tex_path):
+			var tex: Texture2D = load(tex_path)
+			var mat := ShaderMaterial.new()
+			mat.shader = textured_shader
+			mat.set_shader_parameter("building_tex", tex)
+			building_materials[id] = mat
+		else:
+			push_warning("Missing building texture: " + tex_path)
+
+
+# Type-specific UVs are now resolved from the corresponding atlas rule.
+func get_block_atlas_uv(type_id: int, uv: Vector2) -> Vector2:
+	return block_atlases.get_uv(type_id, uv)
 
 # Helper to get the full texture path for a structure sprite
 func get_structure_sprite_path(structure_data: Dictionary) -> String:
@@ -964,123 +920,123 @@ func update_mesh_display() -> void:
 		var chunk_pos: Vector2i = chunk_data["chunk_pos"]
 		_update_chunk_node(chunk_pos, chunk_data)
 
+# The C++ marching-squares generator currently outputs a single material ID
+# per shape, so triangles can be batched by atlas path without changing C++.
+# Once the generator creates actual cross-atlas blends, this renderer will
+# need paired atlas samplers / a different blend representation.
+func _update_terrain_atlases(
+	chunk_pos: Vector2i,
+	terrain_data: Dictionary,
+	terrain_nodes: Dictionary
+) -> void:
+	var verts: PackedVector2Array = terrain_data.get("vertices", PackedVector2Array())
+	var inds: PackedInt32Array = terrain_data.get("indices", PackedInt32Array())
+	var uvs: PackedVector2Array = terrain_data.get("uvs", PackedVector2Array())
+	var colors: PackedColorArray = terrain_data.get("colors", PackedColorArray())
+
+	# path -> packed mesh geometry for this atlas in this chunk.
+	var groups: Dictionary = {}
+	if uvs.size() != verts.size() or colors.size() != verts.size() or inds.size() % 3 != 0:
+		push_warning("Malformed terrain mesh for chunk " + str(chunk_pos))
+	else:
+		for tri in range(0, inds.size(), 3):
+			var ia: int = inds[tri]
+			var ib: int = inds[tri + 1]
+			var ic: int = inds[tri + 2]
+			if min(ia, ib, ic) < 0 or max(ia, ib, ic) >= verts.size():
+				continue
+
+			# C++ packs primary type ID into color.b, secondary into color.a.
+			var type_a: int = int(round(colors[ia].b))
+			var atlas_info: Dictionary = block_atlases.get_mapping(type_a)
+			if atlas_info.is_empty():
+				_warn_unmapped_block(type_a)
+				continue
+
+			var path: String = atlas_info["path"]
+			var type_b: int = int(round(colors[ib].b))
+			var type_c: int = int(round(colors[ic].b))
+			var atlas_b: Dictionary = block_atlases.get_mapping(type_b)
+			var atlas_c: Dictionary = block_atlases.get_mapping(type_c)
+			if atlas_b.is_empty() or atlas_c.is_empty() or atlas_b.get("path", "") != path or atlas_c.get("path", "") != path:
+				push_warning("A terrain triangle spans multiple atlases: " + str(chunk_pos))
+				continue
+
+			if not groups.has(path):
+				groups[path] = {
+					"vertices": PackedVector2Array(),
+					"uvs": PackedVector2Array(),
+					"indices": PackedInt32Array()
+				}
+
+			var g: Dictionary = groups[path]
+			var gv: PackedVector2Array = g["vertices"]
+			var gu: PackedVector2Array = g["uvs"]
+			var gi: PackedInt32Array = g["indices"]
+			var base_index: int = gv.size()
+			for idx in [ia, ib, ic]:
+				var type_id: int = int(round(colors[idx].b))
+				gv.append(verts[idx])
+				gu.append(get_block_atlas_uv(type_id, uvs[idx]))
+			gi.append(base_index)
+			gi.append(base_index + 1)
+			gi.append(base_index + 2)
+			# Store the updated packed arrays explicitly (copy-on-write safe).
+			g["vertices"] = gv
+			g["uvs"] = gu
+			g["indices"] = gi
+
+	# One MeshInstance2D per atlas per chunk; materials shared across chunks.
+	for path in groups:
+		var terrain_node: MeshInstance2D = terrain_nodes.get(path, null)
+		if terrain_node == null:
+			terrain_node = MeshInstance2D.new()
+			terrain_node.name = "Terrain_%d_%d_%s" % [
+				chunk_pos.x, chunk_pos.y, str(path).get_file().get_basename()
+			]
+			terrain_node.scale = MESH_SCALE
+			terrain_node.show_behind_parent = true
+			terrain_node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			add_child(terrain_node)
+			terrain_nodes[path] = terrain_node
+
+		var g: Dictionary = groups[path]
+		var arrays: Array = []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = g["vertices"]
+		arrays[Mesh.ARRAY_TEX_UV] = g["uvs"]
+		arrays[Mesh.ARRAY_INDEX] = g["indices"]
+
+		var mesh := ArrayMesh.new()
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		terrain_node.material = block_atlases.get_terrain_material(path)
+		terrain_node.mesh = mesh
+
+	# Empty or moved atlas groups must not leave stale geometry on screen.
+	for path in terrain_nodes:
+		if not groups.has(path):
+			var stale: MeshInstance2D = terrain_nodes[path]
+			stale.mesh = null
+
+
+func _warn_unmapped_block(block_type: int) -> void:
+	if _warned_unmapped_types.has(block_type):
+		return
+	_warned_unmapped_types[block_type] = true
+	push_warning("No atlas mapping for block type %d" % block_type)
 
 func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 	var chunk_entry: Dictionary = chunk_nodes.get(chunk_pos, {})
-
-	# --------------------------------------------------
-	# Create or retrieve the chunk's nodes
-	# --------------------------------------------------
 	if chunk_entry.is_empty():
-		var terrain_node := MeshInstance2D.new()
-		terrain_node.name = "Terrain_%s_%s" % [chunk_pos.x, chunk_pos.y]
-		terrain_node.scale = MESH_SCALE
-		terrain_node.show_behind_parent = true
-		terrain_node.material = terrain_blend_material
-		add_child(terrain_node)
-
 		chunk_entry = {
-			"terrain": terrain_node,
-			"structures": {}
+			"terrain": {},  # atlas path -> MeshInstance2D
+			"structures": {}  # structure ID -> MeshInstance2D
 		}
-
 		chunk_nodes[chunk_pos] = chunk_entry
 
-	var terrain_node: MeshInstance2D = chunk_entry["terrain"]
+	var terrain_nodes: Dictionary = chunk_entry["terrain"]
 	var structure_nodes: Dictionary = chunk_entry["structures"]
-
-# --------------------------------------------------
-# Terrain mesh with two-texture blending
-# --------------------------------------------------
-	var terrain_dict: Dictionary = chunk_data.get("terrain", {})
-
-	var t_verts: PackedVector2Array = terrain_dict.get(
-		"vertices", PackedVector2Array()
-	)
-	var t_inds: PackedInt32Array = terrain_dict.get(
-		"indices", PackedInt32Array()
-	)
-	var t_uvs: PackedVector2Array = terrain_dict.get(
-		"uvs", PackedVector2Array()
-	)
-	var t_colors: PackedColorArray = terrain_dict.get(
-		"colors", PackedColorArray()
-	)
-
-	var terrain_mesh := ArrayMesh.new()
-
-	if not t_verts.is_empty() and not t_inds.is_empty():
-		var valid_data := (
-			t_uvs.size() == t_verts.size()
-			and t_colors.size() == t_verts.size()
-		)
-
-		if not valid_data:
-			push_warning(
-	            "Terrain mesh arrays have mismatched vertex counts."
-			)
-		else:
-			var atlas_uvs_a := PackedVector2Array()
-			var atlas_uvs_b := PackedFloat32Array()
-			var blend_colors := PackedColorArray()
-
-			atlas_uvs_a.resize(t_verts.size())
-			atlas_uvs_b.resize(t_verts.size() * 2)
-			blend_colors.resize(t_verts.size())
-
-			for i in range(t_verts.size()):
-				var local_uv: Vector2 = t_uvs[i]
-				var source_color: Color = t_colors[i]
-
-				var type_a: int = int(round(source_color.b))
-				var type_b: int = int(round(source_color.a))
-
-				# Resolve both terrain types to their atlas UVs.
-				atlas_uvs_a[i] = get_block_atlas_uv(
-					type_a, local_uv
-				)
-				var uv_b: Vector2 = get_block_atlas_uv(type_b, local_uv)
-
-				var offset := i * 2
-				atlas_uvs_b[offset] = uv_b.x
-				atlas_uvs_b[offset + 1] = uv_b.y
-
-				# Only pass blend weights to the shader.
-				blend_colors[i] = Color(
-					source_color.r,
-					source_color.g,
-					0.0,
-					1.0
-				)
-
-			var t_array: Array = []
-			t_array.resize(Mesh.ARRAY_MAX)
-
-			t_array[Mesh.ARRAY_VERTEX] = t_verts
-			t_array[Mesh.ARRAY_INDEX] = t_inds
-			t_array[Mesh.ARRAY_TEX_UV] = atlas_uvs_a
-			t_array[Mesh.ARRAY_CUSTOM0] = atlas_uvs_b
-			t_array[Mesh.ARRAY_COLOR] = blend_colors
-
-			var format := (
-				Mesh.ARRAY_FORMAT_CUSTOM0
-				| (Mesh.ARRAY_CUSTOM_RG_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT)
-			)
-
-			terrain_mesh.add_surface_from_arrays(
-				Mesh.PRIMITIVE_TRIANGLES,
-				t_array,
-				[],
-				{},
-				format
-			)
-
-	terrain_node.material = terrain_blend_material
-	terrain_node.mesh = (
-		terrain_mesh
-		if terrain_mesh.get_surface_count() > 0
-		else null
-	)
+	_update_terrain_atlases(chunk_pos, chunk_data.get("terrain", {}), terrain_nodes)
 
 	# --------------------------------------------------
 	# Structures and blocks
@@ -1161,11 +1117,16 @@ func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 			var st_data: Dictionary = structure_registry.get(type_id, {})
 			var is_building: bool = st_data.get("isBuilding", false)
 
-			# Blocks use atlas UVs; buildings retain their sprite UVs.
+			# Structure ID and underlying blockType may differ.
+			var block_type: int = int(st_data.get("blockType", 0))
+			if block_type <= 0:
+				block_type = type_id
+
+			# Blocks use the configured atlas; buildings use their whole image.
 			if not is_building:
-				uv0 = get_block_atlas_uv(type_id, uv0)
-				uv1 = get_block_atlas_uv(type_id, uv1)
-				uv2 = get_block_atlas_uv(type_id, uv2)
+				uv0 = get_block_atlas_uv(block_type, uv0)
+				uv1 = get_block_atlas_uv(block_type, uv1)
+				uv2 = get_block_atlas_uv(block_type, uv2)
 
 			g["uvs"].append(uv0)
 			g["uvs"].append(uv1)
@@ -1217,11 +1178,14 @@ func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 				add_child(structure_node)
 				structure_nodes[type_id] = structure_node
 
-			# Assign the expected material on every update.
+			# Select the texture matching the blockType, not structureID.
 			if is_building:
 				structure_node.material = building_materials.get(type_id, null)
 			else:
-				structure_node.material = block_atlas_material
+				var block_type: int = int(st_data.get("blockType", 0))
+				if block_type <= 0:
+					block_type = type_id
+				structure_node.material = block_atlases.get_block_material(block_type)
 
 			# Warn if this type has no assigned texture material.
 			if structure_node.material == null:

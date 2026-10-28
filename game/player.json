@@ -4,8 +4,8 @@
 
     "maxHealth": 100,
 
-    "maxMoveSpeed": 8,
-    "jumpSpeed": 30,
+    "maxMoveSpeed": 16,
+    "jumpSpeed": 20,
     "maxFallSpeed": 1000,
 "gravity" : 40,
 
