@@ -180,4 +180,45 @@
       }
     ]
   }
+,
+  {
+    "entityTypeID": 5,
+    "name": "Pip",
+    "sprite": "Pip.png",
+    "entity_class": "companion",
+    "behavior_type": "ranged",
+    "max_health": 40.0,
+    "move_speed": 3.0,
+    "width": 2,
+    "height": 2,
+"gravity" : 9.8,
+"maxFallSpeed" : 100,
+"jumpStrength" : 20,
+    "is_pickupable": false,
+    "visualPixelsPerCell": 170,
+    "visualPivot": [0.5, 0.12],
+    "animations": {
+      "idle": {
+        "sprite": "Pip.png",
+        "cols": 4,
+        "rows": 2,
+            "animationSpeed": 0.5
+      },
+      "walk": {
+        "sprite": "EvilWizard_walk.png",
+        "cols": 8,
+        "rows": 1,
+            "animationSpeed": 0.5
+      },
+      "attack": {
+        "sprite": "EvilWizard_attack1.png",
+        "cols": 8,
+        "rows": 1,
+            "animationSpeed": 0.5
+      }
+    },
+    "attack_patterns": [
+
+    ]
+  }
 ]

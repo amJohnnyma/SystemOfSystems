@@ -203,8 +203,9 @@ func _ready() -> void:
 	#world.placeEntity(320,10,2)
 	#world.placeEntity(330,10,3)
 	#world.placeEntity(340,10,4)
-	for i in range(10):
-		world.placeEntity(randi_range(1, 320),10,1)
+	#for i in range(10):
+	#	world.placeEntity(randi_range(1, 320),10,1)
+	world.placeEntity(620,10, 5)
 
 	
 func _calculate_sprite_transform(
