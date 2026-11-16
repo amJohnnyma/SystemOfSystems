@@ -27,6 +27,7 @@ private:
 
     bool facingRight = true;
     bool isGrounded_ = false;
+    bool canMove_ = true;
 
     float jumpSpeed_ = 50.0f;
 

@@ -16,22 +16,22 @@ namespace
 }
 
 void EntityMovementManager::applyGravity(MovementState& state,
-                                         float gravity,
-                                         float maxFallSpeed,
-                                         float dt)
+        float gravity,
+        float maxFallSpeed,
+        float dt)
 {
     if (dt <= 0.0f)
         return;
 
     // In Godot 2D / this grid, +Y is DOWN.
     state.velocity.y = std::min(state.velocity.y + gravity * dt,
-                                std::max(0.0f, maxFallSpeed));
+            std::max(0.0f, maxFallSpeed));
 }
 
 void EntityMovementManager::moveTowards(MovementState& state,
-                                        const Vec2& target,
-                                        float maxMoveSpeed,
-                                        float dt)
+        const Vec2& target,
+        float maxMoveSpeed,
+        float dt)
 {
     if (dt <= 0.0f)
         return;
@@ -43,38 +43,130 @@ void EntityMovementManager::moveTowards(MovementState& state,
         return;
     }
     /*
-// AI has calculated its next waypoint
-Vec2 waypoint = path.front();
+    // AI has calculated its next waypoint
+    Vec2 waypoint = path.front();
 
-// Horizontal steering
-EntityMovementManager::moveTowards(
+    // Horizontal steering
+    EntityMovementManager::moveTowards(
     motion, waypoint, moveSpeed, dt
-);
+    );
 
-// AI separately decides whether to jump
-if (shouldJump && motion.isGrounded)
-{
+    // AI separately decides whether to jump
+    if (shouldJump && motion.isGrounded)
+    {
     motion.velocity.y = -jumpSpeed;
     motion.isGrounded = false;
-}
-     */
+    }
+    */
 
     // Move no faster than needed to reach the target in THIS frame.
     const float speed = std::min(std::max(0.0f, maxMoveSpeed),
-                                 std::abs(distance) / dt);
+            std::abs(distance) / dt);
     state.velocity.x = std::copysign(speed, distance);
 }
 
+float EntityMovementManager::tryStepUp(
+        const MovementState& state,
+        const MovementWorld& world,
+        float dx
+        )
+{
+    if (!state.isGrounded ||
+            state.velocity.y < 0.0f ||
+            state.maxStepHeight <= 0.0f ||
+            std::abs(dx) <= EDGE_EPSILON)
+    {
+        return 0.0f;
+    }
+
+    constexpr float STEP_INCREMENT = 0.1f;
+    constexpr float SWEEP_INCREMENT = 0.25f;
+
+    const Vec2 original = state.position;
+
+    const int stepCount = static_cast<int>(
+            std::ceil(state.maxStepHeight / STEP_INCREMENT)
+            );
+
+    for (int step = 1; step <= stepCount; ++step)
+    {
+        const float height = std::min(
+                step * STEP_INCREMENT,
+                state.maxStepHeight
+                );
+
+        Vec2 candidate = original;
+        bool clear = true;
+
+        // 1. Check the entire upward path.
+        const int verticalSamples = static_cast<int>(
+                std::ceil(height / SWEEP_INCREMENT)
+                );
+
+        for (int i = 1; i <= verticalSamples; ++i)
+        {
+            const float fraction =
+                static_cast<float>(i) / verticalSamples;
+
+            candidate.y = original.y - height * fraction;
+
+            if (intersectsSolid(candidate, state.size, world))
+            {
+                clear = false;
+                break;
+            }
+        }
+
+        if (!clear)
+            continue;
+
+        // 2. Check the horizontal path at the elevated position.
+        candidate.y = original.y - height;
+
+        const int horizontalSamples = static_cast<int>(
+                std::ceil(std::abs(dx) / SWEEP_INCREMENT)
+                );
+
+        for (int i = 1; i <= horizontalSamples; ++i)
+        {
+            const float fraction =
+                static_cast<float>(i) / horizontalSamples;
+
+            candidate.x = original.x + dx * fraction;
+
+            if (intersectsSolid(candidate, state.size, world))
+            {
+                clear = false;
+                break;
+            }
+        }
+
+        if (!clear)
+            continue;
+
+        // 3. Verify that there's ground beneath the destination.
+        candidate.x = original.x + dx;
+        candidate.y = original.y - height + GROUND_PROBE;
+
+        if (!intersectsSolid(candidate, state.size, world))
+            continue;
+
+        return height;
+    }
+
+    return 0.0f;
+}
+
 bool EntityMovementManager::isCellSolid(int x, int y,
-                                        const MovementWorld& world)
+        const MovementWorld& world)
 {
     // Treat outside world (or missing cell data) as solid.
     if (x < 0 || x >= world.width || y < 0 || y >= world.height)
         return true;
 
     const std::size_t index = static_cast<std::size_t>(y) *
-                              static_cast<std::size_t>(world.width) +
-                              static_cast<std::size_t>(x);
+        static_cast<std::size_t>(world.width) +
+        static_cast<std::size_t>(x);
     if (index >= world.cells.size())
         return true;
 
@@ -83,8 +175,8 @@ bool EntityMovementManager::isCellSolid(int x, int y,
 }
 
 bool EntityMovementManager::intersectsSolid(const Vec2& position,
-                                            const Vec2& size,
-                                            const MovementWorld& world)
+        const Vec2& size,
+        const MovementWorld& world)
 {
     const int left   = lowCell(position.x);
     const int right  = highCell(position.x + size.x);
@@ -99,8 +191,8 @@ bool EntityMovementManager::intersectsSolid(const Vec2& position,
 }
 
 MovementResult EntityMovementManager::resolve(const MovementState& initial,
-                                               const MovementWorld& world,
-                                               float dt)
+        const MovementWorld& world,
+        float dt)
 {
     MovementResult result;
     result.state = initial;
@@ -115,7 +207,6 @@ MovementResult EntityMovementManager::resolve(const MovementState& initial,
     const int bottom = highCell(result.state.position.y + 1.0f);
     bool blockedX = false;
 
-        
 
     if (dx > 0.0f)
     {
@@ -124,20 +215,16 @@ MovementResult EntityMovementManager::resolve(const MovementState& initial,
 
         const float next_right = right + dx;
 
-        // First column that the movement would enter.
         const int first = static_cast<int>(
-            std::floor(right)
-        );
+                std::floor(right)
+                );
 
-        // Last column reached by the movement.
         const int last = static_cast<int>(
-            std::ceil(next_right)
-        ) - 1;
+                std::ceil(next_right)
+                ) - 1;
 
         for (int col = first; col <= last; ++col)
         {
-            // A column is only relevant if movement
-            // actually crosses or penetrates its boundary.
             if (next_right <= static_cast<float>(col))
                 continue;
 
@@ -154,16 +241,14 @@ MovementResult EntityMovementManager::resolve(const MovementState& initial,
 
             if (blocked)
             {
-                // Snap the right edge to the wall's left edge.
                 const float resolved_x =
                     static_cast<float>(col) -
                     result.state.size.x;
 
-                // Never move farther right when correcting.
                 result.state.position.x = std::min(
-                    result.state.position.x,
-                    resolved_x
-                );
+                        result.state.position.x,
+                        resolved_x
+                        );
 
                 blockedX = true;
                 break;
@@ -188,16 +273,37 @@ MovementResult EntityMovementManager::resolve(const MovementState& initial,
             }
         }
     }
+if (blockedX)
+{
+    const float stepHeight = tryStepUp(
+        initial,
+        world,
+        dx
+    );
 
-    if (blockedX)
+    if (stepHeight > 0.0f)
     {
-        result.state.velocity.x = 0.0f;
-        result.hitWall = true;
+        // Move onto the obstacle.
+        result.state.position.x = initial.position.x + dx;
+        result.state.position.y = initial.position.y - stepHeight;
+
+        result.stepHeight = stepHeight;
+
+        // Preserve horizontal velocity.
+        blockedX = false;
     }
     else
     {
-        result.state.position.x += dx;
+        // Normal wall collision.
+        result.state.velocity.x = 0.0f;
+        result.hitWall = true;
     }
+}
+else
+{
+    result.state.position.x += dx;
+}
+
 
     // AXIS 2: sweep Y using the X-resolved AABB.
     const float dy = result.state.velocity.y * dt;
@@ -208,10 +314,10 @@ MovementResult EntityMovementManager::resolve(const MovementState& initial,
     if (dy > 0.0f)
     {
         const float foot = result.state.position.y + 1.0f;
-    const int first = static_cast<int>(std::floor(foot));
-    const int last = static_cast<int>(
-    std::floor(foot + dy - EDGE_EPSILON)
-);
+        const int first = static_cast<int>(std::floor(foot));
+        const int last = static_cast<int>(
+                std::floor(foot + dy - EDGE_EPSILON)
+                );
         for (int row = first; row <= last && !blockedY; ++row)
         {
             for (int col = left; col <= right; ++col)

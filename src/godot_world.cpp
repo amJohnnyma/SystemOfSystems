@@ -14,6 +14,7 @@
 #include <godot_cpp/variant/packed_vector2_array.hpp>
 #include <godot_cpp/variant/packed_int32_array.hpp>
 #include "game_settings.h"
+#include <chrono>
 
 using namespace godot;
 
@@ -41,6 +42,7 @@ void GodotSimulation::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("updatePlayerPosition", "x", "y"), &GodotSimulation::updatePlayerPosition);
     ClassDB::bind_method(D_METHOD("movePlayer", "input", "jump_pressed", "deltaTime"), &GodotSimulation::movePlayer);
+    ClassDB::bind_method(D_METHOD("processPlayerInputs", "input"), &GodotSimulation::processPlayerInputs);
     ClassDB::bind_method(D_METHOD("getPlayerData"), &GodotSimulation::getPlayerData);
     ClassDB::bind_method(D_METHOD("createPlayer", "data"), &GodotSimulation::createPlayer);
     ADD_SIGNAL(MethodInfo("update_entities_event", PropertyInfo(Variant::DICTIONARY, "batch_data")));
@@ -477,8 +479,6 @@ if (debug_dst)
 }
     return result;
 }
-#include <chrono>
-#include <iostream>
 
 void GodotSimulation::_process(double delta)
 {
@@ -797,6 +797,51 @@ void GodotSimulation::movePlayer(Vector2 input, bool jump_pressed, double deltaT
 {
     world_grid_.movePlayer(Vec2{input.x, input.y}, jump_pressed, deltaTime);
 }
+void GodotSimulation::processPlayerInputs(const godot::Dictionary& input)
+{
+    PlayerInput pi{};
+
+    // Variables
+    pi.deltaTime = static_cast<double>(
+        input.get("deltaTime", 0.0)
+    );
+
+    godot::Vector2 movement = input.get("moveInput", godot::Vector2(0, 0));
+
+    pi.moveInput = Vec2{
+        movement.x,
+        movement.y
+    };
+
+    pi.selectedHotbarSlot = static_cast<int>(
+        input.get("selectedHotbarSlot", -1)
+    );
+
+    pi.hasJumpInput = static_cast<bool>(
+        input.get("hasJumpInput", false)
+    );
+
+    // Checks
+    pi.hasMoveInput = static_cast<bool>(
+        input.get("hasMoveInput", false)
+    );
+
+    pi.hasPrimaryAttackInput = static_cast<bool>(
+        input.get("hasPrimaryAttackInput", false)
+    );
+
+    pi.hasSecondaryAttackInput = static_cast<bool>(
+        input.get("hasSecondaryAttackInput", false)
+    );
+
+    pi.swappedHotbar = static_cast<bool>(
+        input.get("swappedHotbar", false)
+    );
+
+    // Pass to WorldGrid
+    world_grid_.processPlayerInputs(pi);
+}
+
 godot::Dictionary GodotSimulation::getPlayerData() const
 {
     godot::Dictionary data;

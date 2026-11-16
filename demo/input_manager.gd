@@ -74,23 +74,37 @@ func _physics_process(delta: float) -> void:
 	var input_vector := Vector2.ZERO
 	var jump_pressed := false
 
-	if is_input_enabled and (
+	var gameplay_enabled := is_input_enabled and (
 		current_mode == InputMode.FULL_GAMEPLAY
 		or current_mode == InputMode.BUILDING_PLACEMENT
-	):
+	)
+
+	if gameplay_enabled:
 		input_vector = Input.get_vector(
 			"ui_left",
 			"ui_right",
 			"ui_up",
-            "ui_down"
+			"ui_down"
 		)
 
 		jump_pressed = Input.is_action_just_pressed("ui_up")
+		
+	
 
-	world.movePlayer(input_vector, jump_pressed, delta)
+	var input := {
+		"deltaTime": delta,
+		"moveInput": input_vector,
+		"selectedHotbarSlot": -1,
+		"hasJumpInput": jump_pressed,
+		"hasMoveInput": true,
+		"hasPrimaryAttackInput": false,
+		"hasSecondaryAttackInput": false,
+		"swappedHotbar": false
+	}
+
+	world.processPlayerInputs(input)
 
 	var data: Dictionary = world.getPlayerData()
-
 	player_data_updated.emit(data)
 
 func _unhandled_input(event: InputEvent) -> void:

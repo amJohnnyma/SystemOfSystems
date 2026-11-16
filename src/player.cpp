@@ -83,6 +83,7 @@ void Player::tick(const PlayerTickContext& ctx)
     motion.velocity = velocity_;
     motion.size = size_;
     motion.isGrounded = isGrounded_;
+    motion.maxStepHeight = 1.f;
 
     // 2. Apply gravity
     EntityMovementManager::applyGravity(

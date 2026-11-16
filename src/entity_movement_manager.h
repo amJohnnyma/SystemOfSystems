@@ -36,6 +36,7 @@ private:
     static bool intersectsSolid(const Vec2& position,
                                 const Vec2& size,
                                 const MovementWorld& world);
+    static float tryStepUp(const MovementState& state, const MovementWorld& world, float dx);
 };
 
 #endif

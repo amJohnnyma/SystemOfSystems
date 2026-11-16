@@ -502,6 +502,29 @@ void WorldGrid::movePlayer(
     player.tick(playerCtx);
 
 }
+
+void WorldGrid::processPlayerInputs(const PlayerInput& pi)
+{
+    if(pi.hasMoveInput)
+    {
+        movePlayer(pi.moveInput, pi.hasJumpInput, pi.deltaTime);
+    }
+    if(pi.hasPrimaryAttackInput)
+    {
+        // do primary attack
+    }
+    if(pi.hasSecondaryAttackInput)
+    {
+        //do secondary attack
+    }
+    if(pi.swappedHotbar)
+    {
+        // swap hotbar on backend
+        // signal frontend -> Current system is godot controlled, should be signal controlled by cpp
+    }
+    
+}
+
 uint32_t WorldGrid::tick(double deltaTime)
 {
 

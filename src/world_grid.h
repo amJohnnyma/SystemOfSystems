@@ -154,6 +154,7 @@ class WorldGrid
         }
 
         void movePlayer(Vec2 input, bool jump_pressed, double deltaTime);
+        void processPlayerInputs(const PlayerInput& pi);
         const Player& getPlayer() const {return player;}
 
 

@@ -48,6 +48,7 @@ public:
     void updatePlayerPosition(float x, float y);
 
     void movePlayer(Vector2 input, bool jump_pressed, double deltaTime);
+    void processPlayerInputs(const godot::Dictionary& input);
 
     godot::Dictionary getPlayerData() const;
 

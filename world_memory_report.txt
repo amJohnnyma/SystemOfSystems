@@ -6,7 +6,7 @@ Inline WorldGrid object: 896 bytes
 
 world_cells_ heap                         3712672 bytes         3.541 MiB
 placed_cells_ heap                        3712688 bytes         3.541 MiB
-mesh heap                                 8813304 bytes         8.405 MiB
+mesh heap                                 8825320 bytes         8.416 MiB
 dirty_chunk_indices_ heap                     132 bytes         0.000 MiB
 chunk_is_dirty_ heap                           33 bytes         0.000 MiB
 ThreadPool inline object                      208 bytes         0.000 MiB
@@ -19,7 +19,7 @@ tick_entities_ heap                             4 bytes         0.000 MiB
 player nested heap                            918 bytes         0.001 MiB
 
 ============================================
-ESTIMATED ACCOUNTED MEMORY: 16288661 bytes (15.534 MiB)
+ESTIMATED ACCOUNTED MEMORY: 16300677 bytes (15.546 MiB)
 ============================================
 
 CONTAINER COUNTS

@@ -124,6 +124,7 @@ struct MovementState
     Vec2 velocity = {0.0f, 0.0f};
     Vec2 size = {1.0f, 1.0f};
     bool isGrounded = false;
+    float maxStepHeight = 0.f;
 };
 
 // Non-owning, read-only view of the world. Callers must keep cells alive
@@ -142,6 +143,7 @@ struct MovementResult
     bool hitWall = false;
     bool hitCeiling = false;
     bool landed = false; // Collided while moving downward this frame.
+    float stepHeight =0.f;
 };
 
 enum attack_type
@@ -216,6 +218,22 @@ struct entity_template
 
 };
 
+
+struct PlayerInput
+{
+    // vars
+    double deltaTime = 0.0;
+    Vec2 moveInput = Vec2{};
+    int selectedHotbarSlot = -1;
+    bool hasJumpInput = false; // jump
+
+    // checks
+    bool hasMoveInput = false; // move according to moveInput
+    bool hasPrimaryAttackInput = false; // Do selected items primary attack
+    bool hasSecondaryAttackInput = false; // Do selected items secondary attack
+    bool swappedHotbar = false; // swap to the new selected slot
+
+};
 
 
 
