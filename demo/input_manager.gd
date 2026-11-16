@@ -2,85 +2,74 @@ class_name InputManager
 extends Node
 
 enum InputMode {
-	FULL_GAMEPLAY,  # Terraforming, camera pan, and tool shortcuts
-	CAMERA_ONLY,    # Windows like Inventory: camera movement allowed, terraforming blocked
-	UI_ONLY,         # Modal/Pause menus: all world interactions frozen
+	FULL_GAMEPLAY,
+	CAMERA_ONLY,
+	UI_ONLY,
 	BUILDING_PLACEMENT
 }
 
-var current_mode: InputMode = InputMode.FULL_GAMEPLAY
 
-# Signals
+const HOTBAR_ACTIONS: Array[StringName] = [
+	&"hotbar_1", &"hotbar_2", &"hotbar_3", &"hotbar_4", &"hotbar_5",
+	&"hotbar_6", &"hotbar_7", &"hotbar_8", &"hotbar_9", &"hotbar_10"
+]
+
 signal terrain_modified()
 signal cursor_moved(local_cell_pos: Vector2)
 signal brush_radius_changed(new_radius: float)
 signal building_placed()
 signal building_cancelled()
-signal player_data_updated(data : Dictionary)
+signal player_data_updated(data: Dictionary)
 
-# Global toggle
+var current_mode: InputMode = InputMode.FULL_GAMEPLAY
 var is_input_enabled: bool = true
 
-# Dependencies
 var world: GodotSimulation
 var camera: Camera2D
 var mesh_scale: Vector2 = Vector2(4.0, 4.0)
 
-# Brush & Timing
 var brush_radius_cells: float = 2.0
 var current_mouse_local: Vector2 = Vector2.ZERO
-var is_left_down: bool = false
-var is_right_down: bool = false
-var is_panning: bool = false
 var paint_cooldown: float = 0.0
 const PAINT_INTERVAL: float = 0.1
 
-# Camera settings
 var min_zoom: float = 0.001
 var max_zoom: float = 20.0
 var zoom_factor: float = 0.1
+var selected_hotbar_slot: int = -1
 
-var selected_hotbar_slot = -1
 
 func setup(p_world: GodotSimulation, p_camera: Camera2D, p_mesh_scale: Vector2) -> void:
 	world = p_world
 	camera = p_camera
 	mesh_scale = p_mesh_scale
 
-func getCurMouseX():
+
+func getCurMouseX() -> float:
 	return current_mouse_local.x
 
-func getCurMouseY():
+
+func getCurMouseY() -> float:
 	return current_mouse_local.y
 
-func setSelectedHotbarSlot(slot : int):
+
+func setSelectedHotbarSlot(slot: int) -> void:
 	selected_hotbar_slot = slot
+
 
 func _process(delta: float) -> void:
 	if not is_input_enabled or not camera:
-		is_left_down = false                                                                                                                                                                                                                
-		is_right_down = false
 		return
 
-	# Always track cursor position for UI/HUD tooltips
 	current_mouse_local = camera.get_global_mouse_position() / mesh_scale
 	cursor_moved.emit(current_mouse_local)
+	paint_cooldown = maxf(0.0, paint_cooldown - delta)
 
-	 # A UI element might consume the release event before _unhandled_input sees it.                                                                                                                                                       
-	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):                                                                                                                                                                              
-		is_left_down = false                                                                                                                                                                                                                
-	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):                                                                                                                                                                             
-		is_right_down = false                                                                                                                                                                                                               																																																											
-	paint_cooldown = maxf(0.0, paint_cooldown - delta)                                                                                                                                                                                    
-																																																										
-	var brush_held := (                                                                                                                                                                                                                   
-	(is_left_down and selected_hotbar_slot == 1)                                                                                                                                                                                        
-	or (is_right_down and selected_hotbar_slot == 2)                                                                                                                                                                                    
-	)                                                                                                                                                                                                                                     
-																																																										
-	if current_mode == InputMode.FULL_GAMEPLAY and brush_held and paint_cooldown <= 0.0:                                                                                                                                                  
-		_apply_brush()                                                                                                                                                                                                                      
-		paint_cooldown = PAINT_INTERVAL
+	if current_mode == InputMode.FULL_GAMEPLAY and paint_cooldown <= 0.0:
+		if _is_brush_action_held():
+			_apply_brush()
+			paint_cooldown = PAINT_INTERVAL
+
 
 func _physics_process(delta: float) -> void:
 	if not world:
@@ -96,20 +85,11 @@ func _physics_process(delta: float) -> void:
 		or current_mode == InputMode.BUILDING_PLACEMENT
 	)
 
-	if gameplay_enabled:
-		input_vector = Input.get_vector(
-			"ui_left",
-			"ui_right",
-			"ui_up",
-			"ui_down"
-		)
-
-		jump_pressed = Input.is_action_just_pressed("ui_up")
-		
+	if gameplay_enabled: # AND selected item is a weapon
+		input_vector = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+		jump_pressed = Input.is_action_just_pressed("jump")
 		primary_attack = Input.is_action_just_pressed("primary_attack")
 		secondary_attack = Input.is_action_just_pressed("secondary_attack")
-		
-	
 
 	var input := {
 		"deltaTime": delta,
@@ -123,134 +103,120 @@ func _physics_process(delta: float) -> void:
 	}
 
 	world.processPlayerInputs(input)
+	player_data_updated.emit(world.getPlayerData())
 
-	var data: Dictionary = world.getPlayerData()
-	player_data_updated.emit(data)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_input_enabled or current_mode == InputMode.UI_ONLY:
 		return
 
-	# Camera zoom is permitted in both FULL_GAMEPLAY and CAMERA_ONLY modes
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			_zoom_camera(1.0 + zoom_factor)
-			return
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			_zoom_camera(1.0 - zoom_factor)
-			return
-	
-	# Terraforming and key actions are ONLY allowed during FULL_GAMEPLAY
-	if current_mode == InputMode.FULL_GAMEPLAY:
-		if event is InputEventMouseButton:
-			if event.button_index == MOUSE_BUTTON_LEFT:
-				is_left_down = event.pressed
-			elif event.button_index == MOUSE_BUTTON_RIGHT:
-				is_right_down = event.pressed
-
-			if event.pressed and (is_left_down or is_right_down) and (selected_hotbar_slot == 1 or selected_hotbar_slot == 2):
-				_apply_brush()
-				paint_cooldown = PAINT_INTERVAL
-			if event.pressed and (is_left_down or is_right_down) and selected_hotbar_slot == 9:
-				var cell_x := int(current_mouse_local.x)
-				var cell_y := int(current_mouse_local.y)
-				world.selectStructure(cell_x, cell_y)
-
-		elif event is InputEventKey and event.pressed:
-			var cell_x := int(current_mouse_local.x)
-			var cell_y := int(current_mouse_local.y)
-
-			if event.keycode == KEY_A:
-				_apply_fill(cell_x, cell_y, 2, false)
-			elif event.keycode == KEY_S:
-				_apply_fill(cell_x, cell_y, 2, true)
-			elif event.keycode == KEY_MINUS:
-				brush_radius_cells = max(0.5, brush_radius_cells - 0.5)
-				brush_radius_changed.emit(brush_radius_cells)
-			elif event.keycode == KEY_EQUAL:
-				brush_radius_cells += 0.5
-				brush_radius_changed.emit(brush_radius_cells)
-			elif event.keycode >= KEY_1 and event.keycode <= KEY_9:
-				var slot_num = event.keycode - KEY_1 + 1
-				_trigger_hotbar_selection(slot_num)
-			elif event.keycode == KEY_0:
-				_trigger_hotbar_selection(10)
-				
-	if current_mode == InputMode.BUILDING_PLACEMENT:
-		if event is InputEventMouseButton:
-			if event.button_index == MOUSE_BUTTON_LEFT:
-				is_left_down = event.pressed
-
-			if event.pressed and (is_left_down):
-				_place_buiding()
-		elif event is InputEventKey and event.pressed:
-			if event.keycode == KEY_ESCAPE:
-				_cancel_building()
+	if event.is_action_pressed("camera_zoom_in"):
+		_zoom_camera(1.0 + zoom_factor)
 		return
-				
+	if event.is_action_pressed("camera_zoom_out"):
+		_zoom_camera(1.0 - zoom_factor)
+		return
 
-# Helper function to find and update the hotbar node from InputManager
-func _trigger_hotbar_selection(slot_number: int) -> void:
-	var hotbar = get_tree().root.find_child("Hotbar", true, false)
-	if hotbar and hotbar.has_method("select_slot"):
-		hotbar.select_slot(slot_number)
+	if current_mode == InputMode.BUILDING_PLACEMENT:
+		if event.is_action_pressed("primary_attack") and not event.is_echo():
+			_place_building()
+		elif event.is_action_pressed("cancel_build") and not event.is_echo():
+			_cancel_building()
+		return
+
+	if current_mode != InputMode.FULL_GAMEPLAY or event.is_echo():
+		return
+
+	if event.is_action_pressed("primary_attack") or event.is_action_pressed("secondary_attack"):
+		if selected_hotbar_slot == 9:
+			world.selectStructure(int(current_mouse_local.x), int(current_mouse_local.y))
+		elif paint_cooldown <= 0.0 and _is_brush_action_held():
+			_apply_brush()
+			paint_cooldown = PAINT_INTERVAL
+		return
+
+	var cell_x := int(current_mouse_local.x)
+	var cell_y := int(current_mouse_local.y)
+
+	if event.is_action_pressed("brush_smaller"):
+		brush_radius_cells = maxf(0.5, brush_radius_cells - 0.5)
+		brush_radius_changed.emit(brush_radius_cells)
+	elif event.is_action_pressed("brush_larger"):
+		brush_radius_cells += 0.5
+		brush_radius_changed.emit(brush_radius_cells)
+	else:
+		for i in range(HOTBAR_ACTIONS.size()):
+			if event.is_action_pressed(HOTBAR_ACTIONS[i]):
+				_trigger_hotbar_selection(i + 1)
+				break
+
 
 func _input(event: InputEvent) -> void:
 	if not is_input_enabled or not camera or current_mode == InputMode.UI_ONLY:
 		return
 
-	# Middle-click camera panning allowed in FULL_GAMEPLAY and CAMERA_ONLY modes
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE:
-		is_panning = event.pressed
-
-	if event is InputEventMouseMotion and is_panning:
+	# Panning works in FULL_GAMEPLAY, CAMERA_ONLY and BUILDING_PLACEMENT.
+	if event is InputEventMouseMotion and Input.is_action_pressed("camera_pan"):
 		camera.global_position -= event.relative / camera.zoom
+
+
+func _is_brush_action_held() -> bool:
+	return (
+		(selected_hotbar_slot == 1 and Input.is_action_pressed("primary_attack"))
+		or (selected_hotbar_slot == 2 and Input.is_action_pressed("secondary_attack"))
+	)
+
+
+func _trigger_hotbar_selection(slot_number: int) -> void:
+	var hotbar = get_tree().root.find_child("Hotbar", true, false)
+	if hotbar and hotbar.has_method("select_slot"):
+		hotbar.select_slot(slot_number)
+
 
 func _apply_brush() -> void:
 	if not world:
 		return
 	var cell_x := int(current_mouse_local.x)
 	var cell_y := int(current_mouse_local.y)
-
-	if is_left_down and selected_hotbar_slot == 1:
+	if selected_hotbar_slot == 1 and Input.is_action_pressed("primary_attack"):
 		world.setDensity(cell_x, cell_y, brush_radius_cells, 256, 2)
-	elif is_right_down and selected_hotbar_slot == 2:
+	elif selected_hotbar_slot == 2 and Input.is_action_pressed("secondary_attack"):
 		world.setDensity(cell_x, cell_y, brush_radius_cells, -256, 2)
-
+	else:
+		return
 	terrain_modified.emit()
 
-func _place_buiding():
-	if not world:
-		return
 
-	building_placed.emit()
-	
-func _cancel_building():
-	if not world:
-		return
-		
-	building_cancelled.emit()
+func _place_building() -> void:
+	if world:
+		building_placed.emit()
+
+
+func _cancel_building() -> void:
+	if world:
+		building_cancelled.emit()
+
+
 func _apply_fill(x: int, y: int, type_id: int, negative_fill: bool) -> void:
 	if not world:
 		return
 	world.fillCell(x, y, type_id, negative_fill)
-	#world.placeStructure(x,y,1)
 	terrain_modified.emit()
+
 
 func _zoom_camera(factor: float) -> void:
 	if not camera:
 		return
 	var old_zoom := camera.zoom
 	var new_zoom := (old_zoom * factor).clamp(Vector2(min_zoom, min_zoom), Vector2(max_zoom, max_zoom))
-
 	if old_zoom == new_zoom:
 		return
-
 	var mouse_world_before := camera.get_global_mouse_position()
 	camera.zoom = new_zoom
 	var mouse_world_after := camera.get_global_mouse_position()
+	camera.position += mouse_world_before - mouse_world_after
 
-	camera.position += (mouse_world_before - mouse_world_after)
 
-func set_input_mode(mode : InputMode):
+func set_input_mode(mode: InputMode) -> void:
 	current_mode = mode
+	paint_cooldown = 0.0
