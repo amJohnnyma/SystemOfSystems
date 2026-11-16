@@ -73,6 +73,8 @@ func _physics_process(delta: float) -> void:
 
 	var input_vector := Vector2.ZERO
 	var jump_pressed := false
+	var primary_attack := false
+	var secondary_attack := false
 
 	var gameplay_enabled := is_input_enabled and (
 		current_mode == InputMode.FULL_GAMEPLAY
@@ -89,6 +91,9 @@ func _physics_process(delta: float) -> void:
 
 		jump_pressed = Input.is_action_just_pressed("ui_up")
 		
+		primary_attack = Input.is_action_just_pressed("primary_attack")
+		secondary_attack = Input.is_action_just_pressed("secondary_attack")
+		
 	
 
 	var input := {
@@ -97,8 +102,8 @@ func _physics_process(delta: float) -> void:
 		"selectedHotbarSlot": -1,
 		"hasJumpInput": jump_pressed,
 		"hasMoveInput": true,
-		"hasPrimaryAttackInput": false,
-		"hasSecondaryAttackInput": false,
+		"hasPrimaryAttackInput": primary_attack,
+		"hasSecondaryAttackInput": secondary_attack,
 		"swappedHotbar": false
 	}
 

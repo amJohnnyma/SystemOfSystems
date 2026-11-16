@@ -43,14 +43,19 @@ Player::Player(PlayerSettings settings)
     }
 }
 void Player::moveTo(
-    Vec2 input,
-    bool jump_pressed
-)
+        Vec2 input,
+        bool jump_pressed
+        )
 {
 
+    if (state_ == "primary_attack")
+    {
+        return;
+    }
+
     const float horizontal = std::clamp(
-        input.x, -1.0f, 1.0f
-    );
+            input.x, -1.0f, 1.0f
+            );
 
     velocity_.x =
         horizontal * static_cast<float>(currentMoveSpeed_);
@@ -59,6 +64,7 @@ void Player::moveTo(
         facingRight = true;
     else if (horizontal < 0.0f)
         facingRight = false;
+
 
     if (jump_pressed && isGrounded_)
     {
@@ -87,27 +93,27 @@ void Player::tick(const PlayerTickContext& ctx)
 
     // 2. Apply gravity
     EntityMovementManager::applyGravity(
-        motion,
-        ps.gravity,
-        static_cast<float>(ps.maxFallSpeed),
-        dt
-    );
+            motion,
+            ps.gravity,
+            static_cast<float>(ps.maxFallSpeed),
+            dt
+            );
 
     // 3. Build world collision context
     MovementWorld world{
         ctx.world.world_cells,
-        ctx.world.world_x,
-        ctx.world.world_y,
-        ctx.world.threshold
+            ctx.world.world_x,
+            ctx.world.world_y,
+            ctx.world.threshold
     };
 
     // 4. Resolve movement
     MovementResult result =
         EntityMovementManager::resolve(
-            motion,
-            world,
-            dt
-        );
+                motion,
+                world,
+                dt
+                );
 
     // 5. Apply results
     position_ = result.state.position;
@@ -115,17 +121,21 @@ void Player::tick(const PlayerTickContext& ctx)
     isGrounded_ = result.state.isGrounded;
 
     // 6. Animation state
-    if (!isGrounded_)
+    if (state_ != "primary_attack")
     {
-        changeState("jump");
-    }
-    else if (std::abs(velocity_.x) > 0.001f)
-    {
-        changeState("walk");
-    }
-    else
-    {
-        changeState("idle");
+
+        if (!isGrounded_)
+        {
+            changeState("jump");
+        }
+        else if (std::abs(velocity_.x) > 0.001f)
+        {
+            changeState("walk");
+        }
+        else
+        {
+            changeState("idle");
+        }
     }
 
     // 7. Animation progression
@@ -137,12 +147,19 @@ void Player::tick(const PlayerTickContext& ctx)
             it->second.animationSpeed;
 
         animationProgress += dt * animation_speed;
-
         if (animationProgress >= 1.0)
         {
-            animationProgress =
-                std::fmod(animationProgress, 1.0);
+            if (state_ == "primary_attack")
+            {
+                changeState("idle");
+            }
+            else
+            {
+                animationProgress =
+                    std::fmod(animationProgress, 1.0);
+            }
         }
+
     }
 }
 
@@ -153,6 +170,16 @@ void Player::takeDamage(double damage)
 void Player::takeHealing(double damage)
 {
 }
+
+void Player::primaryAttack()
+{
+    if (state_ == "primary_attack")
+    {
+        return;
+    }
+    changeState("primary_attack");
+}
+
 std::size_t Player::getMemoryUsage() const
 {
     std::size_t bytes = sizeof(*this);

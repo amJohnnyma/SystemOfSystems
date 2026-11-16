@@ -485,43 +485,48 @@ void WorldGrid::movePlayer(
         double deltaTime
         )
 {
-    WorldEventContext worldCtx {
-        .world_cells = world_cells_,
-        .world_x = world_x_,
-        .world_y = world_y_,
-        .threshold = threshold
-    };
 
-    PlayerTickContext playerCtx {
-        .deltaTime = deltaTime,
-            .world = worldCtx
-    };
 
     // Update desired movement from Godot input
     player.moveTo(input, jump_pressed);
-    player.tick(playerCtx);
 
 }
 
 void WorldGrid::processPlayerInputs(const PlayerInput& pi)
 {
-    if(pi.hasMoveInput)
-    {
-        movePlayer(pi.moveInput, pi.hasJumpInput, pi.deltaTime);
-    }
+
     if(pi.hasPrimaryAttackInput)
     {
         // do primary attack
+        player.primaryAttack();
     }
     if(pi.hasSecondaryAttackInput)
     {
         //do secondary attack
+    }
+    if(pi.hasMoveInput)
+    {
+        movePlayer(pi.moveInput, pi.hasJumpInput, pi.deltaTime);
     }
     if(pi.swappedHotbar)
     {
         // swap hotbar on backend
         // signal frontend -> Current system is godot controlled, should be signal controlled by cpp
     }
+
+
+
+    WorldEventContext worldCtx {
+        .world_cells = world_cells_,
+        .world_x = world_x_,
+        .world_y = world_y_,
+        .threshold = threshold
+    };
+    PlayerTickContext playerCtx {
+        .deltaTime = pi.deltaTime,
+            .world = worldCtx
+    };
+    player.tick(playerCtx);
     
 }
 

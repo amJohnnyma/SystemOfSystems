@@ -56,6 +56,7 @@ std::size_t getMemoryUsage() const;
 
     void takeDamage(double damage);
     void takeHealing(double healing);
+    void primaryAttack();
 
     // Position and physics
     const Vec2& getPosition() const { return position_; }

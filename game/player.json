@@ -15,7 +15,7 @@
 
     "sprites": {
         "idle": {
-            "filename": "EvilWizard_attack1.png",
+            "filename": "EvilWizard_idle.png",
             "columns": 8,
             "rows": 1,
             "animationSpeed": 0.5
@@ -29,6 +29,12 @@
         "jump": {
             "filename": "EvilWizard_fall.png",
             "columns": 2,
+            "rows": 1,
+            "animationSpeed": 1.0
+        },
+	"primary_attack": {
+            "filename": "EvilWizard_attack1.png",
+            "columns": 8,
             "rows": 1,
             "animationSpeed": 1.0
         }
