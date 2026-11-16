@@ -52,6 +52,7 @@ var PLAYER_ANIMATIONS := {}
 var player_multimeshes: Dictionary = {}
 var player_materials: Dictionary = {}
 var player_debug_multimesh_node: MultiMeshInstance2D
+var player_attack_debug_multimesh_node: MultiMeshInstance2D
 
 
 var player_visual_pixels_per_cell: float = 20.0 # = (Character height in pixels) / (Desired height in world cells)
@@ -173,6 +174,7 @@ func _ready() -> void:
 	_init_create_player()
 	_init_player_materials()
 	_init_player_debug()
+	_init_player_attack_debug()
 	_register_entity_render_configs()
 	_print_item_registry_preview()
 	
@@ -417,6 +419,7 @@ func _on_player_data_updated(data: Dictionary) -> void:
 
 	# 7. Debug physical collision box
 	_update_player_debug_hitbox(data)
+	_update_attack_debug(data)
 
 func _update_player_debug_hitbox(data: Dictionary) -> void:
 	if not player_debug_multimesh_node:
@@ -450,7 +453,37 @@ func _update_player_debug_hitbox(data: Dictionary) -> void:
 		0,
 		Color(0.0, 1.0, 0.0, 0.3)
 	)
-	
+
+func _update_attack_debug(data: Dictionary) -> void:                                                                                                                                                                                    
+	var mm: MultiMesh = player_attack_debug_multimesh_node.multimesh                                                                                                                                                                             
+	var hitboxes: Array = data.get("attackHitboxes", [])                                                                                                                                                                                  
+																																																										 
+	if not bool(data.get("attackHitboxActive", false)):                                                                                                                                                                                   
+		mm.instance_count = 0                                                                                                                                                                                                               
+		return                                                                                                                                                                                                                              
+																																																										 
+	if mm.instance_count != hitboxes.size():                                                                                                                                                                                              
+		mm.instance_count = hitboxes.size()                                                                                                                                                                                                 
+																																																										 
+	for i in range(hitboxes.size()):                                                                                                                                                                                                      
+		var box: Dictionary = hitboxes[i]                                                                                                                                                                                                   
+		var bottom_left: Vector2 = box["bottomLeft"]                                                                                                                                                                                        
+		var top_right: Vector2 = box["topRight"]                                                                                                                                                                                            
+																																																										 
+		var width := top_right.x - bottom_left.x                                                                                                                                                                                            
+		var height := bottom_left.y - top_right.y                                                                                                                                                                                           
+		var center := (bottom_left + top_right) * 0.5                                                                                                                                                                                       
+																																																										 
+		mm.set_instance_transform_2d(                                                                                                                                                                                                       
+			i,                                                                                                                                                                                                                                
+			Transform2D(                                                                                                                                                                                                                      
+			 Vector2(width, 0.0),                                                                                                                                                                                                            
+			 Vector2(0.0, -height),                                                                                                                                                                                                          
+			 center                                                                                                                                                                                                                          
+			)                                                                                                                                                                                                                                 
+		)                                                                                                                                                                                                                                   
+		mm.set_instance_custom_data(i, Color(1.0, 0.0, 0.0, 0.4)) 
+
 func _init_player_debug() -> void:
 	player_debug_multimesh_node = MultiMeshInstance2D.new()
 	player_debug_multimesh_node.name = "PlayerHitboxDebug"
@@ -473,6 +506,26 @@ func _init_player_debug() -> void:
 	player_debug_multimesh_node.multimesh = mm
 
 	add_child(player_debug_multimesh_node)
+	
+func _init_player_attack_debug() -> void:                                                                                                                                                                                                      
+	player_attack_debug_multimesh_node = MultiMeshInstance2D.new()                                                                                                                                                                               
+	player_attack_debug_multimesh_node.name = "PlayerAttackHitboxDebug"                                                                                                                                                                          
+	player_attack_debug_multimesh_node.scale = MESH_SCALE                                                                                                                                                                                        
+	player_attack_debug_multimesh_node.z_index = 21                                                                                                                                                                                              
+	player_attack_debug_multimesh_node.material = debug_multimesh_node.material                                                                                                                                                                  
+																																																											
+	var mm := MultiMesh.new()                                                                                                                                                                                                             
+	mm.transform_format = MultiMesh.TRANSFORM_2D                                                                                                                                                                                          
+	mm.use_custom_data = true                                                                                                                                                                                                             
+																																																											
+	var quad := QuadMesh.new()                                                                                                                                                                                                            
+	quad.size = Vector2.ONE                                                                                                                                                                                                               
+	mm.mesh = quad                                                                                                                                                                                                                        
+	mm.instance_count = 0                                                                                                                                                                                                                 
+																																																											
+	player_attack_debug_multimesh_node.multimesh = mm                                                                                                                                                                                            
+	add_child(player_attack_debug_multimesh_node)  
+
 func _init_player_materials() -> void:
 	for anim_state in PLAYER_ANIMATIONS:
 		var anim_data: Dictionary = PLAYER_ANIMATIONS[anim_state]

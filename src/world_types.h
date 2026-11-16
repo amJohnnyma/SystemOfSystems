@@ -78,6 +78,11 @@ struct AttackHitboxData
     float width = 1.0f;
     float height = 1.0f;
 };
+struct AttackHitBoxBounds
+{
+    Vec2 bottomLeft;
+    Vec2 topRight;
+};
 struct PlayerSpriteSettings
 {
     std::string filename;

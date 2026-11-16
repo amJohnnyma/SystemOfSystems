@@ -1,4 +1,5 @@
 #include "player.h"
+#include "world_types.h"
 
 Player::Player() : Player(PlayerSettings{})
 {
@@ -141,8 +142,11 @@ void Player::tick(const PlayerTickContext& ctx)
     // 7. Animation progression
     auto it = ps.sprites.find(state_);
 
+
+    activeAttackHitboxes_.clear();
     if (it != ps.sprites.end())
     {
+
         const double animation_speed =
             it->second.animationSpeed;
 
@@ -152,13 +156,26 @@ void Player::tick(const PlayerTickContext& ctx)
             if (state_ == "primary_attack")
             {
                 changeState("idle");
+                return;
             }
             else
             {
                 animationProgress =
                     std::fmod(animationProgress, 1.0);
             }
+            
         }
+        const PlayerSpriteSettings& settings = it->second;
+        const int frameCount = settings.columns * settings.rows;
+        const int frame = static_cast<int>(animationProgress * frameCount);
+
+        const auto hitboxIt = settings.frameHitboxes.find(frame);
+        if (hitboxIt != settings.frameHitboxes.end())
+        {
+            activeAttackHitboxes_ = hitboxIt->second;
+        }
+
+        
 
     }
 }
@@ -192,4 +209,27 @@ std::size_t Player::getMemoryUsage() const
     bytes += MemoryUsage::heap(state_);
 
     return bytes;
+}
+
+std::vector<AttackHitBoxBounds> Player::getAttackHitboxBounds() const
+{
+    std::vector<AttackHitBoxBounds> bounds;
+    bounds.reserve(activeAttackHitboxes_.size());
+
+    for (const AttackHitboxData& hitbox : activeAttackHitboxes_)
+    {
+        const float left = facingRight
+            ? position_.x + hitbox.offsetX
+            : position_.x + size_.x - hitbox.offsetX - hitbox.width;
+
+        const float bottom = position_.y - hitbox.offsetY + 1.f;
+
+        bounds.push_back(
+                {
+                Vec2{left, bottom},
+                Vec2{left + hitbox.width, bottom - hitbox.height}
+                }
+                );
+    }
+    return bounds;
 }

@@ -14,6 +14,7 @@
 #include <godot_cpp/variant/packed_vector2_array.hpp>
 #include <godot_cpp/variant/packed_int32_array.hpp>
 #include "game_settings.h"
+#include "world_types.h"
 #include <chrono>
 
 using namespace godot;
@@ -780,6 +781,49 @@ void GodotSimulation::createPlayer(godot::Dictionary data)
                     sprite_data, "animationSpeed", 1.0
                     );
 
+            godot::Variant hitboxes_value = sprite_data.get("hitbox", godot::Array());
+
+            if (hitboxes_value.get_type() == godot::Variant::ARRAY)
+            {
+                godot::Array hitboxes = hitboxes_value;
+                const int frame_count = sprite.columns * sprite.rows;
+
+                for (int j =0; j < hitboxes.size(); j ++)
+                {
+                    if (hitboxes[j].get_type() != godot::Variant::DICTIONARY)
+                    {
+                        continue;
+                    }
+
+                    godot::Dictionary entry = hitboxes[j];
+                    const int frame = static_cast<int>(readNumber(entry, "frame", -1));
+
+                    if (frame < 0 || frame >= frame_count)
+                    {
+                        continue;
+                    }
+
+                    const Vec2 size = readVec2(
+                            entry.get("size", godot::Variant()), Vec2{1.f, 1.f}
+                            );
+                    const Vec2 offset = readVec2(
+                            entry.get("offset_r", godot::Variant()), Vec2{}
+                            );
+
+                    if (size.x <= 0.f || size.y <= 0.f)
+                    {
+                        continue;
+                    }
+
+                    sprite.frameHitboxes[frame].push_back(
+                            AttackHitboxData{offset.x, offset.y, size.x, size.y}
+                            );
+
+
+                }
+            }
+
+
             settings.sprites.emplace(
                     toStdString(state_name),
                     std::move(sprite)
@@ -880,6 +924,26 @@ godot::Dictionary GodotSimulation::getPlayerData() const
     data["state"] = player.getState().c_str();
     data["animPhase"] = player.getAnimProgress();
     data["facingRight"] = player.isFacingRight();
+
+    godot::Array attackHitboxes;
+
+    for (const AttackHitBoxBounds& hitbox : player.getAttackHitboxBounds())
+    {
+        godot::Dictionary bounds;
+
+        bounds["bottomLeft"] = godot::Vector2(
+                hitbox.bottomLeft.x,
+                hitbox.bottomLeft.y);
+
+        bounds["topRight"] = godot::Vector2(
+                hitbox.topRight.x,
+                hitbox.topRight.y);
+
+        attackHitboxes.append(bounds);
+    }
+
+    data["attackHitboxActive"] = player.isAttackHitboxActive();
+    data["attackHitboxes"] = attackHitboxes;
 
     return data;
 }

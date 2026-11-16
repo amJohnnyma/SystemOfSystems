@@ -34,6 +34,8 @@ private:
     PlayerSettings ps;
     Inventory inventory_;
 
+    std::vector<AttackHitboxData> activeAttackHitboxes_;
+
 
     // Future:
     // Equipped item
@@ -80,21 +82,35 @@ std::size_t getMemoryUsage() const;
     double getAnimProgress() const { return animationProgress; }
     bool isFacingRight() const { return facingRight; }
 
-void changeState(const std::string& new_state)
-{
-    if (state_ == new_state)
-        return;
-
-    state_ = new_state;
-    animationProgress = 0.0;
-
-    auto it = ps.sprites.find(state_);
-
-    if (it != ps.sprites.end())
-    {
-        sprite = it->second.filename;
+    bool isAttackHitboxActive() const {
+        return !activeAttackHitboxes_.empty();
     }
-}
+
+    const std::vector<AttackHitboxData>& getActiveHitboxes() const
+    {
+        return activeAttackHitboxes_;
+    }
+
+    void changeState(const std::string& new_state)
+    {
+        if (state_ == new_state)
+            return;
+
+        state_ = new_state;
+        animationProgress = 0.0;
+        activeAttackHitboxes_.clear();
+
+        auto it = ps.sprites.find(state_);
+
+        if (it != ps.sprites.end())
+        {
+            sprite = it->second.filename;
+        }
+    }
+
+    std::vector<AttackHitBoxBounds> getAttackHitboxBounds() const;
+
+    
 };
 
 #endif

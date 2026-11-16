@@ -36,7 +36,30 @@
             "filename": "EvilWizard_attack1.png",
             "columns": 8,
             "rows": 1,
-            "animationSpeed": 1.0
+            "animationSpeed": 1.0,
+		"hitbox":
+		[
+			{
+			"frame": 3,
+			"size": [2,2],
+			"offset_r" : [1,1]
+			},
+			{
+			"frame": 4,
+			"size": [3,3],
+			"offset_r" : [2,2]
+			},
+			{
+			"frame": 5,
+			"size": [4,4],
+			"offset_r" : [3,3]
+			},
+			{
+			"frame": 6,
+			"size": [5,5],
+			"offset_r" : [4,4]
+			}
+		]
         }
     }
 }
