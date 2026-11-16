@@ -26,6 +26,7 @@ void Entity::on_tick(EntityTickContext etx)
     };
 
     motion.isGrounded = et_.isGrounded;
+    motion.maxStepHeight = 1.0f;
 
     // 2. Set movement target (temporary: player)
     Vec2 target = etx.playerPos;
