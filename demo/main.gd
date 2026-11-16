@@ -63,6 +63,7 @@ var player_visual_pivot: Vector2 = Vector2(0.5, 0.0)
 
 
 func _ready() -> void:
+	Engine.max_fps = 60
 	# Create and configure Camera2D
 	camera = Camera2D.new()
 	add_child(camera)
@@ -205,8 +206,8 @@ func _ready() -> void:
 	#world.placeEntity(320,10,2)
 	#world.placeEntity(330,10,3)
 	#world.placeEntity(340,10,4)
-	#for i in range(10):
-	#	world.placeEntity(randi_range(1, 320),10,1)
+	for i in range(10000):
+		world.placeEntity(randi_range(1, 320),10,1)
 	world.placeEntity(620,10, 5)
 
 	
@@ -978,6 +979,7 @@ func update_mesh_display() -> void:
 # per shape, so triangles can be batched by atlas path without changing C++.
 # Once the generator creates actual cross-atlas blends, this renderer will
 # need paired atlas samplers / a different blend representation.
+
 func _update_terrain_atlases(
 	chunk_pos: Vector2i,
 	terrain_data: Dictionary,
@@ -1078,7 +1080,7 @@ func _warn_unmapped_block(block_type: int) -> void:
 		return
 	_warned_unmapped_types[block_type] = true
 	push_warning("No atlas mapping for block type %d" % block_type)
-
+	
 func _update_chunk_node(chunk_pos: Vector2i, chunk_data: Dictionary) -> void:
 	var chunk_entry: Dictionary = chunk_nodes.get(chunk_pos, {})
 	if chunk_entry.is_empty():

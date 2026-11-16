@@ -58,14 +58,29 @@ func setSelectedHotbarSlot(slot : int):
 
 func _process(delta: float) -> void:
 	if not is_input_enabled or not camera:
+		is_left_down = false                                                                                                                                                                                                                
+		is_right_down = false
 		return
 
 	# Always track cursor position for UI/HUD tooltips
 	current_mouse_local = camera.get_global_mouse_position() / mesh_scale
 	cursor_moved.emit(current_mouse_local)
 
-	if paint_cooldown > 0.0:
-		paint_cooldown -= delta
+	 # A UI element might consume the release event before _unhandled_input sees it.                                                                                                                                                       
+	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):                                                                                                                                                                              
+		is_left_down = false                                                                                                                                                                                                                
+	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):                                                                                                                                                                             
+		is_right_down = false                                                                                                                                                                                                               																																																											
+	paint_cooldown = maxf(0.0, paint_cooldown - delta)                                                                                                                                                                                    
+																																																										
+	var brush_held := (                                                                                                                                                                                                                   
+	(is_left_down and selected_hotbar_slot == 1)                                                                                                                                                                                        
+	or (is_right_down and selected_hotbar_slot == 2)                                                                                                                                                                                    
+	)                                                                                                                                                                                                                                     
+																																																										
+	if current_mode == InputMode.FULL_GAMEPLAY and brush_held and paint_cooldown <= 0.0:                                                                                                                                                  
+		_apply_brush()                                                                                                                                                                                                                      
+		paint_cooldown = PAINT_INTERVAL
 
 func _physics_process(delta: float) -> void:
 	if not world:

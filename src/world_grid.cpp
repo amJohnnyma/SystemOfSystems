@@ -537,7 +537,7 @@ void WorldGrid::processPlayerInputs(const PlayerInput& pi)
 uint32_t WorldGrid::tick(double deltaTime)
 {
 
-    updateMesh();
+   // updateMesh();
     // could be parallel
     //   for(uint32_t sID : tick_structures_)
     {

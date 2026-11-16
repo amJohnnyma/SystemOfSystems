@@ -5,7 +5,7 @@
 Inline WorldGrid object: 920 bytes
 
 world_cells_ heap                         3712672 bytes         3.541 MiB
-placed_cells_ heap                        3712688 bytes         3.541 MiB
+placed_cells_ heap                        4035632 bytes         3.849 MiB
 mesh heap                                 8813304 bytes         8.405 MiB
 dirty_chunk_indices_ heap                     132 bytes         0.000 MiB
 chunk_is_dirty_ heap                           33 bytes         0.000 MiB
@@ -14,19 +14,19 @@ structures_ heap                                8 bytes         0.000 MiB
 tick_structures_ heap                           0 bytes         0.000 MiB
 structure_registry_ heap                    41504 bytes         0.040 MiB
 entity_registry_ heap                        5387 bytes         0.005 MiB
-entities_ heap                                907 bytes         0.001 MiB
-tick_entities_ heap                             4 bytes         0.000 MiB
+entities_ heap                           11058923 bytes        10.547 MiB
+tick_entities_ heap                         65536 bytes         0.062 MiB
 player nested heap                           1530 bytes         0.001 MiB
 
 ============================================
-ESTIMATED ACCOUNTED MEMORY: 16289297 bytes (15.535 MiB)
+ESTIMATED ACCOUNTED MEMORY: 27735789 bytes (26.451 MiB)
 ============================================
 
 CONTAINER COUNTS
 World cells: 116021
 Placed cells: 116021
 Chunks: 33
-Entities: 1
+Entities: 9537
 Entity types: 5
 Structures: 0
 Structure types: 258
