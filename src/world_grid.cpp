@@ -33,36 +33,40 @@ bool WorldGrid::set_cell(int x, int y, uint16_t type_id, uint8_t density, uint8_
 
     if(x >= 0 && x < world_x_ && y >= 0 && y < world_y_)
     {
-        int coords[4][2]
+        size_t index = static_cast<size_t>(y * world_x_ + x);
+        Cell& cell = world_cells_[index];
+        if (density == 0)
         {
-            {x, y},         // Bottom-Left
-                {x + 1, y},     // Bottom-Right
-                {x + 1, y + 1}, // Top-Right
-                {x, y + 1}      // Top-Left
-        };
-
-        for (auto& coord : coords) {
-            size_t index = static_cast<size_t>(coord[1]) * world_x_ + coord[0];
-            Cell& c = world_cells_[index];
-            c.type_id = type_id;
-            c.density = density;
-            if (density == 0)
-            {
-                c.type_id = 0;
-            }
-            c.state_flags = state_flags;
-
-            int chunk_x = coord[0] / chunk_size_;
-            int chunk_y = coord[1] / chunk_size_;
-
-            // Mark the corresponding chunks as dirty so they re-render
-            flag_dirty_chunk(chunk_x, chunk_y);
+            type_id = 0;
         }
 
+        if (cell.type_id == type_id &&
+                cell.density == density &&
+                cell.state_flags == state_flags)
+        {
+            return false; //already has the same values
+        }
 
-        // mark dirty chunk
+        cell.type_id = type_id;
+        cell.density = density;
+        cell.state_flags = state_flags;
+
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <=1; dx++)
+            {
+                const int nx = x + dx;
+                const int ny = y + dy;
+
+                if (nx >= 0 && nx < world_x_ && ny >= 0 && ny < world_y_)
+                {
+                    flag_dirty_chunk(nx / chunk_size_, ny / chunk_size_);
+                }
+            }
+        }
         return true;
     }
+
     return false;
 }
 
@@ -713,6 +717,24 @@ uint32_t WorldGrid::tick(double deltaTime)
     active_flags |= TickFlags::MESH_UPDATE;
     }
     */
+
+    //temporary test for deleting blocks on player attack hitboxes
+    for (const AttackHitBoxBounds& box : player.getAttackHitboxBounds())
+    {
+        const float center_x = (box.bottomLeft.x + box.topRight.x) * 0.5f;
+        const float center_y = (box.bottomLeft.y + box.topRight.y) * 0.5f;
+        const float radius = box.bottomLeft.y - box.topRight.y; // hitbox height
+
+        set_density(
+                static_cast<int>(std::floor(center_x)),
+                static_cast<int>(std::floor(center_y)),
+                radius,
+                -255.f,
+                0
+                );
+
+        active_flags |= TickFlags::MESH_UPDATE;
+    }
     return active_flags;
 
 }
