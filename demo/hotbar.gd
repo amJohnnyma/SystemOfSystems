@@ -29,13 +29,14 @@ func _create_hotbar_slots(count: int) -> void:
 		hotbar_grid.add_child(btn)
 
 func select_slot(slot_number: int) -> void:
-	current_selected_slot = slot_number
+	var next_slot := -1 if current_selected_slot == slot_number else slot_number
+	current_selected_slot = next_slot
 	
 	var buttons = hotbar_grid.get_children()
 	for i in range(buttons.size()):
 		var btn = buttons[i] as Button
 		if btn:
-			btn.button_pressed = (i + 1 == slot_number)
+			btn.button_pressed = (i + 1 == next_slot)
 
 	#print("Hotbar slot selected: ", slot_number)
-	hotbar_slot_selected.emit(slot_number)
+	hotbar_slot_selected.emit(next_slot)

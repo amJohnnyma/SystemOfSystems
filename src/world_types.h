@@ -82,6 +82,9 @@ struct AttackHitBoxBounds
 {
     Vec2 bottomLeft;
     Vec2 topRight;
+    Vec2 center;
+    Vec2 size;
+    float angle_deg = 0.0f;
 };
 struct PlayerSpriteSettings
 {

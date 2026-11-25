@@ -963,10 +963,15 @@ godot::Dictionary GodotSimulation::getPlayerData() const
     data["state"] = player.getState().c_str();
     data["animPhase"] = player.getAnimProgress();
     data["facingRight"] = player.isFacingRight();
+    const ItemAnimation* attack_animation = player.getActiveAttackAnimation(world_grid_.getItemRegistry());
+    data["attackAnimationSource"] = attack_animation ? godot::String(attack_animation->source.c_str()) : godot::String("");
+    data["attackAnimationClip"] = attack_animation ? godot::String(attack_animation->clip.c_str()) : godot::String("");
 
     godot::Array attackHitboxes;
 
-    for (const AttackHitBoxBounds& hitbox : player.getAttackHitboxBounds())
+    const auto &registry = world_grid_.getItemRegistry();
+
+    for (const AttackHitBoxBounds& hitbox : player.getAttackHitboxBounds(registry))
     {
         godot::Dictionary bounds;
 
@@ -978,10 +983,16 @@ godot::Dictionary GodotSimulation::getPlayerData() const
                 hitbox.topRight.x,
                 hitbox.topRight.y);
 
+        bounds["center"] = godot::Vector2(
+                hitbox.center.x,
+                hitbox.center.y);
+        bounds["size"] = godot::Vector2(hitbox.size.x, hitbox.size.y);
+        bounds["angle_deg"] = godot::Variant(hitbox.angle_deg);
+
         attackHitboxes.append(bounds);
     }
 
-    data["attackHitboxActive"] = player.isAttackHitboxActive();
+    data["attackHitboxActive"] = player.hasAttackHitboxBounds(registry);
     data["attackHitboxes"] = attackHitboxes;
 
     data["equippedItemId"] = static_cast<int64_t>(player.getEquippedItemId(world_grid_.getItemRegistry()));

@@ -24,12 +24,14 @@ const PLAYER_STATE_CLIPS := {
 	"walk": &"player/walk",                                                                                                                                                                                                               
 	"jump": &"player/jump",                                                                                                                                                                                                               
 } 
+var attack_clips : Dictionary = {} #  "source|clip" -> AnimationPlayer key
 const SIDE_FACING_ANGLE := 90.0
 const RIGHT_HAND_BONE := "mixamorig1_RightHand"
 # TEMP
 @export var test_weapon_grip : Transform3D = Transform3D.IDENTITY
 var hand_socket: BoneAttachment3D                                                                                                                                                                                                       
 var equipped_weapon_model: Node3D
+var rendered_weapon_id := -1
 
 # Chunk coordinate -> { "terrain": {atlas_path: MeshInstance2D},
 #                       "structures": {structure_id: MeshInstance2D} }
@@ -268,7 +270,7 @@ func _set_weapon_model(scene_path: String, grip: Transform3D) -> void:
 	if hand_socket == null:                                                                                                                                                                                                               
 		push_error("Cannot equip weapon: hand socket was not created")                                                                                                                                                                      
 		return                                                                                                                                                                                                                              
-																																																										
+	if scene_path == "<null>": return
 	var weapon_scene := load(scene_path) as PackedScene                                                                                                                                                                                   
 	if weapon_scene == null:                                                                                                                                                                                                              
 		push_error("Cannot load weapon model: " + scene_path)                                                                                                                                                                               
@@ -282,6 +284,51 @@ func _set_weapon_model(scene_path: String, grip: Transform3D) -> void:
 	hand_socket.add_child(model)                                                                                                                                                                                                          
 	model.transform = grip                                                                                                                                                                                                                
 	equipped_weapon_model = model 
+
+func _get_attack_clip(source: String, imported_clip: String) -> StringName:
+	if source.is_empty() or imported_clip.is_empty():
+		return &""
+
+	var cache_key := source + "|" + imported_clip
+	if attack_clips.has(cache_key):
+		return attack_clips[cache_key]
+
+	var scene := load(source) as PackedScene
+	if scene == null:
+		push_error("Cannot load attack animation: " + source)
+		return &""
+
+	var instance := scene.instantiate()
+	var source_player := instance.find_child(
+		"AnimationPlayer", true, false
+	) as AnimationPlayer
+	var clip_name := StringName(imported_clip)
+
+	if source_player == null or not source_player.has_animation(clip_name):
+		push_error("Missing clip %s in %s" % [imported_clip, source])
+		instance.free()
+		return &""
+
+	var animation: Animation = source_player.get_animation(clip_name).duplicate(true)
+
+	# C++ moves the player; the Mixamo clip only supplies a pose.
+	for track in range(animation.get_track_count() - 1, -1, -1):
+		if animation.track_get_type(track) == Animation.TYPE_POSITION_3D:
+			var path := str(animation.track_get_path(track)).to_lower()
+			if path.contains("hips") or path.contains("root"):
+				animation.remove_track(track)
+
+	var library: AnimationLibrary = player_animation.get_animation_library(&"player")
+	var local_name := StringName("attack_%d" % attack_clips.size())
+	if library.add_animation(local_name, animation) != OK:
+		push_error("Could not register attack clip: " + source)
+		instance.free()
+		return &""
+
+	instance.free()
+	var full_name := StringName("player/" + str(local_name))
+	attack_clips[cache_key] = full_name
+	return full_name
 
 func _load_player_clips() -> void:                                                                                                                                                                                                      
 	var library := AnimationLibrary.new()                                                                                                                                                                                                 
@@ -319,8 +366,12 @@ func _load_player_clips() -> void:
 
 func _update_model_pose(data: Dictionary) -> void:                                                                                                                                                                                      
 	var clip: StringName = PLAYER_STATE_CLIPS.get(str(data["state"]), &"")                                                                                                                                                                
-																																																											
-	# No player-owned clip for primary_attack yet.                                                                                                                                                                                        
+	if str(data["state"]) == "primary_attack":
+		clip = _get_attack_clip(
+			str(data.get("attackAnimationSource", "")),
+			str(data.get("attackAnimationClip", ""))
+		)
+
 	if clip == &"" or not player_animation.has_animation(clip):                                                                                                                                                                           
 		player_skeleton.show_rest_only = true                                                                                                                                                                                               
 		return                                                                                                                                                                                                                              
@@ -528,6 +579,15 @@ func _on_player_data_updated(data: Dictionary) -> void:
 	if data.is_empty():
 		return
 		
+	var equipped_id := int(data.get("equippedItemId", 0))
+	if equipped_id != rendered_weapon_id:
+		rendered_weapon_id = equipped_id
+		var definition:Dictionary = item_registry.get(equipped_id, {})
+		_set_weapon_model(
+			str(definition.get("weapon_model", "")),
+			Transform3D.IDENTITY
+			)
+		
 	#print(data["equippedItemId"])
 	_update_player_debug_hitbox(data)
 	_update_attack_debug(data)
@@ -611,18 +671,16 @@ func _update_attack_debug(data: Dictionary) -> void:
 																																																										 
 	for i in range(hitboxes.size()):                                                                                                                                                                                                      
 		var box: Dictionary = hitboxes[i]                                                                                                                                                                                                   
-		var bottom_left: Vector2 = box["bottomLeft"]                                                                                                                                                                                        
-		var top_right: Vector2 = box["topRight"]                                                                                                                                                                                            
-																																																										 
-		var width := top_right.x - bottom_left.x                                                                                                                                                                                            
-		var height := bottom_left.y - top_right.y                                                                                                                                                                                           
-		var center := (bottom_left + top_right) * 0.5                                                                                                                                                                                       
+																																														 
+		var center : Vector2 = box["center"]
+		var size : Vector2 = box["size"]
+		var angle := deg_to_rad(float(box["angle_deg"]))                                                                                                                                                                                       
 																																																										 
 		mm.set_instance_transform_2d(                                                                                                                                                                                                       
 			i,                                                                                                                                                                                                                                
 			Transform2D(                                                                                                                                                                                                                      
-			 Vector2(width, 0.0),                                                                                                                                                                                                            
-			 Vector2(0.0, -height),                                                                                                                                                                                                          
+			 Vector2.RIGHT.rotated(angle) * size.x,                                                                                                                                                                                                            
+			 Vector2.DOWN.rotated(angle) * size.y,                                                                                                                                                                                                          
 			 center                                                                                                                                                                                                                          
 			)                                                                                                                                                                                                                                 
 		)                                                                                                                                                                                                                                   

@@ -504,7 +504,7 @@ void WorldGrid::processPlayerInputs(const PlayerInput& pi)
     if(pi.hasPrimaryAttackInput)
     {
         // do primary attack
-        player.primaryAttack();
+        player.primaryAttack(item_registry_);
     }
     if(pi.hasSecondaryAttackInput)
     {
@@ -721,7 +721,7 @@ uint32_t WorldGrid::tick(double deltaTime)
     */
 
     //temporary test for deleting blocks on player attack hitboxes
-    for (const AttackHitBoxBounds& box : player.getAttackHitboxBounds())
+    for (const AttackHitBoxBounds& box : player.getAttackHitboxBounds(item_registry_))
     {
         const float center_x = (box.bottomLeft.x + box.topRight.x) * 0.5f;
         const float center_y = (box.bottomLeft.y + box.topRight.y) * 0.5f;

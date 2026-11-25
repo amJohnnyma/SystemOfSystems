@@ -12,7 +12,7 @@
     "size": [1.5, 3],
     "visualPixelsPerCell": 16.3,
     "visualPivot": [0.5, 0.0],
-	"startingHotbar":[0,0,561,0,0,0,0,0,0,0],
+	"startingHotbar":[0,0,561,562,0,0,0,0,0,0],
 
     "sprites": {
         "idle": {
@@ -32,35 +32,6 @@
             "columns": 2,
             "rows": 1,
             "animationSpeed": 1.0
-        },
-	"primary_attack": {
-            "filename": "EvilWizard_attack1.png",
-            "columns": 8,
-            "rows": 1,
-            "animationSpeed": 1.0,
-		"hitbox":
-		[
-			{
-			"frame": 3,
-			"size": [2,2],
-			"offset_r" : [1,1]
-			},
-			{
-			"frame": 4,
-			"size": [3,3],
-			"offset_r" : [2,2]
-			},
-			{
-			"frame": 5,
-			"size": [4,4],
-			"offset_r" : [3,3]
-			},
-			{
-			"frame": 6,
-			"size": [5,5],
-			"offset_r" : [4,4]
-			}
-		]
         }
     }
 }

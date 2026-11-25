@@ -38,7 +38,7 @@ struct Inventory
     size_t hotbar_size = 10;
 
     // Currently selected hotbar position.
-    size_t selected_hotbar_slot = 1;
+    size_t selected_hotbar_slot = hotbar_size;
 
     explicit Inventory(
         size_t slot_count = 54,

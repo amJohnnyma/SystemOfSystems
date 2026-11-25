@@ -36,6 +36,9 @@ private:
     PlayerSettings ps;
     Inventory inventory_;
 
+    ItemUseState active_attack_;
+    float active_attack_duration_ = 0.0f;
+
 
 
     // Future:
@@ -59,7 +62,7 @@ std::size_t getMemoryUsage() const;
 
     void takeDamage(double damage);
     void takeHealing(double healing);
-    void primaryAttack();
+    void primaryAttack(const ItemRegistry& registry);
 
     // Position and physics
     const Vec2& getPosition() const { return position_; }
@@ -83,7 +86,6 @@ std::size_t getMemoryUsage() const;
     double getAnimProgress() const { return animationProgress; }
     bool isFacingRight() const { return facingRight; }
 
-    bool isAttackHitboxActive() const;
 
 
     void changeState(const std::string& new_state)
@@ -102,12 +104,14 @@ std::size_t getMemoryUsage() const;
         }
     }
 
-    std::vector<AttackHitBoxBounds> getAttackHitboxBounds() const;
-    const std::vector<AttackHitboxData>* currentHitboxDefinitions() const;
-
     void initializeInventory(const ItemRegistry& registry);
     void selectHotbarSlot(int slot);
     uint32_t getEquippedItemId(const ItemRegistry& registry) const;
+
+    const ItemAnimation* getActiveAttackAnimation(const ItemRegistry& registry) const;
+
+    std::vector<AttackHitBoxBounds> getAttackHitboxBounds(const ItemRegistry& registry) const;
+    const bool hasAttackHitboxBounds(const ItemRegistry& registry) const {return !getAttackHitboxBounds(registry).empty();}
 
     
 };
