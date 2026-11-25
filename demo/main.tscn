@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://bamoj6w4o4kew" path="res://demo/main.gd" id="1_ke4q7"]
 [ext_resource type="Script" uid="uid://p22142dxqs1d" path="res://demo/fps.gd" id="2_ru5rj"]
 [ext_resource type="Script" uid="uid://5dody74e8ebm" path="res://demo/input_manager.gd" id="3_cvse4"]
+[ext_resource type="PackedScene" uid="uid://drf6ryni4ev8" path="res://game/models/Idle.fbx" id="4_dujpc"]
 
 [node name="Main" type="Node2D" unique_id=1802112415]
 script = ExtResource("1_ke4q7")
@@ -14,3 +15,87 @@ script = ExtResource("2_ru5rj")
 
 [node name="InputManager" type="Node" parent="." unique_id=1536726]
 script = ExtResource("3_cvse4")
+
+[node name="PlayerVisual" type="Sprite2D" parent="." unique_id=294999476]
+texture_filter = 1
+position = Vector2(576, 380)
+scale = Vector2(0.1, 0.1)
+
+[node name="ModelViewport" type="SubViewport" parent="." unique_id=372028269]
+own_world_3d = true
+transparent_bg = true
+size = Vector2i(100, 140)
+render_target_update_mode = 4
+
+[node name="ModelRoot" type="Node3D" parent="ModelViewport" unique_id=1143727802]
+
+[node name="Idle" parent="ModelViewport/ModelRoot" unique_id=1108029484 instance=ExtResource("4_dujpc")]
+
+[node name="Skeleton3D" parent="ModelViewport/ModelRoot/Idle" index="0" unique_id=1434844087]
+bones/0/position = Vector3(-0.0014329256, 0.99168867, -0.027202459)
+bones/0/rotation = Quaternion(0.07968184, -0.056606393, -0.009128194, 0.99516994)
+bones/1/rotation = Quaternion(-0.06533618, -0.012435021, 0.003856225, 0.99777836)
+bones/2/rotation = Quaternion(-0.007948628, -0.009729684, 0.0015686483, 0.99991983)
+bones/3/rotation = Quaternion(-0.007960904, -0.009602198, 0.0017090824, 0.99992085)
+bones/4/rotation = Quaternion(0.040801793, 0.018372703, -0.011708106, 0.9989298)
+bones/5/rotation = Quaternion(-0.019604638, 0.017632034, -0.012796375, 0.9995704)
+bones/7/rotation = Quaternion(-0.6151185, -0.38550603, 0.5758032, -0.37611842)
+bones/8/rotation = Quaternion(0.380653, 0.4021134, 0.15209867, 0.8187028)
+bones/9/rotation = Quaternion(0.031415574, 0.016793652, 0.26341853, 0.9640237)
+bones/10/rotation = Quaternion(0.052631468, -0.24924521, -0.012863385, 0.9669237)
+bones/11/rotation = Quaternion(0.07870338, 0.061783087, 0.42101687, 0.9015173)
+bones/12/rotation = Quaternion(-0.013830986, -0.035642017, -0.3730386, 0.9270279)
+bones/13/rotation = Quaternion(-0.02442627, -0.015122694, -0.110954724, 0.99341017)
+bones/15/rotation = Quaternion(-0.12205009, -0.0042188116, 0.061688017, 0.99059606)
+bones/16/rotation = Quaternion(0.20036744, -0.0003371206, -0.03551764, 0.97907674)
+bones/17/rotation = Quaternion(0.100708425, 0.00031110676, -0.017472414, 0.9947626)
+bones/19/rotation = Quaternion(-0.12209056, -0.0060215034, 0.059859227, 0.99069405)
+bones/20/rotation = Quaternion(0.20040104, 2.0844862e-05, -0.034646697, 0.9791011)
+bones/21/rotation = Quaternion(0.100656986, 0.00020270902, -0.0143377315, 0.99481785)
+bones/23/rotation = Quaternion(-0.121570796, -0.0123713855, 0.05795142, 0.9908124)
+bones/24/rotation = Quaternion(0.19986558, 0.0001329286, -0.03227404, 0.9792916)
+bones/25/rotation = Quaternion(0.100455865, -0.0001401234, -0.017065406, 0.9947952)
+bones/27/rotation = Quaternion(-0.12721607, -0.016934182, 0.025808385, 0.9913946)
+bones/28/rotation = Quaternion(0.2057906, 0.0070824297, -0.0019514747, 0.97856855)
+bones/29/rotation = Quaternion(0.10044636, 0.00017882293, -0.017918313, 0.99478114)
+bones/31/rotation = Quaternion(0.59910583, -0.39312774, 0.5936736, 0.36616194)
+bones/32/rotation = Quaternion(0.40419656, -0.34198806, -0.16667408, 0.83179873)
+bones/33/rotation = Quaternion(0.024844756, -0.013130629, -0.21559, 0.9760795)
+bones/34/rotation = Quaternion(-0.11914735, 0.42261234, -0.053051583, 0.896877)
+bones/35/rotation = Quaternion(0.20043159, -0.08159846, -0.18002331, 0.9595627)
+bones/36/rotation = Quaternion(-0.038661376, -0.19543311, 0.25671715, 0.9457313)
+bones/37/rotation = Quaternion(-0.048115265, -0.10819767, 0.020730441, 0.99274796)
+bones/39/rotation = Quaternion(-0.11219363, 0.004043579, -0.053963266, 0.9922118)
+bones/40/rotation = Quaternion(0.21765302, 0.00013301686, 0.033645157, 0.97544616)
+bones/41/rotation = Quaternion(0.109498076, -0.00024451586, 0.015309616, 0.99386907)
+bones/43/rotation = Quaternion(-0.11217652, 0.004370448, -0.054422062, 0.99218726)
+bones/44/rotation = Quaternion(0.21762948, 3.0155297e-05, 0.03516616, 0.9753978)
+bones/45/rotation = Quaternion(0.10948668, -0.0003483828, 0.013811798, 0.9938923)
+bones/47/rotation = Quaternion(-0.1119332, 0.0090780305, -0.053273086, 0.99224526)
+bones/48/rotation = Quaternion(0.21733719, -0.00013840746, 0.034871183, 0.9754735)
+bones/49/rotation = Quaternion(0.10933961, -9.246636e-05, 0.014207549, 0.9939029)
+bones/51/rotation = Quaternion(-0.11183062, 0.01111621, -0.054384504, 0.9921758)
+bones/52/rotation = Quaternion(0.21719578, 3.6491783e-05, 0.036508076, 0.97544515)
+bones/53/rotation = Quaternion(0.109268814, -0.0002536704, 0.016331645, 0.9938781)
+bones/55/rotation = Quaternion(0.15122338, 0.14934818, 0.9748701, -0.066746175)
+bones/56/rotation = Quaternion(-0.103009924, -0.054710202, 0.022331387, 0.99292356)
+bones/57/rotation = Quaternion(0.47795543, -0.04322615, -0.024143945, 0.87698764)
+bones/58/rotation = Quaternion(0.2941172, -0.056801952, 0.017218253, 0.9539246)
+bones/60/rotation = Quaternion(-0.1003085, 0.13489065, 0.98568356, 0.013062511)
+bones/61/rotation = Quaternion(-0.07937082, 0.08103773, -0.03833738, 0.9928059)
+bones/62/rotation = Quaternion(0.46894848, 0.058320362, -0.0052983346, 0.88128203)
+bones/63/rotation = Quaternion(0.2920659, 0.057621725, -0.017366005, 0.95450294)
+
+[node name="AnimationPlayer" parent="ModelViewport/ModelRoot/Idle" index="1" unique_id=844073176]
+callback_mode_process = 2
+
+[node name="Camera3D" type="Camera3D" parent="ModelViewport" unique_id=1788958545]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 5)
+projection = 1
+current = true
+size = 5.0
+
+[node name="OmniLight3D" type="OmniLight3D" parent="ModelViewport" unique_id=483976432]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 3, 4)
+
+[editable path="ModelViewport/ModelRoot/Idle"]

@@ -3,7 +3,26 @@ extends Node2D
 @onready var world: GodotSimulation = $GodotSimulation
 @onready var input_manager: InputManager = $InputManager
 @onready var ui_root_scene = preload("res://demo/ui_root.tscn")
+@onready var player_visual : Sprite2D = $PlayerVisual
+@onready var model_viewport : SubViewport = $ModelViewport
+@onready var model_root: Node3D = $ModelViewport/ModelRoot                                                                                                                                                                              
+@onready var model_camera: Camera3D = $ModelViewport/Camera3D      
+@onready var player_animation: AnimationPlayer = $ModelViewport/ModelRoot/Idle/AnimationPlayer                                                                                                                                                                     
+@onready var player_skeleton: Skeleton3D = $ModelViewport/ModelRoot/Idle/Skeleton3D
 
+const MODEL_FRAME_FILL := 0.9 # Leave some space around the model in the viewport.                                                                                                                                                      
+const PLAYER_CELL_BOTTOM := 1.0 # Existing player-coordinate convention.                                                                                                                                                                
+var model_height_3d := 0.0
+const PLAYER_CLIP_SOURCES := {                                                                                                                                                                                                          
+	"walk": preload("res://game/models/Run.fbx"),                                                                                                                                                                                         
+	"jump": preload("res://game/models/Jump.fbx"),                                                                                                                                                                                        
+}                                                                                                                                                                                                                                       
+const PLAYER_STATE_CLIPS := {                                                                                                                                                                                                           
+	"idle": &"mixamo_com",                                                                                                                                                                                                                
+	"walk": &"player/walk",                                                                                                                                                                                                               
+	"jump": &"player/jump",                                                                                                                                                                                                               
+} 
+const SIDE_FACING_ANGLE := 90.0
 
 
 # Chunk coordinate -> { "terrain": {atlas_path: MeshInstance2D},
@@ -68,6 +87,9 @@ func _ready() -> void:
 	camera = Camera2D.new()
 	add_child(camera)
 	camera.make_current()
+	player_visual.texture = model_viewport.get_texture()
+	_configure_player_model()
+	_load_player_clips()
 
 	# Cache shared shader material
 	#shader_mat = ShaderMaterial.new()
@@ -173,7 +195,7 @@ func _ready() -> void:
 	_init_entity_materials()
 	_init_building_materials()
 	_init_create_player()
-	_init_player_materials()
+	#_init_player_materials()
 	_init_player_debug()
 	_init_player_attack_debug()
 	_register_entity_render_configs()
@@ -206,10 +228,106 @@ func _ready() -> void:
 	#world.placeEntity(320,10,2)
 	#world.placeEntity(330,10,3)
 	#world.placeEntity(340,10,4)
-	for i in range(10000):
-		world.placeEntity(randi_range(1, 320),10,1)
-	world.placeEntity(620,10, 5)
+	#for i in range(10000):
+	#	world.placeEntity(randi_range(1, 320),10,1)
+	#world.placeEntity(620,10, 5)
 
+func _load_player_clips() -> void:                                                                                                                                                                                                      
+	var library := AnimationLibrary.new()                                                                                                                                                                                                 
+																																																											
+	for state in PLAYER_CLIP_SOURCES:                                                                                                                                                                                                     
+		var source_scene: Node = PLAYER_CLIP_SOURCES[state].instantiate()                                                                                                                                                                   
+		var source_player := source_scene.find_child(                                                                                                                                                                                       
+		"AnimationPlayer", true, false                                                                                                                                                                                                    
+		) as AnimationPlayer                                                                                                                                                                                                                
+																																																											
+		if source_player == null or not source_player.has_animation(&"mixamo_com"):                                                                                                                                                         
+			push_error("Missing mixamo_com clip in " + state + " FBX")                                                                                                                                                                        
+			source_scene.free()                                                                                                                                                                                                               
+			continue                                                                                                                                                                                                                          
+																																																											
+		var clip: Animation = source_player.get_animation(&"mixamo_com").duplicate(true)                                                                                                                                                    
+		if state == "jump":                                                                                                                                                                                                                     
+			for track in range(clip.get_track_count() - 1, -1, -1):                                                                                                                                                                               
+				if clip.track_get_type(track) != Animation.TYPE_POSITION_3D:                                                                                                                                                                        
+					continue                                                                                                                                                                                                                          
+																																																												
+				var path := str(clip.track_get_path(track))                                                                                                                                                                                         
+				print("Jump position track: ", path)                                                                                                                                                                                                
+																																																												
+				# C++ controls player movement; don't apply Mixamo's root travel.                                                                                                                                                                   
+				var lower_path := path.to_lower()                                                                                                                                                                                                   
+				if lower_path.contains("hips") or lower_path.contains("root"):                                                                                                                                                                      
+					clip.remove_track(track) 
+		library.add_animation(StringName(state), clip)                                                                                                                                                                                      
+		source_scene.free()                                                                                                                                                                                                                 
+																																																											
+	var result := player_animation.add_animation_library(&"player", library)                                                                                                                                                              
+	if result != OK:                                                                                                                                                                                                                      
+		push_error("Could not add player animation library: " + str(result)) 
+
+func _update_model_pose(data: Dictionary) -> void:                                                                                                                                                                                      
+	var clip: StringName = PLAYER_STATE_CLIPS.get(str(data["state"]), &"")                                                                                                                                                                
+																																																											
+	# No player-owned clip for primary_attack yet.                                                                                                                                                                                        
+	if clip == &"" or not player_animation.has_animation(clip):                                                                                                                                                                           
+		player_skeleton.show_rest_only = true                                                                                                                                                                                               
+		return                                                                                                                                                                                                                              
+																																																											
+	player_skeleton.show_rest_only = false                                                                                                                                                                                                
+																																																											
+	if player_animation.assigned_animation != clip:                                                                                                                                                                                       
+		player_animation.play(clip)                                                                                                                                                                                                         
+		player_animation.advance(0.0)                                                                                                                                                                                                       
+																																																											
+	var phase := clampf(float(data["animPhase"]), 0.0, 1.0)                                                                                                                                                                               
+	player_animation.seek(                                                                                                                                                                                                                
+		phase * player_animation.get_animation(clip).length,                                                                                                                                                                                
+		true,                                                                                                                                                                                                                               
+		true                                                                                                                                                                                                                                
+	) 
+
+func _configure_player_model():
+	var found_mesh := false
+	var min_corner := Vector3(INF,INF,INF)
+	var max_corner := Vector3(-INF, -INF, -INF)
+	
+	for node in model_root.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		if mesh.mesh == null:
+			continue
+		
+		for corner in range(8):
+			var point := mesh.to_global(mesh.get_aabb().get_endpoint(corner))
+			min_corner = min_corner.min(point)
+			max_corner = max_corner.max(point)
+		found_mesh = true
+		
+	
+	if not found_mesh or model_viewport.size.x <=0 or model_viewport.size.y <= 0:
+		push_error("Cannot frame player -> invalid viewport size")
+		return
+	
+	var model_size := max_corner - min_corner
+	if model_size.y <= 0.0:
+		push_error("Cannot frame player model, zero height")
+		return
+	
+	model_height_3d = model_size.y
+	
+	var center := (min_corner + max_corner) * 0.5
+	var viewport_aspect := float(model_viewport.size.x) / float(model_viewport.size.y)
+	
+	model_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	model_camera.keep_aspect = Camera3D.KEEP_HEIGHT
+	model_camera.rotation = Vector3.ZERO                                                                                                                                                                                                  
+	model_camera.size = maxf(model_size.y, model_size.x / viewport_aspect) / MODEL_FRAME_FILL                                                                                                                                             
+	model_camera.global_position = Vector3(                                                                                                                                                                                               
+		center.x,                                                                                                                                                                                                                           
+		center.y,                                                                                                                                                                                                                           
+		max_corner.z + model_camera.size                                                                                                                                                                                                    
+	)                                                                                                                                                                                                                                     
+	model_camera.make_current() 
 	
 func _calculate_sprite_transform(
 	grid_position: Vector2,
@@ -317,6 +435,43 @@ func _init_create_player() -> void:
 	world.createPlayer(data)
 
 func _on_player_data_updated(data: Dictionary) -> void:
+	if data.is_empty():
+		return
+		
+	_update_player_debug_hitbox(data)
+	_update_attack_debug(data)
+	_update_model_pose(data)
+	
+		
+	if model_height_3d <= 0.0:                                                                                                                                                                                                              
+		return                                                                                                                                                                                                                                
+
+	var player_height_px := float(data["height"]) * MESH_SCALE.y                                                                                                                                                                            
+	var model_height_px := model_height_3d * float(model_viewport.size.y) / model_camera.size                                                                                                                                               
+	var visual_scale := player_height_px / model_height_px                                                                                                                                                                                  
+	player_visual.scale = Vector2.ONE * visual_scale                                                                                                                                                                                        
+
+	var feet_center := Vector2(                                                                                                                                                                                                             
+	float(data["x_smooth"]) + float(data["width"]) * 0.5,                                                                                                                                                                                 
+	float(data["y_smooth"]) + PLAYER_CELL_BOTTOM                                                                                                                                                                                          
+	) * MESH_SCALE                                                                                                                                                                                                                          
+
+	# The 3D camera centers the model in the texture, so its feet are half                                                                                                                                                                  
+	# its rendered height below the Sprite2D's center.                                                                                                                                                                                      
+	player_visual.position = feet_center - Vector2(0.0, player_height_px * 0.5)                                                                                                                                                             
+	var state := str(data["state"])                                                                                                                                                                                                         
+	var facing_right := bool(data["facingRight"])                                                                                                                                                                                           
+																																																											
+	if state != "idle":                                                                                                                                                                                                  
+		model_root.rotation_degrees.y = (                                                                                                                                                                                                     
+			SIDE_FACING_ANGLE if facing_right else -SIDE_FACING_ANGLE                                                                                                                                                                           
+		)                                                                                                                                                                                                                                     
+		player_visual.flip_h = false                                                                                                                                                                                                          
+	else:                                                                                                                                                                                                                                   
+		model_root.rotation_degrees.y = 0.0                                                                                                                                                                                                   
+		player_visual.flip_h = not facing_right
+
+	'''
 	if data.is_empty() or player_multimeshes.is_empty():
 		return
 
@@ -421,6 +576,7 @@ func _on_player_data_updated(data: Dictionary) -> void:
 	# 7. Debug physical collision box
 	_update_player_debug_hitbox(data)
 	_update_attack_debug(data)
+	'''
 
 func _update_player_debug_hitbox(data: Dictionary) -> void:
 	if not player_debug_multimesh_node:
@@ -454,6 +610,7 @@ func _update_player_debug_hitbox(data: Dictionary) -> void:
 		0,
 		Color(0.0, 1.0, 0.0, 0.3)
 	)
+
 
 func _update_attack_debug(data: Dictionary) -> void:                                                                                                                                                                                    
 	var mm: MultiMesh = player_attack_debug_multimesh_node.multimesh                                                                                                                                                                             
