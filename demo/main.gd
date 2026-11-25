@@ -1097,10 +1097,8 @@ func _on_hotbar_slot_selected(slot_number: int) -> void:
 	input_manager.setSelectedHotbarSlot(slot_number)
 	
 
-	if slot_number == 5:
-		selected_structure = structure_registry.get(3, {})
-		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
-	elif slot_number == 6:
+	
+	if slot_number == 6:
 		selected_structure = structure_registry.get(4, {})
 		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
 	elif slot_number == 7:

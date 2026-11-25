@@ -27,6 +27,10 @@ UIManager="*res://demo/UIManager.gd"
 
 window/vsync/vsync_mode=0
 
+[filesystem]
+
+import/blender/enabled=false
+
 [input]
 
 OpenInventory={
