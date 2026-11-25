@@ -92,6 +92,7 @@ current = true
 size = 5.0
 
 [node name="OmniLight3D" type="OmniLight3D" parent="ModelViewport" unique_id=483976432]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 3, 4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 3, 10.99558)
+omni_range = 4096.0
 
 [editable path="ModelViewport/ModelRoot/Idle"]

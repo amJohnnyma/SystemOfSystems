@@ -19649,7 +19649,7 @@
 	    "primary_attack": {
 	      "source": "res://game/models/1HSwordSlash.fbx",
 	      "clip": "mixamo_com",
-	      "duration": 1.5
+	      "duration": 2.5
 	    }
 	  },
 
@@ -19663,19 +19663,115 @@
 	      "cooldown": 1.0,
 	"density_change": -32.0,
 		"radius": 1.5,
-	      "hitbox_frame_count": 8,
+	      "hitbox_frame_count": 60,
 	      "hitbox": [
-		{
-		  "frame": 3,
-		  "size": [2, 2],
-		  "offset_r": [1, 1],
-		  "angle_deg": 20
+				{
+			"angle_deg": -30.0,
+			"frame": 20,
+			"offset_r": [
+				-2.75,
+				-2.0
+			],
+			"size": [
+				1.5,
+				5.5
+			]
 		},
 		{
-		  "frame": 4,
-		  "size": [3, 3],
-		  "offset_r": [2, 2],
-		  "angle_deg": 45
+			"angle_deg": -20.0,
+			"frame": 21,
+			"offset_r": [
+				-4.125,
+				-1.125
+			],
+			"size": [
+				1.25,
+				5.25
+			]
+		},
+		{
+			"angle_deg": 0.0,
+			"frame": 22,
+			"offset_r": [
+				-5.0,
+				0.75
+			],
+			"size": [
+				1.0,
+				5.0
+			]
+		},
+		{
+			"angle_deg": 50.0,
+			"frame": 23,
+			"offset_r": [
+				-2.75,
+				3.0
+			],
+			"size": [
+				1.0,
+				5.0
+			]
+		},
+		{
+			"angle_deg": 15.0,
+			"frame": 23,
+			"offset_r": [
+				-0.75,
+				5.75
+			],
+			"size": [
+				2.5,
+				0.5
+			]
+		},
+		{
+			"angle_deg": 105.0,
+			"frame": 24,
+			"offset_r": [
+				3.625,
+				2.375
+			],
+			"size": [
+				1.25,
+				5.25
+			]
+		},
+		{
+			"angle_deg": 150.0,
+			"frame": 25,
+			"offset_r": [
+				7.0,
+				0.75
+			],
+			"size": [
+				0.75,
+				4.75
+			]
+		},
+		{
+			"angle_deg": 25.0,
+			"frame": 26,
+			"offset_r": [
+				7.0,
+				-0.75
+			],
+			"size": [
+				1.0,
+				3.5
+			]
+		},
+		{
+			"angle_deg": 55.0,
+			"frame": 27,
+			"offset_r": [
+				5.0,
+				-1.5
+			],
+			"size": [
+				1.5,
+				4.0
+			]
 		}
 	      ],
 	      "events": [
@@ -19725,27 +19821,58 @@
 	      "cooldown": 1.0,
 	"density_change": -32.0,
 		"radius": 1.5,
-	      "hitbox_frame_count": 89,
-	      "hitbox": [
+	      "hitbox_frame_count": 60,	      
+	"hitbox": [
 		{
-		  "frame": 48,
-		  "size": [1, 4],
-		  "offset_r": [1.5, 2],
-		  "angle_deg": 45
+			"angle_deg": 0.0,
+			"frame": 34,
+			"offset_r": [
+				2.0,
+				2.0
+			],
+			"size": [
+				0.75,
+				3.0
+			]
 		},
 		{
-		  "frame": 49,
-		  "size": [1, 4],
-		  "offset_r": [1.5, 1.5],
-		  "angle_deg": 45
+			"angle_deg": 55.0,
+			"frame": 35,
+			"offset_r": [
+				3.0,
+				0.5
+			],
+			"size": [
+				0.75,
+				3.0
+			]
 		},
 		{
-		  "frame": 50,
-		  "size": [1, 4],
-		  "offset_r": [1.5, 1],
-		  "angle_deg": 45
+			"angle_deg": 85.0,
+			"frame": 36,
+			"offset_r": [
+				3.0,
+				-0.25
+			],
+			"size": [
+				0.75,
+				3.0
+			]
+		},
+		{
+			"angle_deg": 85.0,
+			"frame": 37,
+			"offset_r": [
+				3.0,
+				-0.5
+			],
+			"size": [
+				0.75,
+				3.0
+			]
 		}
-	      ],
+	],
+
 	      "events": [
 {
 "type": "ModifyTerrain",
@@ -19763,3 +19890,9 @@
 
   ]
 }
+
+
+
+
+
+

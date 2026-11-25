@@ -1,0 +1,269 @@
+[gd_scene format=3 uid="uid://bvlp38v7v6tjd"]
+
+[ext_resource type="Script" uid="uid://b5tbiawhnq1rs" path="res://demo/WeaponEditor.gd" id="1_555mn"]
+[ext_resource type="PackedScene" uid="uid://drf6ryni4ev8" path="res://game/models/Idle.fbx" id="1_an54s"]
+[ext_resource type="Script" uid="uid://btr0gp4bianv0" path="res://demo/HitboxOverlay.gd" id="3_cbmg2"]
+
+[node name="WeaponEditor" type="Control" unique_id=294394912]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_555mn")
+
+[node name="Layout" type="VBoxContainer" parent="." unique_id=1092629438]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Toolbar" type="HBoxContainer" parent="Layout" unique_id=8778757]
+layout_mode = 2
+
+[node name="WeaponSelect" type="OptionButton" parent="Layout/Toolbar" unique_id=1424322161]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="AttackSelect" type="OptionButton" parent="Layout/Toolbar" unique_id=1801711329]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="CopyJSON" type="Button" parent="Layout/Toolbar" unique_id=460124946]
+unique_name_in_owner = true
+layout_mode = 2
+text = "CopyJSON"
+
+[node name="FrameCount" type="SpinBox" parent="Layout/Toolbar" unique_id=917719220]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="DuplicateNext" type="Button" parent="Layout/Toolbar" unique_id=457805070]
+unique_name_in_owner = true
+layout_mode = 2
+text = "DuplicateNext"
+
+[node name="CopyWeaponJSON" type="Button" parent="Layout/Toolbar" unique_id=361499553]
+unique_name_in_owner = true
+layout_mode = 2
+text = "CopyWeaponJSON"
+
+[node name="PlayPreview" type="Button" parent="Layout/Toolbar" unique_id=510186488]
+unique_name_in_owner = true
+layout_mode = 2
+text = "PlayPreview"
+
+[node name="SideView" type="Button" parent="Layout/Toolbar" unique_id=1462072244]
+unique_name_in_owner = true
+layout_mode = 2
+text = "SideView"
+
+[node name="FrontView" type="Button" parent="Layout/Toolbar" unique_id=892237257]
+unique_name_in_owner = true
+layout_mode = 2
+text = "FrontView"
+
+[node name="TopView" type="Button" parent="Layout/Toolbar" unique_id=1472736530]
+unique_name_in_owner = true
+layout_mode = 2
+text = "TopView"
+
+[node name="Workspace" type="HBoxContainer" parent="Layout" unique_id=1950848951]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ControlsHelp" type="VBoxContainer" parent="Layout/Workspace" unique_id=955731947]
+layout_mode = 2
+
+[node name="HelpToggle" type="CheckButton" parent="Layout/Workspace/ControlsHelp" unique_id=1849357345]
+layout_mode = 2
+
+[node name="HelpLabel" type="Label" parent="Layout/Workspace/ControlsHelp" unique_id=425220229]
+visible = false
+layout_mode = 2
+text = "Left click + drag: Create hitbox
+Left click hitbox + drag: Move hitbox
+Right click: Delete hitbox
+Scroll: Rotate hitbox
+Shift + Scroll: Resize hitbox
+
+Right arrow: Next frame
+Left arrow: Previous frame
+D: Duplicate to next frame
+Space: Play / Pause"
+
+[node name="Preview" type="Control" parent="Layout/Workspace" unique_id=2130092490]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="Layout/Workspace/Preview" unique_id=1669885284]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
+
+[node name="ModelViewport" type="SubViewport" parent="Layout/Workspace/Preview/SubViewportContainer" unique_id=801339707]
+unique_name_in_owner = true
+handle_input_locally = false
+size = Vector2i(850, 578)
+render_target_update_mode = 4
+
+[node name="ModelRoot" type="Node3D" parent="Layout/Workspace/Preview/SubViewportContainer/ModelViewport" unique_id=1261307648]
+unique_name_in_owner = true
+
+[node name="Idle" parent="Layout/Workspace/Preview/SubViewportContainer/ModelViewport/ModelRoot" unique_id=1108029484 instance=ExtResource("1_an54s")]
+
+[node name="Camera3D" type="Camera3D" parent="Layout/Workspace/Preview/SubViewportContainer/ModelViewport" unique_id=823270243]
+unique_name_in_owner = true
+projection = 1
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Layout/Workspace/Preview/SubViewportContainer/ModelViewport" unique_id=826547930]
+
+[node name="HitboxOverlay" type="Control" parent="Layout/Workspace/Preview" unique_id=2095990932]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("3_cbmg2")
+
+[node name="Properties" type="VBoxContainer" parent="Layout/Workspace" unique_id=1436443823]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+
+[node name="WeaponLabel" type="Label" parent="Layout/Workspace/Properties" unique_id=1620677842]
+layout_mode = 2
+
+[node name="TransformGrid" type="GridContainer" parent="Layout/Workspace/Properties" unique_id=351826437]
+layout_mode = 2
+columns = 2
+
+[node name="Label" type="Label" parent="Layout/Workspace/Properties/TransformGrid" unique_id=85048891]
+layout_mode = 2
+text = "Position X"
+
+[node name="PositionX" type="SpinBox" parent="Layout/Workspace/Properties/TransformGrid" unique_id=362307793]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = -100.0
+step = 0.1
+
+[node name="Label2" type="Label" parent="Layout/Workspace/Properties/TransformGrid" unique_id=618510184]
+layout_mode = 2
+text = "Position Y"
+
+[node name="PositionY" type="SpinBox" parent="Layout/Workspace/Properties/TransformGrid" unique_id=1353927168]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = -100.0
+step = 0.1
+
+[node name="Label3" type="Label" parent="Layout/Workspace/Properties/TransformGrid" unique_id=1218170608]
+layout_mode = 2
+text = "Position Z"
+
+[node name="PositionZ" type="SpinBox" parent="Layout/Workspace/Properties/TransformGrid" unique_id=1662608874]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = -100.0
+step = 0.1
+
+[node name="Label4" type="Label" parent="Layout/Workspace/Properties/TransformGrid" unique_id=210821286]
+layout_mode = 2
+text = "Rotation X"
+
+[node name="RotationX" type="SpinBox" parent="Layout/Workspace/Properties/TransformGrid" unique_id=1757624355]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = -360.0
+max_value = 360.0
+step = 0.1
+
+[node name="Label5" type="Label" parent="Layout/Workspace/Properties/TransformGrid" unique_id=59578688]
+layout_mode = 2
+text = "Rotation Y"
+
+[node name="RotationY" type="SpinBox" parent="Layout/Workspace/Properties/TransformGrid" unique_id=1704476090]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = -360.0
+max_value = 360.0
+step = 0.1
+
+[node name="Label6" type="Label" parent="Layout/Workspace/Properties/TransformGrid" unique_id=497416620]
+layout_mode = 2
+text = "Rotation Z"
+
+[node name="RotationZ" type="SpinBox" parent="Layout/Workspace/Properties/TransformGrid" unique_id=455762747]
+unique_name_in_owner = true
+layout_mode = 2
+min_value = -360.0
+max_value = 360.0
+step = 0.1
+
+[node name="Label7" type="Label" parent="Layout/Workspace/Properties/TransformGrid" unique_id=1129983085]
+layout_mode = 2
+text = "WeaponScale"
+
+[node name="WeaponScale" type="SpinBox" parent="Layout/Workspace/Properties/TransformGrid" unique_id=222973889]
+unique_name_in_owner = true
+layout_mode = 2
+max_value = 1.0
+step = 0.01
+
+[node name="Label8" type="Label" parent="Layout/Workspace/Properties/TransformGrid" unique_id=53807099]
+layout_mode = 2
+text = "InterpolationStart"
+
+[node name="InterpolationStart" type="SpinBox" parent="Layout/Workspace/Properties/TransformGrid" unique_id=1636784797]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label9" type="Label" parent="Layout/Workspace/Properties/TransformGrid" unique_id=1630191522]
+layout_mode = 2
+text = "InterpolationEnd"
+
+[node name="InterpolationEnd" type="SpinBox" parent="Layout/Workspace/Properties/TransformGrid" unique_id=391826523]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Label10" type="Label" parent="Layout/Workspace/Properties/TransformGrid" unique_id=1426888053]
+layout_mode = 2
+text = "Interpolate"
+
+[node name="Interpolate" type="Button" parent="Layout/Workspace/Properties/TransformGrid" unique_id=1898488452]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Timeline" type="HBoxContainer" parent="Layout" unique_id=1210111997]
+layout_mode = 2
+
+[node name="Previous" type="Button" parent="Layout/Timeline" unique_id=579311909]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Previous"
+
+[node name="Next" type="Button" parent="Layout/Timeline" unique_id=539511439]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Next"
+
+[node name="FrameSlider" type="HSlider" parent="Layout/Timeline" unique_id=250295704]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="FrameLabel" type="Label" parent="Layout/Timeline" unique_id=929763321]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Frame"
+
+[connection signal="toggled" from="Layout/Workspace/ControlsHelp/HelpToggle" to="Layout/Workspace/ControlsHelp/HelpLabel" method="set_visible"]
