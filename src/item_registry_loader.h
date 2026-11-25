@@ -175,6 +175,7 @@ inline void parseActions(const Json& obj, ItemDefinition& item) {
         a.range = std::max(0.0f, floatValue(src, "range", a.range));
         a.cooldown = std::max(0.0f, floatValue(src, "cooldown", a.cooldown));
         a.animation = stringValue(src, "animation", a.animation);
+        a.input = stringValue(src, "input", "primary");
         a.damage = floatValue(src, "damage", a.damage);
         a.armor_piercing = std::clamp(floatValue(src, "armor_piercing", 0.0f), 0.0f, 1.f); 
         a.hitbox_frame_count = uintValue(src, "hitbox_frame_count",0);

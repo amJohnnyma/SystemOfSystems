@@ -1,6 +1,7 @@
 
 
 #include "godot_world.h"
+#include "item.h"
 #include "world_grid.h"
 #include <charconv>
 #include <algorithm>
@@ -107,6 +108,7 @@ const char* itemEventName(ItemEventType t) {
         case ItemEventType::ApplyAction: return "ApplyAction";
         case ItemEventType::SpawnEffect: return "SpawnEffect";
         case ItemEventType::PlaySound: return "PlaySound";
+        case ItemEventType::ModifyTerrain: return "ModifyTerrain"; 
         default: return "Unknown";
     }
 }
@@ -135,6 +137,9 @@ godot::Dictionary GodotSimulation::getItemRegistry() const {
         data["sprite_sheet"] = sheet;
         data["world_sprite"] = godot::String(item.world_sprite.c_str());
         data["world_size"] = godot::Vector2(item.world_size.x, item.world_size.y);
+        data["weapon_model"] = item.weapon
+            ? godot::String(item.weapon->model.c_str())
+            : godot::String("");
         data["structure_id"] = static_cast<int64_t>(item.structure_id);
         data["generated_from_structure"] = item.structure_id != 0;
 
@@ -142,6 +147,8 @@ godot::Dictionary GodotSimulation::getItemRegistry() const {
         for (const auto& [name, a] : item.animations) {
             godot::Dictionary anim;
             anim["name"] = godot::String(a.name.c_str());
+            anim["source"] = godot::String(a.source.c_str());
+            anim["clip"] = godot::String(a.clip.c_str());
             anim["start_frame"] = static_cast<int64_t>(a.start_frame);
             anim["end_frame"] = static_cast<int64_t>(a.end_frame);
             godot::Array frame_sequence;
@@ -162,6 +169,9 @@ godot::Dictionary GodotSimulation::getItemRegistry() const {
             act["range"] = a.range;
             act["cooldown"] = a.cooldown;
             act["animation"] = godot::String(a.animation.c_str());
+            act["input"] = godot::String(a.input.c_str());
+            act["armor_piercing"] = a.armor_piercing;
+            act["hitbox_frame_count"] = static_cast<int64_t>(a.hitbox_frame_count);
             act["damage"] = a.damage;
             act["knockback"] = a.knockback;
             act["density_change"] = a.density_change;
@@ -180,6 +190,17 @@ godot::Dictionary GodotSimulation::getItemRegistry() const {
                 events.append(ev);
             }
             act["events"] = events;
+            godot::Array boxes;
+            for (const ItemHitboxFrame& frame : a.hitbox_frames)
+            {
+                godot::Dictionary box;
+                box["frame"] = static_cast<int64_t>(frame.frame);
+                box["size"] = godot::Vector2(frame.size.x, frame.size.y);
+                box["offset_r"] = godot::Vector2(frame.offset_r.x, frame.offset_r.y);
+                box["angle_deg"] = frame.angle_deg;
+                boxes.append(box);
+            }
+            act["hitbox"] = boxes;
             actions.append(act);
         }
         data["actions"] = actions;
@@ -695,6 +716,24 @@ void GodotSimulation::createPlayer(godot::Dictionary data)
             data.get("spawnPosition", godot::Variant()),
             settings.spawnPosition
             );
+    // player starting hotbar
+    godot::Variant hotbar_value = data.get("startingHotbar", godot::Array());
+    if (hotbar_value.get_type() == godot::Variant::ARRAY)
+    {
+        godot::Array slots = hotbar_value;
+        for (int i =0; i < slots.size() && i < 10; i ++)
+        {
+            const double id = readNumber(slots[i], -1.0);
+            const bool valid = 
+                std::isfinite(id) &&
+                id >= 0.0 &&
+                id < 10000 &&
+                std::floor(id) == id;
+
+            settings.startingHotbar.push_back(valid ? static_cast<uint32_t>(id) : 0u);
+        }
+    }
+
     // Health
     settings.maxHealth = readNumber(
             data, "maxHealth", settings.maxHealth
@@ -944,6 +983,8 @@ godot::Dictionary GodotSimulation::getPlayerData() const
 
     data["attackHitboxActive"] = player.isAttackHitboxActive();
     data["attackHitboxes"] = attackHitboxes;
+
+    data["equippedItemId"] = static_cast<int64_t>(player.getEquippedItemId(world_grid_.getItemRegistry()));
 
     return data;
 }

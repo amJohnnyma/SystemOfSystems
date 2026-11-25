@@ -12,6 +12,7 @@
     "size": [1.5, 3],
     "visualPixelsPerCell": 16.3,
     "visualPivot": [0.5, 0.0],
+	"startingHotbar":[0,0,561,0,0,0,0,0,0,0],
 
     "sprites": {
         "idle": {

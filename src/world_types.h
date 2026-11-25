@@ -118,6 +118,8 @@ struct PlayerSettings
 
     // Rendering
     std::unordered_map<std::string, PlayerSpriteSettings> sprites;
+
+    std::vector<uint32_t> startingHotbar;
 };
 
 // Position is in CELL units, with x at the LEFT of the hitbox and y at

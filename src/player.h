@@ -4,11 +4,13 @@
 #include "world_types.h"
 #include "math_types.h"
 
+#include <cstdint>
 #include <string>
 #include <algorithm>
 #include "entity_movement_manager.h"
 #include "memory_usage.h"
 #include "inventory.h"
+#include "item.h"
 
 class Player
 {
@@ -34,7 +36,6 @@ private:
     PlayerSettings ps;
     Inventory inventory_;
 
-    std::vector<AttackHitboxData> activeAttackHitboxes_;
 
 
     // Future:
@@ -82,14 +83,8 @@ std::size_t getMemoryUsage() const;
     double getAnimProgress() const { return animationProgress; }
     bool isFacingRight() const { return facingRight; }
 
-    bool isAttackHitboxActive() const {
-        return !activeAttackHitboxes_.empty();
-    }
+    bool isAttackHitboxActive() const;
 
-    const std::vector<AttackHitboxData>& getActiveHitboxes() const
-    {
-        return activeAttackHitboxes_;
-    }
 
     void changeState(const std::string& new_state)
     {
@@ -98,7 +93,6 @@ std::size_t getMemoryUsage() const;
 
         state_ = new_state;
         animationProgress = 0.0;
-        activeAttackHitboxes_.clear();
 
         auto it = ps.sprites.find(state_);
 
@@ -109,6 +103,11 @@ std::size_t getMemoryUsage() const;
     }
 
     std::vector<AttackHitBoxBounds> getAttackHitboxBounds() const;
+    const std::vector<AttackHitboxData>* currentHitboxDefinitions() const;
+
+    void initializeInventory(const ItemRegistry& registry);
+    void selectHotbarSlot(int slot);
+    uint32_t getEquippedItemId(const ItemRegistry& registry) const;
 
     
 };

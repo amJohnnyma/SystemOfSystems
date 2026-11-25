@@ -97,7 +97,7 @@ func _ready() -> void:
 	body_viewport_size = model_viewport.size
 	_configure_player_model()
 	_create_hand_socket()
-	_set_weapon_model("res://game/models/scythe00.fbx",test_weapon_grip)
+	#_set_weapon_model("res://game/models/scythe00.fbx",test_weapon_grip)
 	_load_player_clips()
 
 	# Cache shared shader material
@@ -528,6 +528,7 @@ func _on_player_data_updated(data: Dictionary) -> void:
 	if data.is_empty():
 		return
 		
+	#print(data["equippedItemId"])
 	_update_player_debug_hitbox(data)
 	_update_attack_debug(data)
 	_update_model_pose(data)
@@ -562,112 +563,6 @@ func _on_player_data_updated(data: Dictionary) -> void:
 		model_root.rotation_degrees.y = 0.0                                                                                                                                                                                                   
 		player_visual.flip_h = not facing_right
 
-	'''
-	if data.is_empty() or player_multimeshes.is_empty():
-		return
-
-	# 1. Determine animation state
-	var state: String = str(data.get("state", "idle"))
-
-	if not player_multimeshes.has(state):
-		state = "idle" if player_multimeshes.has("idle") else str(player_multimeshes.keys()[0])
-
-	# Hide inactive animation states
-	for anim_state in player_multimeshes:
-		if anim_state != state:
-			var inactive_mm: MultiMesh = player_multimeshes[anim_state].multimesh
-			if inactive_mm.instance_count != 0:
-				inactive_mm.instance_count = 0
-
-	var mm_node: MultiMeshInstance2D = player_multimeshes[state]
-	var mm: MultiMesh = mm_node.multimesh
-
-	if mm.instance_count != 1:
-		mm.instance_count = 1
-
-	# 2. Animation frame selection
-	var total_cols: int = max(1, int(mm_node.get_meta("cols", 1)))
-	var total_rows: int = max(1, int(mm_node.get_meta("rows", 1)))
-	var total_frames: int = total_cols * total_rows
-
-	var anim_phase: float = float(data.get("animPhase", 0.0))
-
-	var current_frame: int = int(
-		floor(anim_phase * total_frames)
-	) % total_frames
-
-	var frame_col: float = float(current_frame % total_cols)
-	var frame_row: float = float(current_frame / total_cols)
-
-	# 3. Calculate visual size from source pixels
-	var frame_width_px: float = float(
-		mm_node.get_meta("frame_width_px", 0.0)
-	)
-
-	var frame_height_px: float = float(
-		mm_node.get_meta("frame_height_px", 0.0)
-	)
-
-	if frame_width_px <= 0.0 or frame_height_px <= 0.0:
-		push_warning("Player frame dimensions not initialized: " + state)
-		return
-
-	var pixels_per_cell: float = max(
-		0.001,
-		player_visual_pixels_per_cell
-	)
-
-	var render_w: float = frame_width_px / pixels_per_cell
-	var render_h: float = frame_height_px / pixels_per_cell
-
-	# 4. Physical position from C++
-	var grid_x: float = float(data.get("x_smooth", 0.0))
-	var grid_y: float = float(data.get("y_smooth", 0.0))
-	#camera.global_position = Vector2(grid_x * MESH_SCALE.x, grid_y * MESH_SCALE.y)
-
-	var body_w: float = float(data.get("width", 2.0))
-	var body_h: float = float(data.get("height", 3.0))
-
-	var facing_right: bool = bool(data.get("facingRight", true))
-	var direction: float = 1.0 if facing_right else -1.0
-
-	# Bottom-center anchor of the physical body
-	var anchor := Vector2(
-		grid_x + body_w * 0.5,
-		grid_y + 1.0
-	)
-
-	# 5. Position sprite relative to its visual pivot
-	var pivot: Vector2 = player_visual_pivot
-
-	var center := Vector2(
-		anchor.x + direction * (0.5 - pivot.x) * render_w,
-		anchor.y + (pivot.y - 0.5) * render_h
-	)
-
-	var xform := Transform2D(
-		Vector2(render_w * direction, 0.0),
-		Vector2(0.0, -render_h),
-		center
-	)
-
-	mm.set_instance_transform_2d(0, xform)
-
-	# 6. Pass animation frame to shader
-	mm.set_instance_custom_data(
-		0,
-		Color(
-			frame_col,
-			frame_row,
-			float(total_cols),
-			float(total_rows)
-		)
-	)
-
-	# 7. Debug physical collision box
-	_update_player_debug_hitbox(data)
-	_update_attack_debug(data)
-	'''
 
 func _update_player_debug_hitbox(data: Dictionary) -> void:
 	if not player_debug_multimesh_node:
@@ -1126,13 +1021,8 @@ func _on_hotbar_slot_selected(slot_number: int) -> void:
 	#print("Main script received hotbar selection: Slot ", slot_number)
 	input_manager.setSelectedHotbarSlot(slot_number)
 	
-	if slot_number == 3:
-		selected_structure = structure_registry.get(1, {})
-		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
-	elif slot_number == 4:
-		selected_structure = structure_registry.get(2, {})
-		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
-	elif slot_number == 5:
+
+	if slot_number == 5:
 		selected_structure = structure_registry.get(3, {})
 		input_manager.set_input_mode(InputManager.InputMode.BUILDING_PLACEMENT)
 	elif slot_number == 6:

@@ -143,7 +143,6 @@ void Player::tick(const PlayerTickContext& ctx)
     auto it = ps.sprites.find(state_);
 
 
-    activeAttackHitboxes_.clear();
     if (it != ps.sprites.end())
     {
 
@@ -163,19 +162,10 @@ void Player::tick(const PlayerTickContext& ctx)
                 animationProgress =
                     std::fmod(animationProgress, 1.0);
             }
-            
-        }
-        const PlayerSpriteSettings& settings = it->second;
-        const int frameCount = settings.columns * settings.rows;
-        const int frame = static_cast<int>(animationProgress * frameCount);
 
-        const auto hitboxIt = settings.frameHitboxes.find(frame);
-        if (hitboxIt != settings.frameHitboxes.end())
-        {
-            activeAttackHitboxes_ = hitboxIt->second;
         }
 
-        
+
 
     }
 }
@@ -211,12 +201,35 @@ std::size_t Player::getMemoryUsage() const
     return bytes;
 }
 
+const std::vector<AttackHitboxData>* Player::currentHitboxDefinitions() const
+{
+    if (state_ != "primary_attack") return nullptr;
+
+    const auto state = ps.sprites.find(state_);
+
+    if (state == ps.sprites.end()) return nullptr;
+
+    const int count = std::max(
+            1, state->second.columns * state->second.rows
+            );
+    const int frame = std::clamp(
+            static_cast<int>(animationProgress * count), 0, count - 1
+            );
+    const auto boxes = state->second.frameHitboxes.find(frame);
+
+    return boxes == state->second.frameHitboxes.end()
+        ? nullptr : &boxes->second;
+
+}
+
 std::vector<AttackHitBoxBounds> Player::getAttackHitboxBounds() const
 {
     std::vector<AttackHitBoxBounds> bounds;
-    bounds.reserve(activeAttackHitboxes_.size());
+    const auto* boxes = currentHitboxDefinitions();
+    if(boxes == nullptr) return bounds;
+    bounds.reserve(boxes->size());
 
-    for (const AttackHitboxData& hitbox : activeAttackHitboxes_)
+    for (const AttackHitboxData& hitbox : *boxes)
     {
         const float left = facingRight
             ? position_.x + hitbox.offsetX
@@ -232,4 +245,38 @@ std::vector<AttackHitBoxBounds> Player::getAttackHitboxBounds() const
                 );
     }
     return bounds;
+}
+
+bool Player::isAttackHitboxActive() const
+{
+    const auto* boxes = currentHitboxDefinitions();
+    return boxes != nullptr && !boxes->empty();
+}
+
+void Player::initializeInventory(const ItemRegistry& registry)
+{
+    const size_t count = std::min(inventory_.hotbar_size, ps.startingHotbar.size()); 
+    for (size_t i = 0; i < count; ++i) {
+        auto found = registry.find(ps.startingHotbar[i]); 
+        if (found == registry.end() || !found->second.can_go_hotbar) continue;
+        ItemStack& stack = inventory_.slots[i];
+        stack.item_id = found->first;
+        stack.count = 1;   
+        stack.durability = found->second.max_durability;
+    }  
+}  
+void Player::selectHotbarSlot(int slot)  
+{        
+    if (slot < 0 || static_cast<size_t>(slot) >= inventory_.hotbar_size ||  
+            inventory_.selected_hotbar_slot == static_cast<size_t>(slot)) return; 
+    inventory_.selected_hotbar_slot = static_cast<size_t>(slot);      
+    if (state_ == "primary_attack") changeState("idle");
+} 
+uint32_t Player::getEquippedItemId(const ItemRegistry& registry) const
+{ 
+    const ItemStack* stack = inventory_.selectedItem(); 
+    if (stack == nullptr || stack->empty()) return 0;
+    auto found = registry.find(stack->item_id); 
+    return found != registry.end() && found->second.weapon.has_value()
+        ? stack->item_id : 0;
 }

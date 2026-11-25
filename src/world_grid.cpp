@@ -499,6 +499,8 @@ void WorldGrid::movePlayer(
 void WorldGrid::processPlayerInputs(const PlayerInput& pi)
 {
 
+    player.selectHotbarSlot(pi.selectedHotbarSlot);
+
     if(pi.hasPrimaryAttackInput)
     {
         // do primary attack

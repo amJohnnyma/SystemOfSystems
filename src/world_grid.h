@@ -143,6 +143,7 @@ class WorldGrid
         void createPlayer(PlayerSettings ps)
         {
             player = Player(std::move(ps));
+            player.initializeInventory(item_registry_);
         }
 
         void updatePlayerPosition(float x, float y) {

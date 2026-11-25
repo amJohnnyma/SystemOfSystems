@@ -35,14 +35,14 @@ struct Inventory
     std::vector<ItemStack> slots;
 
     // Number of slots reserved for the hotbar.
-    size_t hotbar_size = 9;
+    size_t hotbar_size = 10;
 
     // Currently selected hotbar position.
-    size_t selected_hotbar_slot = 0;
+    size_t selected_hotbar_slot = 1;
 
     explicit Inventory(
         size_t slot_count = 54,
-        size_t hotbar_count = 9
+        size_t hotbar_count = 10
     )
         : slots(slot_count),
           hotbar_size(std::min(slot_count, hotbar_count))

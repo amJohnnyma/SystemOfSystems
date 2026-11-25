@@ -94,7 +94,7 @@ func _physics_process(delta: float) -> void:
 	var input := {
 		"deltaTime": delta,
 		"moveInput": input_vector,
-		"selectedHotbarSlot": -1,
+		"selectedHotbarSlot": selected_hotbar_slot - 1 if selected_hotbar_slot >= 1 else -1,
 		"hasJumpInput": jump_pressed,
 		"hasMoveInput": true,
 		"hasPrimaryAttackInput": primary_attack,
