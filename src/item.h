@@ -6,11 +6,21 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <optional>
 
 #include "math_types.h"
 
 // An item can have more than one action.
 // For example, a pickaxe might both mine and attack.
+
+enum class ItemEventType : uint8_t
+{
+    ApplyAction,
+    SpawnEffect,
+    PlaySound,
+    ModifyTerrain
+};
+
 enum class ItemActionType : uint8_t
 {
     Attack,
@@ -33,13 +43,6 @@ enum class ItemCategory : uint8_t
     Miscellaneous
 };
 
-// An event occurring during an item-use animation.
-enum class ItemEventType : uint8_t
-{
-    ApplyAction,   // Deal damage, mine, place, etc.
-    SpawnEffect,   // Request particles or another visual effect
-    PlaySound
-};
 
 // Resolved atlas reference, shared in JSON by name but stored by value here.
 // A 16x16 icon atlas only adds a few bytes of numeric metadata per item.
@@ -72,6 +75,9 @@ struct ItemAnimation
     // Offset relative to the player's hand,
     // expressed in world cells.
     Vec2 hand_offset = {0.0f, 0.0f};
+
+    std::string source;
+    std::string clip;
 };
 
 struct ItemActionEvent
@@ -86,8 +92,17 @@ struct ItemActionEvent
     std::string resource_id;
 };
 
+struct ItemHitboxFrame
+{
+    uint32_t frame = 0;
+    Vec2 size = {1.f,1.f};
+    Vec2 offset_r = {0.f,0.f};
+    float angle_deg = 0.0f;
+};
+
 struct ItemAction
 {
+    std::string input = "primary";
     ItemActionType type = ItemActionType::Attack;
 
     // Maximum interaction distance in world cells.
@@ -102,6 +117,9 @@ struct ItemAction
     // Combat
 
     float damage = 0.0f;
+    float armor_piercing = 0.f;
+    uint32_t hitbox_frame_count = 0;
+    std::vector<ItemHitboxFrame> hitbox_frames;
 
     // Can later support damage types, knockback,
     // armor penetration, critical hits, etc.
@@ -142,7 +160,10 @@ struct ItemAction
     // Animation events, including the moment at which
     // gameplay changes are actually applied.
     std::vector<ItemActionEvent> events;
+
 };
+
+struct WeaponInfo {std::string model;};
 
 struct ItemDefinition
 {
@@ -192,6 +213,8 @@ struct ItemDefinition
 
     // Item-specific held animations.
     std::unordered_map<std::string, ItemAnimation> animations;
+
+    std::optional<WeaponInfo> weapon;
 };
 using ItemRegistry = std::unordered_map<uint32_t, ItemDefinition>;
 struct ItemUseState

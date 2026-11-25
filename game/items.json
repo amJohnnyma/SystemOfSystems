@@ -19608,6 +19608,68 @@
       ],
       "sprite_sheet": "items",
       "icon_frame": 559
-    }
+    },
+	{
+	  "iID": 561,
+	  "name": "Scythe",
+	  "description": "A long melee weapon",
+	  "category": "Weapon",
+	  "max_stack": 1,
+	  "can_go_hotbar": true,
+	  "max_durability": 250,
+	  "weight": 0.0,
+	  "icon": "",
+	  "world_sprite": "",
+	  "world_size": [5.0, 2.0],
+	  "weapon": {
+	    "model": "res://game/models/scythe00.fbx"
+	  },
+	  "animations": {
+	    "primary_attack": {
+	      "source": "res://game/models/1HSwordSlash.fbx",
+	      "clip": "mixamo_com",
+	      "duration": 0.9
+	    }
+	  },
+	  "actions": [
+	    {
+	      "type": "Attack",
+	      "input": "primary",
+	      "animation": "primary_attack",
+	      "damage": 50,
+	      "armor_piercing": 0.2,
+	      "cooldown": 1.0,
+	"density_change": -32.0,
+		"radius": 1.5,
+	      "hitbox_frame_count": 8,
+	      "hitbox": [
+		{
+		  "frame": 3,
+		  "size": [2, 2],
+		  "offset_r": [1, 1],
+		  "angle_deg": 20
+		},
+		{
+		  "frame": 4,
+		  "size": [3, 3],
+		  "offset_r": [2, 2],
+		  "angle_deg": 45
+		}
+	      ],
+	      "events": [
+{
+"type": "ModifyTerrain",
+"normalized_time" : 0.5
+}
+]
+	    }
+	  ],
+	  "sprite_sheet": "items",
+	  "icon_frame": 559
+	}
+
+
+
+
   ]
 }

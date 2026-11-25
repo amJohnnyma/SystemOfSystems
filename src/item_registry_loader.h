@@ -92,6 +92,7 @@ inline bool parseEventType(const std::string& name, ItemEventType& type) {
     if (name == "ApplyAction") type = ItemEventType::ApplyAction;
     else if (name == "SpawnEffect") type = ItemEventType::SpawnEffect;
     else if (name == "PlaySound") type = ItemEventType::PlaySound;
+    else if (name == "ModifyTerrain") type = ItemEventType::ModifyTerrain;
     else return false;
     return true;
 }
@@ -126,6 +127,8 @@ inline void parseAnimations(const Json& obj, ItemDefinition& item) {
         const Json& src = it.value();
         ItemAnimation anim;
         anim.name = it.key();
+        anim.source = stringValue(src, "source");
+        anim.clip= stringValue(src, "clip");
         anim.start_frame = uintValue(src, "start_frame", item.sprite_sheet.icon_frame);
         anim.end_frame = uintValue(src, "end_frame", anim.start_frame);
         if (anim.end_frame < anim.start_frame) {
@@ -173,6 +176,31 @@ inline void parseActions(const Json& obj, ItemDefinition& item) {
         a.cooldown = std::max(0.0f, floatValue(src, "cooldown", a.cooldown));
         a.animation = stringValue(src, "animation", a.animation);
         a.damage = floatValue(src, "damage", a.damage);
+        a.armor_piercing = std::clamp(floatValue(src, "armor_piercing", 0.0f), 0.0f, 1.f); 
+        a.hitbox_frame_count = uintValue(src, "hitbox_frame_count",0);
+        const Json* boxes = field(src, "hitbox");
+        if (boxes && boxes->is_array())
+        {
+            for (const Json& box : *boxes)
+            {
+                if (!box.is_object()) continue;
+                const uint32_t frame = uintValue(
+                        box, "frame", std::numeric_limits<uint32_t>::max()
+                        );
+                const Vec2 size = vec2Value(box, "size", {0.f,0.f});
+                if (frame >= a.hitbox_frame_count || size.x <= 0.f || size.y <= 0.f) continue;
+
+                a.hitbox_frames.push_back(
+                        {
+                        frame,
+                        size,
+                        vec2Value(box, "offset_r", {0.f,0.f}),
+                        floatValue(box, "angle_deg", 0.f)
+                        }
+                        );
+
+            }
+        }
         a.knockback = floatValue(src, "knockback", a.knockback);
         a.density_change = floatValue(src, "density_change", a.density_change);
         a.radius = std::max(0.0f, floatValue(src, "radius", a.radius));
@@ -242,6 +270,27 @@ inline size_t loadCustomItems(ItemRegistry& registry, const Json& document) {
         item.structure_id = 0;
         parseAnimations(src, item);
         parseActions(src, item);
+        if (item.category == ItemCategory::Weapon)
+        {
+            const Json* weapon = field(src, "weapon");
+            if (!weapon || !weapon->is_object()) continue;
+
+            WeaponInfo info{stringValue(*weapon, "model")};
+            if (info.model.rfind("res://", 0) != 0) continue;
+
+            const bool has_primary = std::any_of(
+                    item.actions.begin(), item.actions.end(),
+                    [&item](const ItemAction& action){
+                    if (action.type != ItemActionType::Attack || action.input != "primary") return false;
+                    const auto anim = item.animations.find(action.animation);
+                    return anim != item.animations.end() &&
+                        !anim->second.source.empty() &&
+                        !anim->second.clip.empty();
+                    }
+                    );
+            if (!has_primary) continue;
+            item.weapon = std::move(info);
+        }
         if (registry.emplace(id, std::move(item)).second) ++added;
         else std::cerr << "[Items] Duplicate item ID: " << id << "\n";
     }

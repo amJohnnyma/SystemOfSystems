@@ -9,7 +9,7 @@
     "maxFallSpeed": 1000,
 "gravity" : 40,
 
-    "size": [2, 3],
+    "size": [1.5, 3],
     "visualPixelsPerCell": 16.3,
     "visualPivot": [0.5, 0.0],
 

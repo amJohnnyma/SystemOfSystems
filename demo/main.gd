@@ -13,6 +13,8 @@ extends Node2D
 const MODEL_FRAME_FILL := 0.9 # Leave some space around the model in the viewport.                                                                                                                                                      
 const PLAYER_CELL_BOTTOM := 1.0 # Existing player-coordinate convention.                                                                                                                                                                
 var model_height_3d := 0.0
+var body_camera_size := 0.0
+var body_viewport_size: Vector2i
 const PLAYER_CLIP_SOURCES := {                                                                                                                                                                                                          
 	"walk": preload("res://game/models/Run.fbx"),                                                                                                                                                                                         
 	"jump": preload("res://game/models/Jump.fbx"),                                                                                                                                                                                        
@@ -23,7 +25,11 @@ const PLAYER_STATE_CLIPS := {
 	"jump": &"player/jump",                                                                                                                                                                                                               
 } 
 const SIDE_FACING_ANGLE := 90.0
-
+const RIGHT_HAND_BONE := "mixamorig1_RightHand"
+# TEMP
+@export var test_weapon_grip : Transform3D = Transform3D.IDENTITY
+var hand_socket: BoneAttachment3D                                                                                                                                                                                                       
+var equipped_weapon_model: Node3D
 
 # Chunk coordinate -> { "terrain": {atlas_path: MeshInstance2D},
 #                       "structures": {structure_id: MeshInstance2D} }
@@ -82,13 +88,16 @@ var player_visual_pivot: Vector2 = Vector2(0.5, 0.0)
 
 
 func _ready() -> void:
-	Engine.max_fps = 60
+	#Engine.max_fps = 60
 	# Create and configure Camera2D
 	camera = Camera2D.new()
 	add_child(camera)
 	camera.make_current()
 	player_visual.texture = model_viewport.get_texture()
+	body_viewport_size = model_viewport.size
 	_configure_player_model()
+	_create_hand_socket()
+	_set_weapon_model("res://game/models/scythe00.fbx",test_weapon_grip)
 	_load_player_clips()
 
 	# Cache shared shader material
@@ -232,6 +241,48 @@ func _ready() -> void:
 	#	world.placeEntity(randi_range(1, 320),10,1)
 	#world.placeEntity(620,10, 5)
 
+func _create_hand_socket():
+	var bone_index := player_skeleton.find_bone(RIGHT_HAND_BONE)
+	if bone_index == -1:
+		push_error("RIght hand bone not found")
+		return
+	
+	hand_socket = BoneAttachment3D.new()
+	hand_socket.name = "RightHandSocket"
+	player_skeleton.add_child(hand_socket)
+	hand_socket.bone_idx = bone_index
+	
+
+func _set_weapon_model(scene_path: String, grip: Transform3D) -> void:                                                                                                                                                                  
+	if equipped_weapon_model != null:                                                                                                                                                                                                     
+		hand_socket.remove_child(equipped_weapon_model)                                                                                                                                                                                     
+		equipped_weapon_model.queue_free()                                                                                                                                                                                                  
+		equipped_weapon_model = null 
+		model_camera.size = body_camera_size   
+		model_viewport.size = body_viewport_size                                                                                                                                                                                                    
+																																																										
+	# Empty path means bare hands.                                                                                                                                                                                                        
+	if scene_path.is_empty():                                                                                                                                                                                                             
+		return                                                                                                                                                                                                                              
+																																																										
+	if hand_socket == null:                                                                                                                                                                                                               
+		push_error("Cannot equip weapon: hand socket was not created")                                                                                                                                                                      
+		return                                                                                                                                                                                                                              
+																																																										
+	var weapon_scene := load(scene_path) as PackedScene                                                                                                                                                                                   
+	if weapon_scene == null:                                                                                                                                                                                                              
+		push_error("Cannot load weapon model: " + scene_path)                                                                                                                                                                               
+		return                                                                                                                                                                                                                              
+																																																										
+	var model := weapon_scene.instantiate() as Node3D                                                                                                                                                                                     
+	if model == null:                                                                                                                                                                                                                     
+		push_error("Weapon scene root must be Node3D: " + scene_path)                                                                                                                                                                       
+		return                                                                                                                                                                                                                              
+																																																										
+	hand_socket.add_child(model)                                                                                                                                                                                                          
+	model.transform = grip                                                                                                                                                                                                                
+	equipped_weapon_model = model 
+
 func _load_player_clips() -> void:                                                                                                                                                                                                      
 	var library := AnimationLibrary.new()                                                                                                                                                                                                 
 																																																											
@@ -322,12 +373,51 @@ func _configure_player_model():
 	model_camera.keep_aspect = Camera3D.KEEP_HEIGHT
 	model_camera.rotation = Vector3.ZERO                                                                                                                                                                                                  
 	model_camera.size = maxf(model_size.y, model_size.x / viewport_aspect) / MODEL_FRAME_FILL                                                                                                                                             
+	
+	body_camera_size = model_camera.size
+	
 	model_camera.global_position = Vector3(                                                                                                                                                                                               
 		center.x,                                                                                                                                                                                                                           
 		center.y,                                                                                                                                                                                                                           
 		max_corner.z + model_camera.size                                                                                                                                                                                                    
 	)                                                                                                                                                                                                                                     
-	model_camera.make_current() 
+	model_camera.make_current()
+	 
+func _fit_equipped_weapon_in_view() -> void:                                                                                                                                                                                            
+	if equipped_weapon_model == null:                                                                                                                                                                                                     
+		model_camera.size = body_camera_size
+		model_viewport.size = body_viewport_size
+		return        
+	const WEAPON_FRAME_FILL := 0.75                                                                                                                                                                                                                      
+																																																										
+	var aspect := float(model_viewport.size.x) / float(model_viewport.size.y)                                                                                                                                                             
+	var view_center := model_camera.global_position                                                                                                                                                                                       
+	var required_size := maxf(body_camera_size, model_camera.size)                                                                                                                                                                        
+																																																										
+	for node in equipped_weapon_model.find_children(                                                                                                                                                                                      
+	"*", "MeshInstance3D", true, false                                                                                                                                                                                                  
+	):                                                                                                                                                                                                                                    
+		var mesh := node as MeshInstance3D                                                                                                                                                                                                  
+		if mesh.mesh == null:                                                                                                                                                                                                               
+			continue                                                                                                                                                                                                                          
+																																																											
+		for corner in range(8):                                                                                                                                                                                                             
+			var point := mesh.to_global(mesh.get_aabb().get_endpoint(corner))                                                                                                                                                                 
+			var vertical_size := 2.0 * absf(point.y - view_center.y)                                                                                                                                                                          
+			var horizontal_size := 2.0 * absf(point.x - view_center.x) / aspect                                                                                                                                                               
+																																																												
+			required_size = maxf(                                                                                                                                                                                                             
+				required_size,                                                                                                                                                                                                                  
+				maxf(vertical_size, horizontal_size) / WEAPON_FRAME_FILL                                                                                                                                                                         
+			)                                                                                                                                                                                                                                 
+																																																										
+	model_camera.size = required_size 
+	var coverage_ratio := model_camera.size / body_camera_size                                                                                                                                                                           
+	model_viewport.size = Vector2i(                                                                                                                                                                                                      
+		roundi(float(body_viewport_size.x) * coverage_ratio),                                                                                                                                                                            
+		roundi(float(body_viewport_size.y) * coverage_ratio)                                                                                                                                                                             
+	)                                                                                                                                                                                                                                    
+		  
 	
 func _calculate_sprite_transform(
 	grid_position: Vector2,
@@ -441,6 +531,7 @@ func _on_player_data_updated(data: Dictionary) -> void:
 	_update_player_debug_hitbox(data)
 	_update_attack_debug(data)
 	_update_model_pose(data)
+	_fit_equipped_weapon_in_view()
 	
 		
 	if model_height_3d <= 0.0:                                                                                                                                                                                                              
