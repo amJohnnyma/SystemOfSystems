@@ -284,6 +284,7 @@ func _set_weapon_model(scene_path: String, grip: Transform3D) -> void:
 	hand_socket.add_child(model)                                                                                                                                                                                                          
 	model.transform = grip                                                                                                                                                                                                                
 	equipped_weapon_model = model 
+	 
 
 func _get_attack_clip(source: String, imported_clip: String) -> StringName:
 	if source.is_empty() or imported_clip.is_empty():
@@ -578,15 +579,31 @@ func _init_create_player() -> void:
 func _on_player_data_updated(data: Dictionary) -> void:
 	if data.is_empty():
 		return
-		
+	
 	var equipped_id := int(data.get("equippedItemId", 0))
-	if equipped_id != rendered_weapon_id:
+
+	if equipped_id != rendered_weapon_id:		
+		
 		rendered_weapon_id = equipped_id
-		var definition:Dictionary = item_registry.get(equipped_id, {})
+		var pos: Vector3 = data.get("weaponPositionOffset", Vector3.ZERO)
+		var rot: Vector3 = data.get("weaponRotationOffset", Vector3.ZERO)
+		var weapon_scale: float = data.get("weaponScale", 1.0)
+
+		# Convert rotation from degrees to radians
+		var radians := rot * (PI / 180.0)
+
+		# Construct rotation and scale
+		var basis := Basis.from_euler(radians)
+		basis = basis.scaled(Vector3.ONE * weapon_scale)
+
+		# Construct the complete local transformation
+		var grip := Transform3D(basis, pos)
+
+		
 		_set_weapon_model(
-			str(definition.get("weapon_model", "")),
-			Transform3D.IDENTITY
-			)
+			str(data.get("weaponModel", "")),
+			grip
+		)
 		
 	#print(data["equippedItemId"])
 	_update_player_debug_hitbox(data)

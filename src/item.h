@@ -7,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include <optional>
+#include <array>
 
 #include "math_types.h"
 
@@ -163,7 +164,15 @@ struct ItemAction
 
 };
 
-struct WeaponInfo {std::string model;};
+struct WeaponInfo
+{
+    std::string model;
+
+    std::array<float, 3> position_offset = {0.f, 0.f, 0.f};
+    std::array<float, 3> rotation_offset = {0.f, 0.f, 0.f};
+
+    float scale = 1.f;
+};
 
 struct ItemDefinition
 {
@@ -215,6 +224,8 @@ struct ItemDefinition
     std::unordered_map<std::string, ItemAnimation> animations;
 
     std::optional<WeaponInfo> weapon;
+
+
 };
 using ItemRegistry = std::unordered_map<uint32_t, ItemDefinition>;
 struct ItemUseState

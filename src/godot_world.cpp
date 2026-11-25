@@ -17,6 +17,7 @@
 #include "game_settings.h"
 #include "world_types.h"
 #include <chrono>
+#include <godot_cpp/variant/vector3.hpp>
 
 using namespace godot;
 
@@ -52,10 +53,10 @@ void GodotSimulation::_bind_methods() {
             godot::D_METHOD("set_entity_render_configs", "configs"),
             &GodotSimulation::setEntityRenderConfigs
             );
-ClassDB::bind_method(
-    D_METHOD("getWorldDefaults"),
-    &GodotSimulation::getWorldDefaults
-);
+    ClassDB::bind_method(
+            D_METHOD("getWorldDefaults"),
+            &GodotSimulation::getWorldDefaults
+            );
 
 }
 
@@ -80,38 +81,38 @@ godot::Dictionary GodotSimulation::getWorldDefaults() const
     return result;
 }
 namespace {
-const char* itemCategoryName(ItemCategory c) {
-    switch (c) {
-        case ItemCategory::Material: return "Material";
-        case ItemCategory::Tool: return "Tool";
-        case ItemCategory::Weapon: return "Weapon";
-        case ItemCategory::Consumable: return "Consumable";
-        case ItemCategory::Building: return "Building";
-        case ItemCategory::Ammunition: return "Ammunition";
-        default: return "Miscellaneous";
+    const char* itemCategoryName(ItemCategory c) {
+        switch (c) {
+            case ItemCategory::Material: return "Material";
+            case ItemCategory::Tool: return "Tool";
+            case ItemCategory::Weapon: return "Weapon";
+            case ItemCategory::Consumable: return "Consumable";
+            case ItemCategory::Building: return "Building";
+            case ItemCategory::Ammunition: return "Ammunition";
+            default: return "Miscellaneous";
+        }
     }
-}
-const char* itemActionName(ItemActionType t) {
-    switch (t) {
-        case ItemActionType::Attack: return "Attack";
-        case ItemActionType::ModifyTerrain: return "ModifyTerrain";
-        case ItemActionType::PlaceBlock: return "PlaceBlock";
-        case ItemActionType::PlaceStructure: return "PlaceStructure";
-        case ItemActionType::Consume: return "Consume";
-        case ItemActionType::SpawnProjectile: return "SpawnProjectile";
-        case ItemActionType::ThrowItem: return "ThrowItem";
-        default: return "Unknown";
+    const char* itemActionName(ItemActionType t) {
+        switch (t) {
+            case ItemActionType::Attack: return "Attack";
+            case ItemActionType::ModifyTerrain: return "ModifyTerrain";
+            case ItemActionType::PlaceBlock: return "PlaceBlock";
+            case ItemActionType::PlaceStructure: return "PlaceStructure";
+            case ItemActionType::Consume: return "Consume";
+            case ItemActionType::SpawnProjectile: return "SpawnProjectile";
+            case ItemActionType::ThrowItem: return "ThrowItem";
+            default: return "Unknown";
+        }
     }
-}
-const char* itemEventName(ItemEventType t) {
-    switch (t) {
-        case ItemEventType::ApplyAction: return "ApplyAction";
-        case ItemEventType::SpawnEffect: return "SpawnEffect";
-        case ItemEventType::PlaySound: return "PlaySound";
-        case ItemEventType::ModifyTerrain: return "ModifyTerrain"; 
-        default: return "Unknown";
+    const char* itemEventName(ItemEventType t) {
+        switch (t) {
+            case ItemEventType::ApplyAction: return "ApplyAction";
+            case ItemEventType::SpawnEffect: return "SpawnEffect";
+            case ItemEventType::PlaySound: return "PlaySound";
+            case ItemEventType::ModifyTerrain: return "ModifyTerrain"; 
+            default: return "Unknown";
+        }
     }
-}
 } // namespace
 
 godot::Dictionary GodotSimulation::getItemRegistry() const {
@@ -328,25 +329,25 @@ GodotSimulation::getEntityRenderBuffers() const
 
     const auto& entities = world_grid_.getEntities();
 
-const bool debug_enabled = static_cast<bool>(
-    entity_render_configs_.get("__debug_enabled", false)
-);
+    const bool debug_enabled = static_cast<bool>(
+            entity_render_configs_.get("__debug_enabled", false)
+            );
 
 
-godot::PackedFloat32Array debug_buffer;
-float* debug_dst = nullptr;
-size_t debug_index = 0;
+    godot::PackedFloat32Array debug_buffer;
+    float* debug_dst = nullptr;
+    size_t debug_index = 0;
 
-float debug_min_x = std::numeric_limits<float>::max();
-float debug_min_y = std::numeric_limits<float>::max();
-float debug_max_x = std::numeric_limits<float>::lowest();
-float debug_max_y = std::numeric_limits<float>::lowest();
+    float debug_min_x = std::numeric_limits<float>::max();
+    float debug_min_y = std::numeric_limits<float>::max();
+    float debug_max_x = std::numeric_limits<float>::lowest();
+    float debug_max_y = std::numeric_limits<float>::lowest();
 
-if (debug_enabled && !entities.empty())
-{
-    debug_buffer.resize(entities.size() * 12);
-    debug_dst = debug_buffer.ptrw();
-}
+    if (debug_enabled && !entities.empty())
+    {
+        debug_buffer.resize(entities.size() * 12);
+        debug_dst = debug_buffer.ptrw();
+    }
     const float MARGIN =
         GameSettings::Instance().rendering.entity_culling_margin;
 
@@ -365,38 +366,38 @@ if (debug_enabled && !entities.empty())
             "_" + entity.getState();
 
         groups[key].push_back(&entity);
-if (debug_dst)
-{
-    const float x = et.x_smooth;
-    const float y = et.y_smooth;
-    const float w = static_cast<float>(et.width);
-    const float h = static_cast<float>(et.height);
+        if (debug_dst)
+        {
+            const float x = et.x_smooth;
+            const float y = et.y_smooth;
+            const float w = static_cast<float>(et.width);
+            const float h = static_cast<float>(et.height);
 
-    float* dst = debug_dst + debug_index * 12;
-    ++debug_index;
+            float* dst = debug_dst + debug_index * 12;
+            ++debug_index;
 
-    // Physical hitbox transform (centered 1x1 quad)
-    dst[0] = w;
-    dst[1] = 0.0f;
-    dst[2] = 0.0f;
-    dst[3] = x + w * 0.5f;
+            // Physical hitbox transform (centered 1x1 quad)
+            dst[0] = w;
+            dst[1] = 0.0f;
+            dst[2] = 0.0f;
+            dst[3] = x + w * 0.5f;
 
-    dst[4] = 0.0f;
-    dst[5] = -h;
-    dst[6] = 0.0f;
-    dst[7] = y + 1.0f - h * 0.5f;
+            dst[4] = 0.0f;
+            dst[5] = -h;
+            dst[6] = 0.0f;
+            dst[7] = y + 1.0f - h * 0.5f;
 
-    // Red, semi-transparent hitbox
-    dst[8]  = 1.0f;
-    dst[9]  = 0.0f;
-    dst[10] = 0.0f;
-    dst[11] = 0.25f;
+            // Red, semi-transparent hitbox
+            dst[8]  = 1.0f;
+            dst[9]  = 0.0f;
+            dst[10] = 0.0f;
+            dst[11] = 0.25f;
 
-    debug_min_x = std::min(debug_min_x, x);
-    debug_min_y = std::min(debug_min_y, y + 1.0f - h);
-    debug_max_x = std::max(debug_max_x, x + w);
-    debug_max_y = std::max(debug_max_y, y + 1.0f);
-}
+            debug_min_x = std::min(debug_min_x, x);
+            debug_min_y = std::min(debug_min_y, y + 1.0f - h);
+            debug_max_x = std::max(debug_max_x, x + w);
+            debug_max_y = std::max(debug_max_y, y + 1.0f);
+        }
     }
 
     for (const auto& [key, group] : groups)
@@ -476,29 +477,29 @@ if (debug_dst)
         result[godot_key] = group_data;
     }
 
-if (debug_dst)
-{
-    constexpr float MARGIN = 2.0f;
+    if (debug_dst)
+    {
+        constexpr float MARGIN = 2.0f;
 
-    godot::Dictionary debug_data;
+        godot::Dictionary debug_data;
 
-    debug_data["buffer"] = debug_buffer;
+        debug_data["buffer"] = debug_buffer;
 
-    debug_data["aabb"] = godot::AABB(
-        godot::Vector3(
-            debug_min_x - MARGIN,
-            debug_min_y - MARGIN,
-            -1.0f
-        ),
-        godot::Vector3(
-            debug_max_x - debug_min_x + 2.0f * MARGIN,
-            debug_max_y - debug_min_y + 2.0f * MARGIN,
-            2.0f
-        )
-    );
+        debug_data["aabb"] = godot::AABB(
+                godot::Vector3(
+                    debug_min_x - MARGIN,
+                    debug_min_y - MARGIN,
+                    -1.0f
+                    ),
+                godot::Vector3(
+                    debug_max_x - debug_min_x + 2.0f * MARGIN,
+                    debug_max_y - debug_min_y + 2.0f * MARGIN,
+                    2.0f
+                    )
+                );
 
-    result["__debug"] = debug_data;
-}
+        result["__debug"] = debug_data;
+    }
     return result;
 }
 
@@ -886,40 +887,40 @@ void GodotSimulation::processPlayerInputs(const godot::Dictionary& input)
 
     // Variables
     pi.deltaTime = static_cast<double>(
-        input.get("deltaTime", 0.0)
-    );
+            input.get("deltaTime", 0.0)
+            );
 
     godot::Vector2 movement = input.get("moveInput", godot::Vector2(0, 0));
 
     pi.moveInput = Vec2{
         movement.x,
-        movement.y
+            movement.y
     };
 
     pi.selectedHotbarSlot = static_cast<int>(
-        input.get("selectedHotbarSlot", -1)
-    );
+            input.get("selectedHotbarSlot", -1)
+            );
 
     pi.hasJumpInput = static_cast<bool>(
-        input.get("hasJumpInput", false)
-    );
+            input.get("hasJumpInput", false)
+            );
 
     // Checks
     pi.hasMoveInput = static_cast<bool>(
-        input.get("hasMoveInput", false)
-    );
+            input.get("hasMoveInput", false)
+            );
 
     pi.hasPrimaryAttackInput = static_cast<bool>(
-        input.get("hasPrimaryAttackInput", false)
-    );
+            input.get("hasPrimaryAttackInput", false)
+            );
 
     pi.hasSecondaryAttackInput = static_cast<bool>(
-        input.get("hasSecondaryAttackInput", false)
-    );
+            input.get("hasSecondaryAttackInput", false)
+            );
 
     pi.swappedHotbar = static_cast<bool>(
-        input.get("swappedHotbar", false)
-    );
+            input.get("swappedHotbar", false)
+            );
 
     // Pass to WorldGrid
     world_grid_.processPlayerInputs(pi);
@@ -994,8 +995,41 @@ godot::Dictionary GodotSimulation::getPlayerData() const
 
     data["attackHitboxActive"] = player.hasAttackHitboxBounds(registry);
     data["attackHitboxes"] = attackHitboxes;
+    // Equipped weapon
+    const uint32_t equipped_id = player.getEquippedItemId(registry);
 
-    data["equippedItemId"] = static_cast<int64_t>(player.getEquippedItemId(world_grid_.getItemRegistry()));
+    data["equippedItemId"] = static_cast<int64_t>(equipped_id);
+
+    // Default weapon rendering properties
+    data["weaponModel"] = godot::String("");
+    data["weaponPositionOffset"] = godot::Vector3(0.f, 0.f, 0.f);
+    data["weaponRotationOffset"] = godot::Vector3(0.f, 0.f, 0.f);
+    data["weaponScale"] = 1.f;
+
+    const auto item = registry.find(equipped_id);
+
+    if (item != registry.end() && item->second.weapon.has_value())
+    {
+        const WeaponInfo& weapon = item->second.weapon.value();
+
+        data["weaponModel"] = godot::String(weapon.model.c_str());
+
+        data["weaponPositionOffset"] = godot::Vector3(
+                weapon.position_offset[0],
+                weapon.position_offset[1],
+                weapon.position_offset[2]
+                );
+
+        data["weaponRotationOffset"] = godot::Vector3(
+                weapon.rotation_offset[0],
+                weapon.rotation_offset[1],
+                weapon.rotation_offset[2]
+                );
+
+        data["weaponScale"] = weapon.scale;
+    }
+
+
 
     return data;
 }

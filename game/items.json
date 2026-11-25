@@ -19640,7 +19640,10 @@
 	  "world_sprite": "",
 	  "world_size": [5.0, 2.0],
 	  "weapon": {
-	    "model": "res://game/models/scythe00.fbx"
+	    "model": "res://game/models/scythe00.fbx",
+           "position_offset": [1.425, 0.18, 0.04],
+            "rotation_offset": [180.0, 180.0, 90.0],
+            "scale": 1.0
 	  },
 	  "animations": {
 	    "primary_attack": {
@@ -19649,6 +19652,7 @@
 	      "duration": 1.5
 	    }
 	  },
+
 	  "actions": [
 	    {
 	      "type": "Attack",
@@ -19698,7 +19702,10 @@
 	  "world_sprite": "",
 	  "world_size": [5.0, 2.0],
 	  "weapon": {
-	    "model": "res://game/models/Sword.glb"
+	    "model": "res://game/models/Sword.glb",
+           "position_offset": [0.67, 0.17, 0.0],
+            "rotation_offset": [0.0, 90.0, 90.0],
+            "scale": 1.0
 	  },
 	  "animations": {
 	    "primary_attack": {
@@ -19707,6 +19714,7 @@
 	      "duration": 3
 	    }
 	  },
+ 
 	  "actions": [
 	    {
 	      "type": "Attack",
@@ -19717,24 +19725,24 @@
 	      "cooldown": 1.0,
 	"density_change": -32.0,
 		"radius": 1.5,
-	      "hitbox_frame_count": 8,
+	      "hitbox_frame_count": 89,
 	      "hitbox": [
 		{
-		  "frame": 3,
-		  "size": [2, 2],
-		  "offset_r": [1, 1],
-		  "angle_deg": 20
-		},
-		{
-		  "frame": 4,
-		  "size": [3, 3],
-		  "offset_r": [2, 2],
+		  "frame": 48,
+		  "size": [1, 4],
+		  "offset_r": [1.5, 2],
 		  "angle_deg": 45
 		},
 		{
-		  "frame": 5,
-		  "size": [4, 4],
-		  "offset_r": [3, 3],
+		  "frame": 49,
+		  "size": [1, 4],
+		  "offset_r": [1.5, 1.5],
+		  "angle_deg": 45
+		},
+		{
+		  "frame": 50,
+		  "size": [1, 4],
+		  "offset_r": [1.5, 1],
 		  "angle_deg": 45
 		}
 	      ],

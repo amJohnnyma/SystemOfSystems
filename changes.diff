@@ -1,0 +1,1334 @@
+diff --git a/demo/main.gd b/demo/main.gd
+index 890788b..ccf2a70 100644
+--- a/demo/main.gd
++++ b/demo/main.gd
+@@ -20,7 +20,7 @@ const PLAYER_CLIP_SOURCES := {
+ 	"jump": preload("res://game/models/Jump.fbx"),                                                                                                                                                                                        
+ }                                                                                                                                                                                                                                       
+ const PLAYER_STATE_CLIPS := {                                                                                                                                                                                                           
+-	"idle": &"mixamo_com",                                                                                                                                                                                                                
++	#"idle": &"mixamo_com",                                                                                                                                                                                                                
+ 	"walk": &"player/walk",                                                                                                                                                                                                               
+ 	"jump": &"player/jump",                                                                                                                                                                                                               
+ } 
+@@ -284,6 +284,7 @@ func _set_weapon_model(scene_path: String, grip: Transform3D) -> void:
+ 	hand_socket.add_child(model)                                                                                                                                                                                                          
+ 	model.transform = grip                                                                                                                                                                                                                
+ 	equipped_weapon_model = model 
++	 
+ 
+ func _get_attack_clip(source: String, imported_clip: String) -> StringName:
+ 	if source.is_empty() or imported_clip.is_empty():
+@@ -578,15 +579,35 @@ func _init_create_player() -> void:
+ func _on_player_data_updated(data: Dictionary) -> void:
+ 	if data.is_empty():
+ 		return
+-		
++	print("1")
+ 	var equipped_id := int(data.get("equippedItemId", 0))
+-	if equipped_id != rendered_weapon_id:
++	print(
++	"Equipped: ", equipped_id,
++	" | Rendered: ", rendered_weapon_id,
++	" | Model: ", data.get("weaponModel", "MISSING")
++)
++	if equipped_id != rendered_weapon_id:		
++		print("2")
+ 		rendered_weapon_id = equipped_id
+-		var definition:Dictionary = item_registry.get(equipped_id, {})
++		var pos: Vector3 = data.get("weaponPositionOffset", Vector3.ZERO)
++		var rot: Vector3 = data.get("weaponRotationOffset", Vector3.ZERO)
++		var weapon_scale: float = data.get("weaponScale", 1.0)
++
++		# Convert rotation from degrees to radians
++		var radians := rot * (PI / 180.0)
++
++		# Construct rotation and scale
++		var basis := Basis.from_euler(radians)
++		basis = basis.scaled(Vector3.ONE * weapon_scale)
++
++		# Construct the complete local transformation
++		var grip := Transform3D(basis, pos)
++
++		
+ 		_set_weapon_model(
+-			str(definition.get("weapon_model", "")),
+-			Transform3D.IDENTITY
+-			)
++			str(data.get("weaponModel", "")),
++			grip
++		)
+ 		
+ 	#print(data["equippedItemId"])
+ 	_update_player_debug_hitbox(data)
+diff --git a/game/items.json b/game/items.json
+index a612e45..8743d94 100644
+--- a/game/items.json
++++ b/game/items.json
+@@ -19640,7 +19640,10 @@
+ 	  "world_sprite": "",
+ 	  "world_size": [5.0, 2.0],
+ 	  "weapon": {
+-	    "model": "res://game/models/scythe00.fbx"
++	    "model": "res://game/models/scythe00.fbx",
++           "position_offset": [0.0, 0.0, 0.0],
++            "rotation_offset": [0.0, 0.0, 0.0],
++            "scale": 1.0,
+ 	  },
+ 	  "animations": {
+ 	    "primary_attack": {
+@@ -19649,6 +19652,7 @@
+ 	      "duration": 1.5
+ 	    }
+ 	  },
++
+ 	  "actions": [
+ 	    {
+ 	      "type": "Attack",
+@@ -19698,7 +19702,10 @@
+ 	  "world_sprite": "",
+ 	  "world_size": [5.0, 2.0],
+ 	  "weapon": {
+-	    "model": "res://game/models/Sword.glb"
++	    "model": "res://game/models/Sword.glb",
++           "position_offset": [0.0, 0.0, 0.0],
++            "rotation_offset": [0.0, 0.0, 0.0],
++            "scale": 1.0,
+ 	  },
+ 	  "animations": {
+ 	    "primary_attack": {
+@@ -19707,6 +19714,7 @@
+ 	      "duration": 3
+ 	    }
+ 	  },
++ 
+ 	  "actions": [
+ 	    {
+ 	      "type": "Attack",
+diff --git a/src/godot_world.cpp b/src/godot_world.cpp
+index ce3eee5..37762f9 100644
+--- a/src/godot_world.cpp
++++ b/src/godot_world.cpp
+@@ -17,6 +17,7 @@
+ #include "game_settings.h"
+ #include "world_types.h"
+ #include <chrono>
++#include <godot_cpp/variant/vector3.hpp>
+ 
+ using namespace godot;
+ 
+@@ -52,10 +53,10 @@ void GodotSimulation::_bind_methods() {
+             godot::D_METHOD("set_entity_render_configs", "configs"),
+             &GodotSimulation::setEntityRenderConfigs
+             );
+-ClassDB::bind_method(
+-    D_METHOD("getWorldDefaults"),
+-    &GodotSimulation::getWorldDefaults
+-);
++    ClassDB::bind_method(
++            D_METHOD("getWorldDefaults"),
++            &GodotSimulation::getWorldDefaults
++            );
+ 
+ }
+ 
+@@ -80,38 +81,38 @@ godot::Dictionary GodotSimulation::getWorldDefaults() const
+     return result;
+ }
+ namespace {
+-const char* itemCategoryName(ItemCategory c) {
+-    switch (c) {
+-        case ItemCategory::Material: return "Material";
+-        case ItemCategory::Tool: return "Tool";
+-        case ItemCategory::Weapon: return "Weapon";
+-        case ItemCategory::Consumable: return "Consumable";
+-        case ItemCategory::Building: return "Building";
+-        case ItemCategory::Ammunition: return "Ammunition";
+-        default: return "Miscellaneous";
++    const char* itemCategoryName(ItemCategory c) {
++        switch (c) {
++            case ItemCategory::Material: return "Material";
++            case ItemCategory::Tool: return "Tool";
++            case ItemCategory::Weapon: return "Weapon";
++            case ItemCategory::Consumable: return "Consumable";
++            case ItemCategory::Building: return "Building";
++            case ItemCategory::Ammunition: return "Ammunition";
++            default: return "Miscellaneous";
++        }
+     }
+-}
+-const char* itemActionName(ItemActionType t) {
+-    switch (t) {
+-        case ItemActionType::Attack: return "Attack";
+-        case ItemActionType::ModifyTerrain: return "ModifyTerrain";
+-        case ItemActionType::PlaceBlock: return "PlaceBlock";
+-        case ItemActionType::PlaceStructure: return "PlaceStructure";
+-        case ItemActionType::Consume: return "Consume";
+-        case ItemActionType::SpawnProjectile: return "SpawnProjectile";
+-        case ItemActionType::ThrowItem: return "ThrowItem";
+-        default: return "Unknown";
++    const char* itemActionName(ItemActionType t) {
++        switch (t) {
++            case ItemActionType::Attack: return "Attack";
++            case ItemActionType::ModifyTerrain: return "ModifyTerrain";
++            case ItemActionType::PlaceBlock: return "PlaceBlock";
++            case ItemActionType::PlaceStructure: return "PlaceStructure";
++            case ItemActionType::Consume: return "Consume";
++            case ItemActionType::SpawnProjectile: return "SpawnProjectile";
++            case ItemActionType::ThrowItem: return "ThrowItem";
++            default: return "Unknown";
++        }
+     }
+-}
+-const char* itemEventName(ItemEventType t) {
+-    switch (t) {
+-        case ItemEventType::ApplyAction: return "ApplyAction";
+-        case ItemEventType::SpawnEffect: return "SpawnEffect";
+-        case ItemEventType::PlaySound: return "PlaySound";
+-        case ItemEventType::ModifyTerrain: return "ModifyTerrain"; 
+-        default: return "Unknown";
++    const char* itemEventName(ItemEventType t) {
++        switch (t) {
++            case ItemEventType::ApplyAction: return "ApplyAction";
++            case ItemEventType::SpawnEffect: return "SpawnEffect";
++            case ItemEventType::PlaySound: return "PlaySound";
++            case ItemEventType::ModifyTerrain: return "ModifyTerrain"; 
++            default: return "Unknown";
++        }
+     }
+-}
+ } // namespace
+ 
+ godot::Dictionary GodotSimulation::getItemRegistry() const {
+@@ -328,25 +329,25 @@ GodotSimulation::getEntityRenderBuffers() const
+ 
+     const auto& entities = world_grid_.getEntities();
+ 
+-const bool debug_enabled = static_cast<bool>(
+-    entity_render_configs_.get("__debug_enabled", false)
+-);
++    const bool debug_enabled = static_cast<bool>(
++            entity_render_configs_.get("__debug_enabled", false)
++            );
+ 
+ 
+-godot::PackedFloat32Array debug_buffer;
+-float* debug_dst = nullptr;
+-size_t debug_index = 0;
++    godot::PackedFloat32Array debug_buffer;
++    float* debug_dst = nullptr;
++    size_t debug_index = 0;
+ 
+-float debug_min_x = std::numeric_limits<float>::max();
+-float debug_min_y = std::numeric_limits<float>::max();
+-float debug_max_x = std::numeric_limits<float>::lowest();
+-float debug_max_y = std::numeric_limits<float>::lowest();
++    float debug_min_x = std::numeric_limits<float>::max();
++    float debug_min_y = std::numeric_limits<float>::max();
++    float debug_max_x = std::numeric_limits<float>::lowest();
++    float debug_max_y = std::numeric_limits<float>::lowest();
+ 
+-if (debug_enabled && !entities.empty())
+-{
+-    debug_buffer.resize(entities.size() * 12);
+-    debug_dst = debug_buffer.ptrw();
+-}
++    if (debug_enabled && !entities.empty())
++    {
++        debug_buffer.resize(entities.size() * 12);
++        debug_dst = debug_buffer.ptrw();
++    }
+     const float MARGIN =
+         GameSettings::Instance().rendering.entity_culling_margin;
+ 
+@@ -365,38 +366,38 @@ if (debug_enabled && !entities.empty())
+             "_" + entity.getState();
+ 
+         groups[key].push_back(&entity);
+-if (debug_dst)
+-{
+-    const float x = et.x_smooth;
+-    const float y = et.y_smooth;
+-    const float w = static_cast<float>(et.width);
+-    const float h = static_cast<float>(et.height);
+-
+-    float* dst = debug_dst + debug_index * 12;
+-    ++debug_index;
+-
+-    // Physical hitbox transform (centered 1x1 quad)
+-    dst[0] = w;
+-    dst[1] = 0.0f;
+-    dst[2] = 0.0f;
+-    dst[3] = x + w * 0.5f;
+-
+-    dst[4] = 0.0f;
+-    dst[5] = -h;
+-    dst[6] = 0.0f;
+-    dst[7] = y + 1.0f - h * 0.5f;
+-
+-    // Red, semi-transparent hitbox
+-    dst[8]  = 1.0f;
+-    dst[9]  = 0.0f;
+-    dst[10] = 0.0f;
+-    dst[11] = 0.25f;
+-
+-    debug_min_x = std::min(debug_min_x, x);
+-    debug_min_y = std::min(debug_min_y, y + 1.0f - h);
+-    debug_max_x = std::max(debug_max_x, x + w);
+-    debug_max_y = std::max(debug_max_y, y + 1.0f);
+-}
++        if (debug_dst)
++        {
++            const float x = et.x_smooth;
++            const float y = et.y_smooth;
++            const float w = static_cast<float>(et.width);
++            const float h = static_cast<float>(et.height);
++
++            float* dst = debug_dst + debug_index * 12;
++            ++debug_index;
++
++            // Physical hitbox transform (centered 1x1 quad)
++            dst[0] = w;
++            dst[1] = 0.0f;
++            dst[2] = 0.0f;
++            dst[3] = x + w * 0.5f;
++
++            dst[4] = 0.0f;
++            dst[5] = -h;
++            dst[6] = 0.0f;
++            dst[7] = y + 1.0f - h * 0.5f;
++
++            // Red, semi-transparent hitbox
++            dst[8]  = 1.0f;
++            dst[9]  = 0.0f;
++            dst[10] = 0.0f;
++            dst[11] = 0.25f;
++
++            debug_min_x = std::min(debug_min_x, x);
++            debug_min_y = std::min(debug_min_y, y + 1.0f - h);
++            debug_max_x = std::max(debug_max_x, x + w);
++            debug_max_y = std::max(debug_max_y, y + 1.0f);
++        }
+     }
+ 
+     for (const auto& [key, group] : groups)
+@@ -476,29 +477,29 @@ if (debug_dst)
+         result[godot_key] = group_data;
+     }
+ 
+-if (debug_dst)
+-{
+-    constexpr float MARGIN = 2.0f;
+-
+-    godot::Dictionary debug_data;
+-
+-    debug_data["buffer"] = debug_buffer;
+-
+-    debug_data["aabb"] = godot::AABB(
+-        godot::Vector3(
+-            debug_min_x - MARGIN,
+-            debug_min_y - MARGIN,
+-            -1.0f
+-        ),
+-        godot::Vector3(
+-            debug_max_x - debug_min_x + 2.0f * MARGIN,
+-            debug_max_y - debug_min_y + 2.0f * MARGIN,
+-            2.0f
+-        )
+-    );
+-
+-    result["__debug"] = debug_data;
+-}
++    if (debug_dst)
++    {
++        constexpr float MARGIN = 2.0f;
++
++        godot::Dictionary debug_data;
++
++        debug_data["buffer"] = debug_buffer;
++
++        debug_data["aabb"] = godot::AABB(
++                godot::Vector3(
++                    debug_min_x - MARGIN,
++                    debug_min_y - MARGIN,
++                    -1.0f
++                    ),
++                godot::Vector3(
++                    debug_max_x - debug_min_x + 2.0f * MARGIN,
++                    debug_max_y - debug_min_y + 2.0f * MARGIN,
++                    2.0f
++                    )
++                );
++
++        result["__debug"] = debug_data;
++    }
+     return result;
+ }
+ 
+@@ -886,40 +887,40 @@ void GodotSimulation::processPlayerInputs(const godot::Dictionary& input)
+ 
+     // Variables
+     pi.deltaTime = static_cast<double>(
+-        input.get("deltaTime", 0.0)
+-    );
++            input.get("deltaTime", 0.0)
++            );
+ 
+     godot::Vector2 movement = input.get("moveInput", godot::Vector2(0, 0));
+ 
+     pi.moveInput = Vec2{
+         movement.x,
+-        movement.y
++            movement.y
+     };
+ 
+     pi.selectedHotbarSlot = static_cast<int>(
+-        input.get("selectedHotbarSlot", -1)
+-    );
++            input.get("selectedHotbarSlot", -1)
++            );
+ 
+     pi.hasJumpInput = static_cast<bool>(
+-        input.get("hasJumpInput", false)
+-    );
++            input.get("hasJumpInput", false)
++            );
+ 
+     // Checks
+     pi.hasMoveInput = static_cast<bool>(
+-        input.get("hasMoveInput", false)
+-    );
++            input.get("hasMoveInput", false)
++            );
+ 
+     pi.hasPrimaryAttackInput = static_cast<bool>(
+-        input.get("hasPrimaryAttackInput", false)
+-    );
++            input.get("hasPrimaryAttackInput", false)
++            );
+ 
+     pi.hasSecondaryAttackInput = static_cast<bool>(
+-        input.get("hasSecondaryAttackInput", false)
+-    );
++            input.get("hasSecondaryAttackInput", false)
++            );
+ 
+     pi.swappedHotbar = static_cast<bool>(
+-        input.get("swappedHotbar", false)
+-    );
++            input.get("swappedHotbar", false)
++            );
+ 
+     // Pass to WorldGrid
+     world_grid_.processPlayerInputs(pi);
+@@ -994,8 +995,41 @@ godot::Dictionary GodotSimulation::getPlayerData() const
+ 
+     data["attackHitboxActive"] = player.hasAttackHitboxBounds(registry);
+     data["attackHitboxes"] = attackHitboxes;
++    // Equipped weapon
++    const uint32_t equipped_id = player.getEquippedItemId(registry);
++
++    data["equippedItemId"] = static_cast<int64_t>(equipped_id);
++
++    // Default weapon rendering properties
++    data["weaponModel"] = godot::String("");
++    data["weaponPositionOffset"] = godot::Vector3(0.f, 0.f, 0.f);
++    data["weaponRotationOffset"] = godot::Vector3(0.f, 0.f, 0.f);
++    data["weaponScale"] = 1.f;
++
++    const auto item = registry.find(equipped_id);
++
++    if (item != registry.end() && item->second.weapon.has_value())
++    {
++        const WeaponInfo& weapon = item->second.weapon.value();
++
++        data["weaponModel"] = godot::String(weapon.model.c_str());
++
++        data["weaponPositionOffset"] = godot::Vector3(
++                weapon.position_offset[0],
++                weapon.position_offset[1],
++                weapon.position_offset[2]
++                );
++
++        data["weaponRotationOffset"] = godot::Vector3(
++                weapon.rotation_offset[0],
++                weapon.rotation_offset[1],
++                weapon.rotation_offset[2]
++                );
++
++        data["weaponScale"] = weapon.scale;
++    }
++
+ 
+-    data["equippedItemId"] = static_cast<int64_t>(player.getEquippedItemId(world_grid_.getItemRegistry()));
+ 
+     return data;
+ }
+diff --git a/src/item.h b/src/item.h
+index 6822c36..a0607ad 100644
+--- a/src/item.h
++++ b/src/item.h
+@@ -7,6 +7,7 @@
+ #include <vector>
+ #include <unordered_map>
+ #include <optional>
++#include <array>
+ 
+ #include "math_types.h"
+ 
+@@ -163,7 +164,15 @@ struct ItemAction
+ 
+ };
+ 
+-struct WeaponInfo {std::string model;};
++struct WeaponInfo
++{
++    std::string model;
++
++    std::array<float, 3> position_offset = {0.f, 0.f, 0.f};
++    std::array<float, 3> rotation_offset = {0.f, 0.f, 0.f};
++
++    float scale = 1.f;
++};
+ 
+ struct ItemDefinition
+ {
+@@ -215,6 +224,8 @@ struct ItemDefinition
+     std::unordered_map<std::string, ItemAnimation> animations;
+ 
+     std::optional<WeaponInfo> weapon;
++
++
+ };
+ using ItemRegistry = std::unordered_map<uint32_t, ItemDefinition>;
+ struct ItemUseState
+diff --git a/src/item_registry_loader.h b/src/item_registry_loader.h
+index fbea4e0..aeeeb5f 100644
+--- a/src/item_registry_loader.h
++++ b/src/item_registry_loader.h
+@@ -19,420 +19,440 @@
+ // Startup-only helpers. No inventory logic, no Godot dependency, no exceptions.
+ namespace ItemRegistryLoader {
+ 
+-using Json = nlohmann::json;
+-constexpr uint32_t STRUCTURE_ITEM_BASE = 100000;
+-
+-inline const Json* field(const Json& obj, const char* key) {
+-    if (!obj.is_object()) return nullptr;
+-    auto it = obj.find(key);
+-    return it == obj.end() ? nullptr : &(*it);
+-}
+-
+-inline std::string stringValue(const Json& obj, const char* key, const std::string& fallback = "") {
+-    const Json* v = field(obj, key);
+-    return v && v->is_string() ? v->get<std::string>() : fallback;
+-}
+-
+-inline bool boolValue(const Json& obj, const char* key, bool fallback) {
+-    const Json* v = field(obj, key);
+-    return v && v->is_boolean() ? v->get<bool>() : fallback;
+-}
+-
+-inline uint32_t uintValue(const Json& obj, const char* key, uint32_t fallback) {
+-    const Json* v = field(obj, key);
+-    if (!v || !v->is_number_integer()) return fallback;
+-    if (v->is_number_unsigned()) {
+-        const auto n = v->get<uint64_t>();
+-        return n <= std::numeric_limits<uint32_t>::max() ? static_cast<uint32_t>(n) : fallback;
++    using Json = nlohmann::json;
++    constexpr uint32_t STRUCTURE_ITEM_BASE = 100000;
++
++    inline const Json* field(const Json& obj, const char* key) {
++        if (!obj.is_object()) return nullptr;
++        auto it = obj.find(key);
++        return it == obj.end() ? nullptr : &(*it);
+     }
+-    const auto n = v->get<int64_t>();
+-    return n >= 0 && static_cast<uint64_t>(n) <= std::numeric_limits<uint32_t>::max()
+-        ? static_cast<uint32_t>(n) : fallback;
+-}
+-
+-inline float floatValue(const Json& obj, const char* key, float fallback) {
+-    const Json* v = field(obj, key);
+-    if (!v || !v->is_number()) return fallback;
+-    const float n = v->get<float>();
+-    return std::isfinite(n) ? n : fallback;
+-}
+-
+-inline Vec2 vec2Value(const Json& obj, const char* key, Vec2 fallback) {
+-    const Json* v = field(obj, key);
+-    if (!v || !v->is_array() || v->size() != 2 || !(*v)[0].is_number() || !(*v)[1].is_number())
+-        return fallback;
+-    const float x = (*v)[0].get<float>();
+-    const float y = (*v)[1].get<float>();
+-    return std::isfinite(x) && std::isfinite(y) ? Vec2{x, y} : fallback;
+-}
+-
+-inline ItemCategory parseCategory(const std::string& name) {
+-    if (name == "Material") return ItemCategory::Material;
+-    if (name == "Tool") return ItemCategory::Tool;
+-    if (name == "Weapon") return ItemCategory::Weapon;
+-    if (name == "Consumable") return ItemCategory::Consumable;
+-    if (name == "Building") return ItemCategory::Building;
+-    if (name == "Ammunition") return ItemCategory::Ammunition;
+-    return ItemCategory::Miscellaneous;
+-}
+-
+-inline bool parseActionType(const std::string& name, ItemActionType& type) {
+-    if (name == "Attack") type = ItemActionType::Attack;
+-    else if (name == "ModifyTerrain") type = ItemActionType::ModifyTerrain;
+-    else if (name == "PlaceBlock") type = ItemActionType::PlaceBlock;
+-    else if (name == "PlaceStructure") type = ItemActionType::PlaceStructure;
+-    else if (name == "Consume") type = ItemActionType::Consume;
+-    else if (name == "SpawnProjectile") type = ItemActionType::SpawnProjectile;
+-    else if (name == "ThrowItem") type = ItemActionType::ThrowItem;
+-    else return false;
+-    return true;
+-}
+-
+-inline bool parseEventType(const std::string& name, ItemEventType& type) {
+-    if (name == "ApplyAction") type = ItemEventType::ApplyAction;
+-    else if (name == "SpawnEffect") type = ItemEventType::SpawnEffect;
+-    else if (name == "PlaySound") type = ItemEventType::PlaySound;
+-    else if (name == "ModifyTerrain") type = ItemEventType::ModifyTerrain;
+-    else return false;
+-    return true;
+-}
+-
+-// Resolve named atlas definitions from the root of items.json.
+-// Frame indexes are zero-based and row-major. All numeric values are validated
+-// before get<T>() because the GDExtension is compiled with -fno-exceptions.
+-inline std::unordered_map<std::string, ItemSpriteSheet> parseSpriteSheets(const Json& doc) {
+-    std::unordered_map<std::string, ItemSpriteSheet> sheets;
+-    const Json* definitions = field(doc, "sprite_sheets");
+-    if (!definitions || !definitions->is_object()) return sheets;
+-
+-    for (auto it = definitions->begin(); it != definitions->end(); ++it) {
+-        if (!it.value().is_object()) continue;
+-        const Json& src = it.value();
+-        ItemSpriteSheet sheet;
+-        sheet.path = stringValue(src, "path");
+-        const Vec2 frame = vec2Value(src, "frame_size", {16.0f, 16.0f});
+-        sheet.frame_width_px = static_cast<uint32_t>(std::clamp(frame.x, 1.0f, 4096.0f));
+-        sheet.frame_height_px = static_cast<uint32_t>(std::clamp(frame.y, 1.0f, 4096.0f));
+-        if (!sheet.path.empty()) sheets.emplace(it.key(), std::move(sheet));
++
++    inline std::string stringValue(const Json& obj, const char* key, const std::string& fallback = "") {
++        const Json* v = field(obj, key);
++        return v && v->is_string() ? v->get<std::string>() : fallback;
++    }
++
++    inline bool boolValue(const Json& obj, const char* key, bool fallback) {
++        const Json* v = field(obj, key);
++        return v && v->is_boolean() ? v->get<bool>() : fallback;
+     }
+-    return sheets;
+-}
+-
+-// Parse only data. Actual use/animation/particle execution is a later phase.
+-inline void parseAnimations(const Json& obj, ItemDefinition& item) {
+-    const Json* animations = field(obj, "animations");
+-    if (!animations || !animations->is_object()) return;
+-    for (auto it = animations->begin(); it != animations->end(); ++it) {
+-        if (!it.value().is_object()) continue;
+-        const Json& src = it.value();
+-        ItemAnimation anim;
+-        anim.name = it.key();
+-        anim.source = stringValue(src, "source");
+-        anim.clip= stringValue(src, "clip");
+-        anim.start_frame = uintValue(src, "start_frame", item.sprite_sheet.icon_frame);
+-        anim.end_frame = uintValue(src, "end_frame", anim.start_frame);
+-        if (anim.end_frame < anim.start_frame) {
+-            std::cerr << "[Items] Invalid frame range for item " << item.iID
+-                      << " animation '" << anim.name << "'; using one frame\n";
+-            anim.end_frame = anim.start_frame;
++
++    inline uint32_t uintValue(const Json& obj, const char* key, uint32_t fallback) {
++        const Json* v = field(obj, key);
++        if (!v || !v->is_number_integer()) return fallback;
++        if (v->is_number_unsigned()) {
++            const auto n = v->get<uint64_t>();
++            return n <= std::numeric_limits<uint32_t>::max() ? static_cast<uint32_t>(n) : fallback;
+         }
++        const auto n = v->get<int64_t>();
++        return n >= 0 && static_cast<uint64_t>(n) <= std::numeric_limits<uint32_t>::max()
++            ? static_cast<uint32_t>(n) : fallback;
++    }
+ 
+-        // Optional repeated/noncontiguous frames, e.g. [2,2,2,2,7].
+-        const Json* sequence = field(src, "frame_sequence");
+-        if (sequence && sequence->is_array()) {
+-            for (const Json& frame : *sequence) {
+-                if (!frame.is_number_integer()) continue;
+-                uint64_t n = 0;
+-                if (frame.is_number_unsigned()) n = frame.get<uint64_t>();
+-                else {
+-                    const int64_t signed_n = frame.get<int64_t>();
+-                    if (signed_n < 0) continue;
+-                    n = static_cast<uint64_t>(signed_n);
++    inline float floatValue(const Json& obj, const char* key, float fallback) {
++        const Json* v = field(obj, key);
++        if (!v || !v->is_number()) return fallback;
++        const float n = v->get<float>();
++        return std::isfinite(n) ? n : fallback;
++    }
++
++    inline Vec2 vec2Value(const Json& obj, const char* key, Vec2 fallback) {
++        const Json* v = field(obj, key);
++        if (!v || !v->is_array() || v->size() != 2 || !(*v)[0].is_number() || !(*v)[1].is_number())
++            return fallback;
++        const float x = (*v)[0].get<float>();
++        const float y = (*v)[1].get<float>();
++        return std::isfinite(x) && std::isfinite(y) ? Vec2{x, y} : fallback;
++    }
++
++    inline ItemCategory parseCategory(const std::string& name) {
++        if (name == "Material") return ItemCategory::Material;
++        if (name == "Tool") return ItemCategory::Tool;
++        if (name == "Weapon") return ItemCategory::Weapon;
++        if (name == "Consumable") return ItemCategory::Consumable;
++        if (name == "Building") return ItemCategory::Building;
++        if (name == "Ammunition") return ItemCategory::Ammunition;
++        return ItemCategory::Miscellaneous;
++    }
++
++    inline bool parseActionType(const std::string& name, ItemActionType& type) {
++        if (name == "Attack") type = ItemActionType::Attack;
++        else if (name == "ModifyTerrain") type = ItemActionType::ModifyTerrain;
++        else if (name == "PlaceBlock") type = ItemActionType::PlaceBlock;
++        else if (name == "PlaceStructure") type = ItemActionType::PlaceStructure;
++        else if (name == "Consume") type = ItemActionType::Consume;
++        else if (name == "SpawnProjectile") type = ItemActionType::SpawnProjectile;
++        else if (name == "ThrowItem") type = ItemActionType::ThrowItem;
++        else return false;
++        return true;
++    }
++
++    inline bool parseEventType(const std::string& name, ItemEventType& type) {
++        if (name == "ApplyAction") type = ItemEventType::ApplyAction;
++        else if (name == "SpawnEffect") type = ItemEventType::SpawnEffect;
++        else if (name == "PlaySound") type = ItemEventType::PlaySound;
++        else if (name == "ModifyTerrain") type = ItemEventType::ModifyTerrain;
++        else return false;
++        return true;
++    }
++
++    // Resolve named atlas definitions from the root of items.json.
++    // Frame indexes are zero-based and row-major. All numeric values are validated
++    // before get<T>() because the GDExtension is compiled with -fno-exceptions.
++    inline std::unordered_map<std::string, ItemSpriteSheet> parseSpriteSheets(const Json& doc) {
++        std::unordered_map<std::string, ItemSpriteSheet> sheets;
++        const Json* definitions = field(doc, "sprite_sheets");
++        if (!definitions || !definitions->is_object()) return sheets;
++
++        for (auto it = definitions->begin(); it != definitions->end(); ++it) {
++            if (!it.value().is_object()) continue;
++            const Json& src = it.value();
++            ItemSpriteSheet sheet;
++            sheet.path = stringValue(src, "path");
++            const Vec2 frame = vec2Value(src, "frame_size", {16.0f, 16.0f});
++            sheet.frame_width_px = static_cast<uint32_t>(std::clamp(frame.x, 1.0f, 4096.0f));
++            sheet.frame_height_px = static_cast<uint32_t>(std::clamp(frame.y, 1.0f, 4096.0f));
++            if (!sheet.path.empty()) sheets.emplace(it.key(), std::move(sheet));
++        }
++        return sheets;
++    }
++
++    // Parse only data. Actual use/animation/particle execution is a later phase.
++    inline void parseAnimations(const Json& obj, ItemDefinition& item) {
++        const Json* animations = field(obj, "animations");
++        if (!animations || !animations->is_object()) return;
++        for (auto it = animations->begin(); it != animations->end(); ++it) {
++            if (!it.value().is_object()) continue;
++            const Json& src = it.value();
++            ItemAnimation anim;
++            anim.name = it.key();
++            anim.source = stringValue(src, "source");
++            anim.clip= stringValue(src, "clip");
++            anim.start_frame = uintValue(src, "start_frame", item.sprite_sheet.icon_frame);
++            anim.end_frame = uintValue(src, "end_frame", anim.start_frame);
++            if (anim.end_frame < anim.start_frame) {
++                std::cerr << "[Items] Invalid frame range for item " << item.iID
++                    << " animation '" << anim.name << "'; using one frame\n";
++                anim.end_frame = anim.start_frame;
++            }
++
++            // Optional repeated/noncontiguous frames, e.g. [2,2,2,2,7].
++            const Json* sequence = field(src, "frame_sequence");
++            if (sequence && sequence->is_array()) {
++                for (const Json& frame : *sequence) {
++                    if (!frame.is_number_integer()) continue;
++                    uint64_t n = 0;
++                    if (frame.is_number_unsigned()) n = frame.get<uint64_t>();
++                    else {
++                        const int64_t signed_n = frame.get<int64_t>();
++                        if (signed_n < 0) continue;
++                        n = static_cast<uint64_t>(signed_n);
++                    }
++                    if (n <= std::numeric_limits<uint32_t>::max())
++                        anim.frame_sequence.push_back(static_cast<uint32_t>(n));
+                 }
+-                if (n <= std::numeric_limits<uint32_t>::max())
+-                    anim.frame_sequence.push_back(static_cast<uint32_t>(n));
+             }
++            anim.duration = std::max(0.001f, floatValue(src, "duration", 0.25f));
++            anim.loop = boolValue(src, "loop", false);
++            anim.hand_offset = vec2Value(src, "hand_offset", {0.0f, 0.0f});
++            item.animations.emplace(anim.name, std::move(anim));
+         }
+-        anim.duration = std::max(0.001f, floatValue(src, "duration", 0.25f));
+-        anim.loop = boolValue(src, "loop", false);
+-        anim.hand_offset = vec2Value(src, "hand_offset", {0.0f, 0.0f});
+-        item.animations.emplace(anim.name, std::move(anim));
+     }
+-}
+-
+-inline void parseActions(const Json& obj, ItemDefinition& item) {
+-    const Json* actions = field(obj, "actions");
+-    if (!actions || !actions->is_array()) return;
+-    for (const Json& src : *actions) {
+-        if (!src.is_object()) continue;
+-        ItemAction a;
+-        const std::string type_name = stringValue(src, "type");
+-        if (!parseActionType(type_name, a.type)) {
+-            std::cerr << "[Items] Skipping unknown action '" << type_name
+-                      << "' for item " << item.iID << "\n";
+-            continue;
+-        }
+-        a.range = std::max(0.0f, floatValue(src, "range", a.range));
+-        a.cooldown = std::max(0.0f, floatValue(src, "cooldown", a.cooldown));
+-        a.animation = stringValue(src, "animation", a.animation);
+-        a.input = stringValue(src, "input", "primary");
+-        a.damage = floatValue(src, "damage", a.damage);
+-        a.armor_piercing = std::clamp(floatValue(src, "armor_piercing", 0.0f), 0.0f, 1.f); 
+-        a.hitbox_frame_count = uintValue(src, "hitbox_frame_count",0);
+-        const Json* boxes = field(src, "hitbox");
+-        if (boxes && boxes->is_array())
+-        {
+-            for (const Json& box : *boxes)
+-            {
+-                if (!box.is_object()) continue;
+-                const uint32_t frame = uintValue(
+-                        box, "frame", std::numeric_limits<uint32_t>::max()
+-                        );
+-                const Vec2 size = vec2Value(box, "size", {0.f,0.f});
+-                if (frame >= a.hitbox_frame_count || size.x <= 0.f || size.y <= 0.f) continue;
+ 
+-                a.hitbox_frames.push_back(
+-                        {
+-                        frame,
+-                        size,
+-                        vec2Value(box, "offset_r", {0.f,0.f}),
+-                        floatValue(box, "angle_deg", 0.f)
+-                        }
+-                        );
++    inline void parseActions(const Json& obj, ItemDefinition& item) {
++        const Json* actions = field(obj, "actions");
++        if (!actions || !actions->is_array()) return;
++        for (const Json& src : *actions) {
++            if (!src.is_object()) continue;
++            ItemAction a;
++            const std::string type_name = stringValue(src, "type");
++            if (!parseActionType(type_name, a.type)) {
++                std::cerr << "[Items] Skipping unknown action '" << type_name
++                    << "' for item " << item.iID << "\n";
++                continue;
++            }
++            a.range = std::max(0.0f, floatValue(src, "range", a.range));
++            a.cooldown = std::max(0.0f, floatValue(src, "cooldown", a.cooldown));
++            a.animation = stringValue(src, "animation", a.animation);
++            a.input = stringValue(src, "input", "primary");
++            a.damage = floatValue(src, "damage", a.damage);
++            a.armor_piercing = std::clamp(floatValue(src, "armor_piercing", 0.0f), 0.0f, 1.f); 
++            a.hitbox_frame_count = uintValue(src, "hitbox_frame_count",0);
++            const Json* boxes = field(src, "hitbox");
++            if (boxes && boxes->is_array())
++            {
++                for (const Json& box : *boxes)
++                {
++                    if (!box.is_object()) continue;
++                    const uint32_t frame = uintValue(
++                            box, "frame", std::numeric_limits<uint32_t>::max()
++                            );
++                    const Vec2 size = vec2Value(box, "size", {0.f,0.f});
++                    if (frame >= a.hitbox_frame_count || size.x <= 0.f || size.y <= 0.f) continue;
++
++                    a.hitbox_frames.push_back(
++                            {
++                            frame,
++                            size,
++                            vec2Value(box, "offset_r", {0.f,0.f}),
++                            floatValue(box, "angle_deg", 0.f)
++                            }
++                            );
+ 
++                }
+             }
+-        }
+-        a.knockback = floatValue(src, "knockback", a.knockback);
+-        a.density_change = floatValue(src, "density_change", a.density_change);
+-        a.radius = std::max(0.0f, floatValue(src, "radius", a.radius));
+-        a.terrain_material_id = static_cast<uint16_t>(
+-            std::min(uintValue(src, "terrain_material_id", a.terrain_material_id), 65535u));
+-        a.place_type_id = uintValue(src, "place_type_id", a.place_type_id);
+-        a.projectile_type_id = uintValue(src, "projectile_type_id", a.projectile_type_id);
+-        a.consume_count = uintValue(src, "consume_count", a.consume_count);
+-        a.durability_cost = uintValue(src, "durability_cost", a.durability_cost);
+-        const Json* events = field(src, "events");
+-        if (events && events->is_array()) {
+-            for (const Json& event_src : *events) {
+-                if (!event_src.is_object()) continue;
+-                ItemActionEvent e;
+-                if (!parseEventType(stringValue(event_src, "type"), e.type)) continue;
+-                e.normalized_time = std::clamp(floatValue(event_src, "normalized_time", 0.5f), 0.0f, 1.0f);
+-                e.resource_id = stringValue(event_src, "resource_id");
+-                a.events.push_back(std::move(e));
++            a.knockback = floatValue(src, "knockback", a.knockback);
++            a.density_change = floatValue(src, "density_change", a.density_change);
++            a.radius = std::max(0.0f, floatValue(src, "radius", a.radius));
++            a.terrain_material_id = static_cast<uint16_t>(
++                    std::min(uintValue(src, "terrain_material_id", a.terrain_material_id), 65535u));
++            a.place_type_id = uintValue(src, "place_type_id", a.place_type_id);
++            a.projectile_type_id = uintValue(src, "projectile_type_id", a.projectile_type_id);
++            a.consume_count = uintValue(src, "consume_count", a.consume_count);
++            a.durability_cost = uintValue(src, "durability_cost", a.durability_cost);
++            const Json* events = field(src, "events");
++            if (events && events->is_array()) {
++                for (const Json& event_src : *events) {
++                    if (!event_src.is_object()) continue;
++                    ItemActionEvent e;
++                    if (!parseEventType(stringValue(event_src, "type"), e.type)) continue;
++                    e.normalized_time = std::clamp(floatValue(event_src, "normalized_time", 0.5f), 0.0f, 1.0f);
++                    e.resource_id = stringValue(event_src, "resource_id");
++                    a.events.push_back(std::move(e));
++                }
++                std::stable_sort(a.events.begin(), a.events.end(), [](const auto& l, const auto& r) {
++                        return l.normalized_time < r.normalized_time;
++                        });
+             }
+-            std::stable_sort(a.events.begin(), a.events.end(), [](const auto& l, const auto& r) {
+-                return l.normalized_time < r.normalized_time;
+-            });
++            item.actions.push_back(std::move(a));
+         }
+-        item.actions.push_back(std::move(a));
+-    }
+-}
+-
+-inline size_t loadCustomItems(ItemRegistry& registry, const Json& document) {
+-    // New format: { "sprite_sheets": { ... }, "items": [ ... ] }
+-    // Legacy plain-array documents are still accepted, without named sheets.
+-    const Json* item_list = document.is_array() ? &document : field(document, "items");
+-    if (!item_list || !item_list->is_array()) {
+-        std::cerr << "[Items] game/items.json requires an items array\n";
+-        return 0;
+     }
+-    const auto sheets = parseSpriteSheets(document);
+-    size_t added = 0;
+-    for (const Json& src : *item_list) {
+-        if (!src.is_object()) continue;
+-        const uint32_t id = uintValue(src, "iID", 0);
+-        if (id == 0 || id >= STRUCTURE_ITEM_BASE) {
+-            std::cerr << "[Items] Invalid/reserved item ID: " << id << "\n";
+-            continue;
+-        }
+-        ItemDefinition item;
+-        item.iID = id;
+-        item.name = stringValue(src, "name", "Item " + std::to_string(id));
+-        item.description = stringValue(src, "description");
+-        item.category = parseCategory(stringValue(src, "category", "Miscellaneous"));
+-        item.max_stack = std::max(1u, uintValue(src, "max_stack", item.max_stack));
+-        item.can_go_hotbar = boolValue(src, "can_go_hotbar", item.can_go_hotbar);
+-        item.max_durability = uintValue(src, "max_durability", item.max_durability);
+-        item.weight = std::max(0.0f, floatValue(src, "weight", item.weight));
+-        item.icon = stringValue(src, "icon");
+-        const std::string sheet_name = stringValue(src, "sprite_sheet");
+-        if (!sheet_name.empty()) {
+-            const auto found = sheets.find(sheet_name);
+-            if (found != sheets.end()) item.sprite_sheet = found->second;
+-            else std::cerr << "[Items] Unknown sprite sheet '" << sheet_name
+-                           << "' for item " << id << "\n";
++
++    inline size_t loadCustomItems(ItemRegistry& registry, const Json& document) {
++        // New format: { "sprite_sheets": { ... }, "items": [ ... ] }
++        // Legacy plain-array documents are still accepted, without named sheets.
++        const Json* item_list = document.is_array() ? &document : field(document, "items");
++        if (!item_list || !item_list->is_array()) {
++            std::cerr << "[Items] game/items.json requires an items array\n";
++            return 0;
+         }
+-        item.sprite_sheet.icon_frame = uintValue(src, "icon_frame", 0);
+-        item.world_sprite = stringValue(src, "world_sprite");
+-        item.world_size = vec2Value(src, "world_size", item.world_size);
+-        if (item.world_size.x <= 0 || item.world_size.y <= 0) item.world_size = {1, 1};
+-        // Structure-linked items come from structures.json, not items.json.
+-        item.structure_id = 0;
+-        parseAnimations(src, item);
+-        parseActions(src, item);
+-        if (item.category == ItemCategory::Weapon)
+-        {
+-            const Json* weapon = field(src, "weapon");
+-            if (!weapon || !weapon->is_object()) continue;
+-
+-            WeaponInfo info{stringValue(*weapon, "model")};
+-            if (info.model.rfind("res://", 0) != 0) continue;
+-
+-            const bool has_primary = std::any_of(
+-                    item.actions.begin(), item.actions.end(),
+-                    [&item](const ItemAction& action){
+-                    if (action.type != ItemActionType::Attack || action.input != "primary") return false;
+-                    const auto anim = item.animations.find(action.animation);
+-                    return anim != item.animations.end() &&
++        const auto sheets = parseSpriteSheets(document);
++        size_t added = 0;
++        for (const Json& src : *item_list) {
++            if (!src.is_object()) continue;
++            const uint32_t id = uintValue(src, "iID", 0);
++            if (id == 0 || id >= STRUCTURE_ITEM_BASE) {
++                std::cerr << "[Items] Invalid/reserved item ID: " << id << "\n";
++                continue;
++            }
++            ItemDefinition item;
++            item.iID = id;
++            item.name = stringValue(src, "name", "Item " + std::to_string(id));
++            item.description = stringValue(src, "description");
++            item.category = parseCategory(stringValue(src, "category", "Miscellaneous"));
++            item.max_stack = std::max(1u, uintValue(src, "max_stack", item.max_stack));
++            item.can_go_hotbar = boolValue(src, "can_go_hotbar", item.can_go_hotbar);
++            item.max_durability = uintValue(src, "max_durability", item.max_durability);
++            item.weight = std::max(0.0f, floatValue(src, "weight", item.weight));
++            item.icon = stringValue(src, "icon");
++            const std::string sheet_name = stringValue(src, "sprite_sheet");
++            if (!sheet_name.empty()) {
++                const auto found = sheets.find(sheet_name);
++                if (found != sheets.end()) item.sprite_sheet = found->second;
++                else std::cerr << "[Items] Unknown sprite sheet '" << sheet_name
++                    << "' for item " << id << "\n";
++            }
++            item.sprite_sheet.icon_frame = uintValue(src, "icon_frame", 0);
++            item.world_sprite = stringValue(src, "world_sprite");
++            item.world_size = vec2Value(src, "world_size", item.world_size);
++            if (item.world_size.x <= 0 || item.world_size.y <= 0) item.world_size = {1, 1};
++            // Structure-linked items come from structures.json, not items.json.
++            item.structure_id = 0;
++            parseAnimations(src, item);
++            parseActions(src, item);
++            if (item.category == ItemCategory::Weapon)
++            {
++                const Json* weapon = field(src, "weapon");
++                if (!weapon || !weapon->is_object()) continue;
++
++                WeaponInfo info{stringValue(*weapon, "model")};
++                if (info.model.rfind("res://", 0) != 0) continue;
++
++                // Weapon transform offsets
++                info.position_offset = weapon->value(
++                        "position_offset",
++                        std::array<float, 3>{0.f, 0.f, 0.f}
++                        );
++
++                info.rotation_offset = weapon->value(
++                        "rotation_offset",
++                        std::array<float, 3>{0.f, 0.f, 0.f}
++                        );
++
++                info.scale = weapon->value("scale", 1.f);
++
++                // Validate primary attack
++                const bool has_primary = std::any_of(
++                        item.actions.begin(), item.actions.end(),
++                        [&item](const ItemAction& action)
++                        {
++                        if (action.type != ItemActionType::Attack ||
++                                action.input != "primary") return false;
++
++                        const auto anim = item.animations.find(action.animation);
++
++                        return anim != item.animations.end() &&
+                         !anim->second.source.empty() &&
+                         !anim->second.clip.empty();
+-                    }
+-                    );
+-            if (!has_primary) continue;
+-            item.weapon = std::move(info);
++                        }
++                        );
++
++                if (!has_primary) continue;
++
++                item.weapon = std::move(info);
++            }
++            if (registry.emplace(id, std::move(item)).second) ++added;
++            else std::cerr << "[Items] Duplicate item ID: " << id << "\n";
+         }
+-        if (registry.emplace(id, std::move(item)).second) ++added;
+-        else std::cerr << "[Items] Duplicate item ID: " << id << "\n";
+-    }
+-    return added;
+-}
+-
+-// Each rule maps a contiguous blockType range to one atlas file.
+-// The frame index is LOCAL to that texture, not a global block ID.
+-struct BlockAtlasRule
+-{
+-    std::string name;
+-    uint32_t first_block_type = 0; // inclusive
+-    uint32_t last_block_type = 0;  // inclusive
+-    uint32_t first_frame = 0;      // zero-based index inside the PNG
+-    ItemSpriteSheet sheet;
+-};
+-
+-// Reads game/structure_atlases.json. No Godot dependency and no exceptions.
+-// Overlapping ranges are rejected to avoid ambiguous material selection.
+-inline std::vector<BlockAtlasRule> parseBlockAtlases(const Json& document)
+-{
+-    std::vector<BlockAtlasRule> rules;
+-    const Json* entries = field(document, "block_atlases");
+-    if (!entries || !entries->is_array()) {
+-        std::cerr << "[Items] structure_atlases.json requires a block_atlases array\n";
+-        return rules;
++        return added;
+     }
+ 
+-    for (const Json& src : *entries) {
+-        if (!src.is_object()) continue;
+-        BlockAtlasRule rule;
+-        rule.name = stringValue(src, "name", "unnamed");
+-        rule.first_block_type = uintValue(src, "first_block_type", 0);
+-        rule.last_block_type = uintValue(src, "last_block_type", 0);
+-        rule.first_frame = uintValue(src, "first_frame", 0);
+-        rule.sheet.path = stringValue(src, "path");
+-
+-        const Vec2 size = vec2Value(src, "frame_size", {0.0f, 0.0f});
+-        if (size.x <= 0.0f || size.y <= 0.0f ||
+-            size.x > 4096.0f || size.y > 4096.0f ||
+-            std::floor(size.x) != size.x || std::floor(size.y) != size.y ||
+-            rule.first_block_type == 0 ||
+-            rule.last_block_type < rule.first_block_type ||
+-            rule.sheet.path.rfind("res://", 0) != 0) {
+-            std::cerr << "[Items] Skipping invalid block atlas '" << rule.name << "'\n";
+-            continue;
+-        }
+-        rule.sheet.frame_width_px = static_cast<uint32_t>(size.x);
+-        rule.sheet.frame_height_px = static_cast<uint32_t>(size.y);
+-
+-        // A range of N block types needs N consecutive frame indices.
+-        if (static_cast<uint64_t>(rule.first_frame) +
+-                (rule.last_block_type - rule.first_block_type) >
+-                std::numeric_limits<uint32_t>::max()) {
+-            std::cerr << "[Items] Atlas frame index overflow in '" << rule.name << "'\n";
+-            continue;
++    // Each rule maps a contiguous blockType range to one atlas file.
++    // The frame index is LOCAL to that texture, not a global block ID.
++    struct BlockAtlasRule
++    {
++        std::string name;
++        uint32_t first_block_type = 0; // inclusive
++        uint32_t last_block_type = 0;  // inclusive
++        uint32_t first_frame = 0;      // zero-based index inside the PNG
++        ItemSpriteSheet sheet;
++    };
++
++    // Reads game/structure_atlases.json. No Godot dependency and no exceptions.
++    // Overlapping ranges are rejected to avoid ambiguous material selection.
++    inline std::vector<BlockAtlasRule> parseBlockAtlases(const Json& document)
++    {
++        std::vector<BlockAtlasRule> rules;
++        const Json* entries = field(document, "block_atlases");
++        if (!entries || !entries->is_array()) {
++            std::cerr << "[Items] structure_atlases.json requires a block_atlases array\n";
++            return rules;
+         }
+ 
+-        bool overlaps = false;
+-        for (const BlockAtlasRule& previous : rules) {
+-            if (rule.first_block_type <= previous.last_block_type &&
+-                rule.last_block_type >= previous.first_block_type) {
+-                overlaps = true;
+-                break;
++        for (const Json& src : *entries) {
++            if (!src.is_object()) continue;
++            BlockAtlasRule rule;
++            rule.name = stringValue(src, "name", "unnamed");
++            rule.first_block_type = uintValue(src, "first_block_type", 0);
++            rule.last_block_type = uintValue(src, "last_block_type", 0);
++            rule.first_frame = uintValue(src, "first_frame", 0);
++            rule.sheet.path = stringValue(src, "path");
++
++            const Vec2 size = vec2Value(src, "frame_size", {0.0f, 0.0f});
++            if (size.x <= 0.0f || size.y <= 0.0f ||
++                    size.x > 4096.0f || size.y > 4096.0f ||
++                    std::floor(size.x) != size.x || std::floor(size.y) != size.y ||
++                    rule.first_block_type == 0 ||
++                    rule.last_block_type < rule.first_block_type ||
++                    rule.sheet.path.rfind("res://", 0) != 0) {
++                std::cerr << "[Items] Skipping invalid block atlas '" << rule.name << "'\n";
++                continue;
+             }
++            rule.sheet.frame_width_px = static_cast<uint32_t>(size.x);
++            rule.sheet.frame_height_px = static_cast<uint32_t>(size.y);
++
++            // A range of N block types needs N consecutive frame indices.
++            if (static_cast<uint64_t>(rule.first_frame) +
++                    (rule.last_block_type - rule.first_block_type) >
++                    std::numeric_limits<uint32_t>::max()) {
++                std::cerr << "[Items] Atlas frame index overflow in '" << rule.name << "'\n";
++                continue;
++            }
++
++            bool overlaps = false;
++            for (const BlockAtlasRule& previous : rules) {
++                if (rule.first_block_type <= previous.last_block_type &&
++                        rule.last_block_type >= previous.first_block_type) {
++                    overlaps = true;
++                    break;
++                }
++            }
++            if (overlaps) {
++                std::cerr << "[Items] Overlapping block atlas range: '" << rule.name << "'\n";
++                continue;
++            }
++            rules.push_back(std::move(rule));
+         }
+-        if (overlaps) {
+-            std::cerr << "[Items] Overlapping block atlas range: '" << rule.name << "'\n";
+-            continue;
+-        }
+-        rules.push_back(std::move(rule));
++        return rules;
+     }
+-    return rules;
+-}
+-
+-inline size_t registerStructureItems(
+-        ItemRegistry& registry,
+-        const std::unordered_map<int, Structure>& structures,
+-        const Json& block_atlas_document) {
+-    const auto block_atlases = parseBlockAtlases(block_atlas_document);
+-    size_t unmapped_blocks = 0;
+-    size_t added = 0;
+-    for (const auto& [id, structure] : structures) {
+-        const auto& st = structure.getTemplate();
+-        if (st.structureID <= 0 ||
+-            st.structureID > std::numeric_limits<uint32_t>::max() - STRUCTURE_ITEM_BASE ||
+-            st.x_width <= 0 || st.y_width <= 0) continue;
+-
+-        ItemDefinition item;
+-        item.iID = STRUCTURE_ITEM_BASE + st.structureID;
+-        item.structure_id = st.structureID;
+-        // A copy of the structure dimensions is intentional: dropped items need size.
+-        item.world_size = {static_cast<float>(st.x_width), static_cast<float>(st.y_width)};
+-        item.category = st.isBuilding ? ItemCategory::Building : ItemCategory::Material;
+-        item.name = (st.isBuilding ? "Building " : "Block ") + std::to_string(st.structureID);
+-        item.description = "Automatically generated from structures.json";
+-        item.max_stack = st.isBuilding ? 99u : 999u;
+-        item.can_go_hotbar = true;
+-        // Structures carry their own visual source. A building gets its own
+-        // sprite; an ordinary block uses its material tile in terrain.png.
+-        if (st.isBuilding) {
+-            item.icon = st.sprite.empty() ? "" :
+-                (st.sprite.rfind("res://", 0) == 0 ? st.sprite
+-                 : "res://game/sprite/" + st.sprite);
+-            item.world_sprite = item.icon;
+-        } else {
+-            // Use the underlying block type, which need not equal structureID.
+-            const uint32_t block_type = st.blockType > 0
+-                ? static_cast<uint32_t>(st.blockType)
+-                : static_cast<uint32_t>(st.structureID);
+-
+-            bool found_atlas = false;
+-            for (const BlockAtlasRule& rule : block_atlases) {
+-                if (block_type < rule.first_block_type ||
+-                    block_type > rule.last_block_type) continue;
+-
+-                item.sprite_sheet = rule.sheet;
+-                item.sprite_sheet.icon_frame =
+-                    rule.first_frame + (block_type - rule.first_block_type);
+-                found_atlas = true;
+-                break;
++
++    inline size_t registerStructureItems(
++            ItemRegistry& registry,
++            const std::unordered_map<int, Structure>& structures,
++            const Json& block_atlas_document) {
++        const auto block_atlases = parseBlockAtlases(block_atlas_document);
++        size_t unmapped_blocks = 0;
++        size_t added = 0;
++        for (const auto& [id, structure] : structures) {
++            const auto& st = structure.getTemplate();
++            if (st.structureID <= 0 ||
++                    st.structureID > std::numeric_limits<uint32_t>::max() - STRUCTURE_ITEM_BASE ||
++                    st.x_width <= 0 || st.y_width <= 0) continue;
++
++            ItemDefinition item;
++            item.iID = STRUCTURE_ITEM_BASE + st.structureID;
++            item.structure_id = st.structureID;
++            // A copy of the structure dimensions is intentional: dropped items need size.
++            item.world_size = {static_cast<float>(st.x_width), static_cast<float>(st.y_width)};
++            item.category = st.isBuilding ? ItemCategory::Building : ItemCategory::Material;
++            item.name = (st.isBuilding ? "Building " : "Block ") + std::to_string(st.structureID);
++            item.description = "Automatically generated from structures.json";
++            item.max_stack = st.isBuilding ? 99u : 999u;
++            item.can_go_hotbar = true;
++            // Structures carry their own visual source. A building gets its own
++            // sprite; an ordinary block uses its material tile in terrain.png.
++            if (st.isBuilding) {
++                item.icon = st.sprite.empty() ? "" :
++                    (st.sprite.rfind("res://", 0) == 0 ? st.sprite
++                     : "res://game/sprite/" + st.sprite);
++                item.world_sprite = item.icon;
++            } else {
++                // Use the underlying block type, which need not equal structureID.
++                const uint32_t block_type = st.blockType > 0
++                    ? static_cast<uint32_t>(st.blockType)
++                    : static_cast<uint32_t>(st.structureID);
++
++                bool found_atlas = false;
++                for (const BlockAtlasRule& rule : block_atlases) {
++                    if (block_type < rule.first_block_type ||
++                            block_type > rule.last_block_type) continue;
++
++                    item.sprite_sheet = rule.sheet;
++                    item.sprite_sheet.icon_frame =
++                        rule.first_frame + (block_type - rule.first_block_type);
++                    found_atlas = true;
++                    break;
++                }
++                if (!found_atlas) ++unmapped_blocks;
+             }
+-            if (!found_atlas) ++unmapped_blocks;
+-        }
+ 
+-        ItemAction a;
+-        a.type = st.isBuilding ? ItemActionType::PlaceStructure : ItemActionType::PlaceBlock;
+-        a.place_type_id = st.structureID;
+-        a.consume_count = 1;
+-        a.animation = "place";
+-        item.actions.push_back(std::move(a));
++            ItemAction a;
++            a.type = st.isBuilding ? ItemActionType::PlaceStructure : ItemActionType::PlaceBlock;
++            a.place_type_id = st.structureID;
++            a.consume_count = 1;
++            a.animation = "place";
++            item.actions.push_back(std::move(a));
+ 
+-        if (registry.emplace(item.iID, std::move(item)).second) ++added;
+-        else std::cerr << "[Items] Generated ID collision for structure " << id << "\n";
+-    }
+-    if (unmapped_blocks > 0) {
+-        std::cerr << "[Items] No atlas mapping for " << unmapped_blocks
+-                  << " block items (their inventory icons will be missing)\n";
++            if (registry.emplace(item.iID, std::move(item)).second) ++added;
++            else std::cerr << "[Items] Generated ID collision for structure " << id << "\n";
++        }
++        if (unmapped_blocks > 0) {
++            std::cerr << "[Items] No atlas mapping for " << unmapped_blocks
++                << " block items (their inventory icons will be missing)\n";
++        }
++        return added;
+     }
+-    return added;
+-}
+ 
+ } // namespace ItemRegistryLoader
+ #endif // ITEM_REGISTRY_LOADER_H
